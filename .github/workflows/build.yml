@@ -86,6 +86,7 @@ jobs:
           bash ../scripts/verify-config.sh .config
 
       - name: Upload resolved config
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: photonicat1-build-config
