@@ -144,6 +144,7 @@ jobs:
             echo 'Device: Ariaboard Photonicat1 (RK3568)'
             echo "ImmortalWrt source: $(git -C immortalwrt rev-parse HEAD)"
             echo "Reference config: $(git -C photonicat-reference rev-parse HEAD)"
+            echo "QModem feed branch: stable"
             echo "QModem feed: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
             echo "Workflow repo commit: $GITHUB_SHA"
             echo "Built at (Asia/Shanghai): $(date '+%Y-%m-%d %H:%M:%S %Z')"
