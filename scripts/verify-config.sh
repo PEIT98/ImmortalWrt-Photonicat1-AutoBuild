@@ -8,7 +8,7 @@ need=(
   CONFIG_PACKAGE_sms-forwarder-next
   CONFIG_PACKAGE_luci-app-mwan3
   CONFIG_PACKAGE_mwan3
-  CONFIG_PACKAGE_luci-app-clash
+  CONFIG_PACKAGE_luci-app-openclash
   CONFIG_PACKAGE_luci-app-cpufreq
   CONFIG_PACKAGE_cpufreq
   CONFIG_PACKAGE_luci-mod-battstatus
@@ -35,6 +35,7 @@ absent=(
   CONFIG_PACKAGE_luci-app-qmodem
   CONFIG_PACKAGE_luci-app-qmodem-sms
   CONFIG_PACKAGE_luci-app-qmodem-mwan
+  CONFIG_PACKAGE_luci-app-clash
   CONFIG_PACKAGE_luci-app-passwall
   CONFIG_PACKAGE_luci-app-smartdns
   CONFIG_PACKAGE_luci-app-zerotier
