@@ -51,3 +51,19 @@ GitHub Actions 设定 **每周五中国/新加坡时间凌晨 02:00**（UTC 周�
 本工程保留光影猫一代设备及原 `pcat-mgr` 软件包。若管理程序抢占 AT 口，须在真机定位冲突后修复。原参考仓库中的无线密码及固定 USB 拨号设置不会引入。刷机前务必备份原厂固件并准备救砖方式；**不要使用西瓜皮固件的刷写命令或磁盘路径**。
 
 自动更新上游源码可能造成某次构建失败或功能变化；构建成功也不等于真机兼容测试完成。
+## 编译可靠性优化（参考西瓜皮）
+
+- 记录磁盘、内存和磁盘设备情况；清理 Actions 运行环境中的无关大文件。
+- feeds 更新后执行 `./scripts/feeds install -a -f -p qmodem`，优先使用 QModem feed 软件包。
+- `make defconfig` 前后打印消失的显式软件包选项，并逐项核查设备和驱动。
+- 即使配置检查失败，也在 Actions Artifacts 上传实际生成的 `.config` 便于排错。
+- 使用 `make -j2 V=0` 编译；失败后 `make -j1 V=s` 输出完整诊断日志。
+- 固件包含 `/etc/photonicat1-build-info`；Release 附带最近25个 ImmortalWrt 提交、固件包清单和 SHA256。
+
+**尚未验证的兼容事项：**
+
+- 首次 Actions 运行在 `make defconfig` 后缺少 `CONFIG_PACKAGE_qmodem=y`。新的构建过程增强了依赖诊断，但尚不能认为该问题已经修复。
+- 原配置选择 `luci-app-clash`，但默认 ImmortalWrt 25.12 与 QModem feeds 未确认提供此包；原始 Clash LuCI 项目较老，若配置校验提示缺失，不应悄悄改成不含代理插件的固件。需要单独选择经验证可用于 25.12 的来源，或确认是否改用 OpenClash。
+- QModem 使用 `main` 而非西瓜皮的 `stable`；如出现上游回归，可以考虑切换到稳定分支。
+
+不要把 GitHub Actions 编译成功等同于真机验证通过。
