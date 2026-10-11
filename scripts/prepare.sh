@@ -9,9 +9,12 @@ test -f "$SRC/Makefile"
 cp -f "$REF/.config" "$SRC/.config"
 cp -f "$REF/feeds.conf.default" "$SRC/feeds.conf.default"
 
-# QModem 官方 feed，每次构建从 main 更新源码。
-if ! grep -Eq '^src-git qmodem ' "$SRC/feeds.conf.default"; then
-  printf '\nsrc-git qmodem https://github.com/FUjr/QModem.git;main\n' >> "$SRC/feeds.conf.default"
+# QModem 官方 feed，每次从 stable 分支获取源码。
+# 不论参考配置之前指定了哪个分支，都统一固定到 stable。
+if grep -Eq '^src-git qmodem ' "$SRC/feeds.conf.default"; then
+  sed -i -E 's#^src-git qmodem .*#src-git qmodem https://github.com/FUjr/QModem.git;stable#' "$SRC/feeds.conf.default"
+else
+  printf '\nsrc-git qmodem https://github.com/FUjr/QModem.git;stable\n' >> "$SRC/feeds.conf.default"
 fi
 
 python3 - "$SRC/.config" <<'PY'
@@ -30,9 +33,7 @@ remove_exact = {
 remove_prefixes = ('luci-app-passwall_INCLUDE_',)
 force = {
     'qmodem': 'y', 'luci-app-qmodem-next': 'y',
-    'qmodem_INCLUDE_generic-qmi-wwan': 'y',
-    'qmodem_INCLUDE_vendor-qmi-wwan': 'n',
-    'qmodem_INCLUDE_nss-qmi-wwan': 'n',
+    'sms-forwarder-next': 'y',
     'luci-app-mwan3': 'y', 'luci-i18n-mwan3-zh-cn': 'y', 'mwan3': 'y',
     'luci-app-clash': 'y',
     'cpufreq': 'y', 'luci-app-cpufreq': 'y', 'luci-i18n-cpufreq-zh-cn': 'y',
