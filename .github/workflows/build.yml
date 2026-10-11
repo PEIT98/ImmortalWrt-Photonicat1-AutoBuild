@@ -12,7 +12,7 @@ on:
     - cron: '0 18 * * 4' # UTC 周四 18:00，即北京时间周五 02:00
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: photonicat1-${{ github.ref }}
