@@ -8,7 +8,7 @@ test -f "$dir/build-sources.txt"
   echo '> 尚需光影猫一代真机验证，刷机前备份并准备恢复方案。'
   echo
   echo '- ImmortalWrt：openwrt-25.12（编译时最新）'
-  echo '- QModem：stable 分支，Next 界面（含短信）、mwan3、Clash、CPU 调频、电池状态'
+  echo '- QModem：stable 分支，Next 界面（含短信）、mwan3、OpenClash、CPU 调频、电池状态'
   echo '- 优先级：WAN > Wi-Fi 中继 > 5G/LTE'
   echo '- 首次需配置 Wi-Fi STA/wwan 与 QModem 别名 wwan_5g'
   echo
