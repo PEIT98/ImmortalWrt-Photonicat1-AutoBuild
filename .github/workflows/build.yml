@@ -1,0 +1,171 @@
+name: Photonicat1 ImmortalWrt QModem Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: '编译成功后自动发布 Release'
+        type: boolean
+        default: true
+        required: true
+  schedule:
+    - cron: '0 18 * * 4' # UTC 周四 18:00，即北京时间周五 02:00
+
+permissions:
+  contents: write
+
+concurrency:
+  group: photonicat1-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - name: Checkout workflow
+        uses: actions/checkout@v4
+
+      - name: Checkout latest ImmortalWrt 25.12
+        uses: actions/checkout@v4
+        with:
+          repository: immortalwrt/immortalwrt
+          ref: openwrt-25.12
+          path: immortalwrt
+          fetch-depth: 1
+
+      - name: Checkout pinned Photonicat1 reference
+        uses: actions/checkout@v4
+        with:
+          repository: a757814283/ImmortalWrt_Photonicat1
+          ref: 707cd8c57d6d221dec033aa75a3a7580f1a4ddf9
+          path: photonicat-reference
+          fetch-depth: 1
+
+      - name: Free build space
+        run: |
+          df -h
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/share/powershell || true
+          df -h
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            ack antlr3 asciidoc autoconf automake autopoint binutils bison \
+            build-essential bzip2 ccache clang cmake cpio curl device-tree-compiler \
+            flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man \
+            intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev \
+            libmpc-dev libmpfr-dev libncurses-dev libreadline-dev libssl-dev libtool \
+            lrzsz mkisofs msmtp ninja-build patch pkgconf python3 python3-pyelftools \
+            python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig \
+            texinfo unzip vim wget xmlto xxd zlib1g-dev zstd
+
+      - name: Prepare Photonicat1 config with QModem
+        run: bash scripts/prepare.sh "$GITHUB_WORKSPACE/photonicat-reference" "$GITHUB_WORKSPACE/immortalwrt" "$GITHUB_WORKSPACE/files"
+
+      - name: Update official and QModem feeds
+        working-directory: immortalwrt
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Resolve and verify package selection
+        working-directory: immortalwrt
+        run: |
+          make defconfig
+          bash ../scripts/verify-config.sh .config
+
+      - name: Upload resolved config
+        uses: actions/upload-artifact@v4
+        with:
+          name: photonicat1-build-config
+          path: |
+            immortalwrt/.config
+            immortalwrt/feeds.conf.default
+          retention-days: 14
+
+      - name: Download sources
+        working-directory: immortalwrt
+        run: make download -j4
+
+      - name: Build firmware
+        working-directory: immortalwrt
+        run: make -j2 V=s
+
+      - name: Collect firmware and metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          out='immortalwrt/bin/targets/rockchip/armv8'
+          mkdir -p release
+          test -d "$out"
+          shopt -s nullglob
+          n=0
+          for f in "$out"/*ariaboard_photonicat*.img.gz "$out"/*ariaboard_photonicat*.img "$out"/*ariaboard_photonicat*.bin; do
+            [ -f "$f" ] || continue
+            cp "$f" release/
+            n=$((n+1))
+          done
+          [ "$n" -gt 0 ] || { echo 'Photonicat1 firmware image not found!' >&2; exit 1; }
+          for f in "$out"/*ariaboard_photonicat*.manifest "$out"/config.buildinfo "$out"/feeds.buildinfo "$out"/version.buildinfo "$out"/profiles.json; do
+            [ -f "$f" ] && cp "$f" release/
+          done
+          {
+            echo 'Device: Ariaboard Photonicat1 (RK3568)'
+            echo "ImmortalWrt source: $(git -C immortalwrt rev-parse HEAD)"
+            echo "Reference config: $(git -C photonicat-reference rev-parse HEAD)"
+            echo "QModem feed: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
+            echo "Workflow repo commit: $GITHUB_SHA"
+            echo "Built at (Asia/Shanghai): $(date '+%Y-%m-%d %H:%M:%S %Z')"
+          } > release/build-sources.txt
+          (cd release && find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS.txt)
+          ls -lah release
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: photonicat1-qmodem-firmware
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: build
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - name: Download firmware artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: photonicat1-qmodem-firmware
+          path: release
+
+      - name: Prepare tag
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "name=photonicat1-$(date +%Y%m%d-%H%M%S)-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: 光影猫一代 ImmortalWrt + QModem ${{ steps.tag.outputs.name }}
+          body: |
+            基于 ImmortalWrt openwrt-25.12 最新源码、光影猫一代参考配置和 QModem main。
+            内置 QModem Next（短信）、mwan3、Clash、CPU 调频和电池状态。
+            多 WAN 优先级：wan > wwan > wwan_5g；首次需配置 Wi-Fi STA 与 QModem Alias。
+            设备为 Photonicat1 RK3568，非 Photonicat2。
+            请先准备恢复固件和救砖方案；首次发布尚需真机测试。
+            build-sources.txt 记录确切源码版本。
+          files: release/*
+          fail_on_unmatched_files: true
+          generate_release_notes: false
