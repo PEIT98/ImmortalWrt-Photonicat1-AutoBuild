@@ -79,10 +79,14 @@ jobs:
       - name: Resolve and verify package selection
         working-directory: immortalwrt
         run: |
-          cp .config /tmp/photonicat1-before-defconfig.config
+          cp .config .config.before-defconfig
+          echo '===== defconfig 前核心插件 ====='
+          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-clash|luci-mod-battstatus)=' .config.before-defconfig || true
           make defconfig
-          echo '===== 原配置中已选但失效的软件包（最多50行）====='
-          comm -23 <(grep '^CONFIG_PACKAGE_.*=y$' /tmp/photonicat1-before-defconfig.config | sort -u) <(grep '^CONFIG_PACKAGE_.*=y$' .config | sort -u) | head -n 50 || true
+          echo '===== defconfig 后核心插件 ====='
+          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-clash|luci-mod-battstatus)(=| is not set)' .config || true
+          echo '===== defconfig 前已选但后被取消的选项（最多70行）====='
+          comm -23 <(grep '^CONFIG_PACKAGE_.*=y$' .config.before-defconfig | sort -u) <(grep '^CONFIG_PACKAGE_.*=y$' .config | sort -u) | head -n 70 || true
           bash ../scripts/verify-config.sh .config
 
       - name: Upload resolved config
@@ -92,7 +96,9 @@ jobs:
           name: photonicat1-build-config
           path: |
             immortalwrt/.config
+            immortalwrt/.config.before-defconfig
             immortalwrt/feeds.conf.default
+          include-hidden-files: true
           retention-days: 14
 
       - name: Write build provenance inside firmware
