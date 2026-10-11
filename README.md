@@ -6,7 +6,7 @@
 
 - **ImmortalWrt**：每次拉取 [immortalwrt/immortalwrt](https://github.com/immortalwrt/immortalwrt) 的 `openwrt-25.12` 分支最新源码。
 - **光影猫一代原作者配置**：参考 [a757814283/ImmortalWrt_Photonicat1](https://github.com/a757814283/ImmortalWrt_Photonicat1) 中固定版本的 `.config` 和 feeds 配置；避免意外导入旧版静态 USB 拨号配置、Wi-Fi 凭据。
-- **QModem**：从 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 分支拉取最新版，采用 `luci-app-qmodem-next`（含短信功能）。
+- **QModem**：每次从 [FUjr/QModem](https://github.com/FUjr/QModem) 的 `stable` 分支拉取最新稳定版，采用 `luci-app-qmodem-next`（含短信功能）。
 - **自动编译方案**：参考 [西瓜皮 ImmortalWrt 自动构建](https://github.com/zzzz0317/immortalwrt-xgp-auto-build)，单独提供光影猫设备的编译工作流。
 
 ## 软件选择
@@ -64,6 +64,6 @@ GitHub Actions 设定 **每周五中国/新加坡时间凌晨 02:00**（UTC 周�
 
 - 首次 Actions 运行在 `make defconfig` 后缺少 `CONFIG_PACKAGE_qmodem=y`。新的构建过程增强了依赖诊断，但尚不能认为该问题已经修复。
 - 原配置选择 `luci-app-clash`，但默认 ImmortalWrt 25.12 与 QModem feeds 未确认提供此包；原始 Clash LuCI 项目较老，若配置校验提示缺失，不应悄悄改成不含代理插件的固件。需要单独选择经验证可用于 25.12 的来源，或确认是否改用 OpenClash。
-- QModem 使用 `main` 而非西瓜皮的 `stable`；如出现上游回归，可以考虑切换到稳定分支。
+- QModem 已调整为与西瓜皮相同的 `stable` 分支；ImmortalWrt 仍为 `openwrt-25.12`。stable 版的短信与拨号包依赖不同于 main，因此已同步调整配置校验。
 
 不要把 GitHub Actions 编译成功等同于真机验证通过。
