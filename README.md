@@ -15,7 +15,7 @@
 |---|---|
 | QModem / QModem Next（含短信） | 保留 |
 | mwan3 多 WAN 路由及 LuCI | 保留 |
-| luci-app-clash | 保留 |
+| luci-app-openclash | 保留 |
 | luci-app-cpufreq | 保留 |
 | luci-mod-battstatus | 保留 |
 | ath11k PCI / WCN6855 固件、USB QMI / MBIM 等驱动 | 保留 |
@@ -63,7 +63,13 @@ GitHub Actions 设定 **每周五中国/新加坡时间凌晨 02:00**（UTC 周�
 **尚未验证的兼容事项：**
 
 - 首次 Actions 运行在 `make defconfig` 后缺少 `CONFIG_PACKAGE_qmodem=y`。新的构建过程增强了依赖诊断，但尚不能认为该问题已经修复。
-- 原配置选择 `luci-app-clash`，但默认 ImmortalWrt 25.12 与 QModem feeds 未确认提供此包；原始 Clash LuCI 项目较老，若配置校验提示缺失，不应悄悄改成不含代理插件的固件。需要单独选择经验证可用于 25.12 的来源，或确认是否改用 OpenClash。
+- 原配置选择 `luci-app-openclash`，但默认 ImmortalWrt 25.12 与 QModem feeds 未确认提供此包；原始 OpenClash LuCI 项目较老，若配置校验提示缺失，不应悄悄改成不含代理插件的固件。需要单独选择经验证可用于 25.12 的来源，或确认是否改用 OpenOpenClash。
 - QModem 已调整为与西瓜皮相同的 `stable` 分支；ImmortalWrt 仍为 `openwrt-25.12`。stable 版的短信与拨号包依赖不同于 main，因此已同步调整配置校验。
 
 不要把 GitHub Actions 编译成功等同于真机验证通过。
+
+## 首次编译失败后的修复说明
+
+2026-10-12 检查 Actions #38185529059 的 `.config.before-defconfig`，发现 `scripts/feeds install -a` 之后原先指定的 QModem、mwan3 与电池插件选项全部消失。根因是配置顺序不正确：必须在安装 feeds 后运行 `scripts/select-packages.py`，再执行 `make defconfig`。
+
+原 `luci-app-clash` 无法在原有 ImmortalWrt 25.12 feeds 中找到，改用 [官方维护的 OpenClash](https://github.com/vernesong/OpenClash)，实际包名 `luci-app-openclash`，构建时跟随 `master` 分支。该插件与旧 `luci-app-clash` 并非同一款，请在真机核对需求。
