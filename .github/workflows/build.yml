@@ -75,16 +75,19 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           ./scripts/feeds install -a -f -p qmodem
+          ./scripts/feeds install -a -f -p openclash
 
       - name: Resolve and verify package selection
         working-directory: immortalwrt
         run: |
+          # feeds install -a 会重置 .config，因此必须在安装完成后再应用选项
+          python3 ../scripts/select-packages.py .config
           cp .config .config.before-defconfig
           echo '===== defconfig 前核心插件 ====='
-          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-clash|luci-mod-battstatus)=' .config.before-defconfig || true
+          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus)=' .config.before-defconfig || true
           make defconfig
           echo '===== defconfig 后核心插件 ====='
-          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-clash|luci-mod-battstatus)(=| is not set)' .config || true
+          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus)(=| is not set)' .config || true
           echo '===== defconfig 前已选但后被取消的选项（最多70行）====='
           comm -23 <(grep '^CONFIG_PACKAGE_.*=y$' .config.before-defconfig | sort -u) <(grep '^CONFIG_PACKAGE_.*=y$' .config | sort -u) | head -n 70 || true
           bash ../scripts/verify-config.sh .config
