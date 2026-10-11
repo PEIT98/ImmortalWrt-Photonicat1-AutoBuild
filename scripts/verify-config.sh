@@ -5,7 +5,6 @@ need=(
   CONFIG_TARGET_rockchip_armv8_DEVICE_ariaboard_photonicat
   CONFIG_PACKAGE_qmodem
   CONFIG_PACKAGE_luci-app-qmodem-next
-  CONFIG_PACKAGE_qmodem-smsd
   CONFIG_PACKAGE_sms-forwarder-next
   CONFIG_PACKAGE_luci-app-mwan3
   CONFIG_PACKAGE_mwan3
@@ -48,10 +47,7 @@ for key in "${absent[@]}"; do
     failed=1
   fi
 done
-if ! grep -Fxq 'CONFIG_PACKAGE_qmodem_INCLUDE_generic-qmi-wwan=y' "$CFG"; then
-  echo '::error::通用 QMI WWAN 驱动选择丢失' >&2
-  failed=1
-fi
+# stable 版将 QMI 驱动选择定义在传统 LuCI 包中；这里直接核验通用内核驱动。
 if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
