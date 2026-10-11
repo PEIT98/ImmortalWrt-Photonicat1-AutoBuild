@@ -62,8 +62,8 @@ GitHub Actions 设定 **每周五中国/新加坡时间凌晨 02:00**（UTC 周�
 
 **尚未验证的兼容事项：**
 
-- 首次 Actions 运行在 `make defconfig` 后缺少 `CONFIG_PACKAGE_qmodem=y`。新的构建过程增强了依赖诊断，但尚不能认为该问题已经修复。
-- 原配置选择 `luci-app-openclash`，但默认 ImmortalWrt 25.12 与 QModem feeds 未确认提供此包；原始 OpenClash LuCI 项目较老，若配置校验提示缺失，不应悄悄改成不含代理插件的固件。需要单独选择经验证可用于 25.12 的来源，或确认是否改用 OpenOpenClash。
+- 历史 Actions 运行在 `make defconfig` 后缺少 `CONFIG_PACKAGE_qmodem=y`。现已发现原脚本在 feeds 安装前应用配置，导致选项被重置，修复顺序后仍需新一轮编译验证。
+- 原参考配置选用旧版 `luci-app-clash`，但所用 ImmortalWrt 25.12 feeds 不提供它。本仓库明确改用官方 `vernesong/OpenClash` 提供的 `luci-app-openclash`，仍需实际编译与真机验证兼容性。
 - QModem 已调整为与西瓜皮相同的 `stable` 分支；ImmortalWrt 仍为 `openwrt-25.12`。stable 版的短信与拨号包依赖不同于 main，因此已同步调整配置校验。
 
 不要把 GitHub Actions 编译成功等同于真机验证通过。
