@@ -57,4 +57,8 @@ kept += ['CONFIG_DRIVER_11AC_SUPPORT=y', 'CONFIG_DRIVER_11AX_SUPPORT=y', 'CONFIG
 # 关闭可选 YJIT，不影响 Ruby 与 OpenClash 常规工作。
 kept = [line for line in kept if not re.match(r'(?:# )?CONFIG_RUBY_ENABLE_YJIT(?:=| is not set)', line)]
 kept.append('# CONFIG_RUBY_ENABLE_YJIT is not set')
+# Persist OpenWrt compiler objects across GitHub Actions runs (no build_dir cache).
+kept = [line for line in kept if not re.match(r'(?:# )?CONFIG_CCACHE(?:=| is not set)', line)
+        and not re.match(r'(?:# )?CONFIG_CCACHE_DIR(?:=| is not set)', line)]
+kept += ['CONFIG_CCACHE=y', 'CONFIG_CCACHE_DIR=""']
 p.write_text('\n'.join(kept) + '\n')
