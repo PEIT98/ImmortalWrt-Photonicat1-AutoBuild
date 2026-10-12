@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Patch upstream luci-mod-battstatus and the bundled Aurora theme for Photonicat1.
+
+Only browser presentation is changed; /usr/libexec/rpcd/luci.battstatus stays upstream.
+Run after 'feeds update/install' and before 'make'. Fail if upstream changes incompatibly.
+"""
+from pathlib import Path
+import sys
+
+if len(sys.argv) != 2:
+    raise SystemExit("Usage: python3 scripts/fix-aurora-battstatus.py IMMORTALWRT_ROOT")
+
+root = Path(sys.argv[1]).resolve()
+battery = root / "feeds/luci/modules/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js"
+aurora_css = root / "package/luci-theme-aurora/htdocs/luci-static/aurora/main.css"
+patch_css = Path(__file__).with_name("aurora-battstatus.css")
+
+for p in (battery, aurora_css, patch_css):
+    if not p.is_file():
+        raise SystemExit(f"::error::Battery compatibility patch: required file not found: {p}")
+
+# Original plugin incorrectly quotes JS template strings with single quotes.
+# When <= 30%, querySelector() returns null, its innerHTML assignment throws,
+# and the indicator polling promise fails.
+old = """\t\t\t\tif (typeof info.color != 'undefined') {
+\t\t\t\t\tinfo.element = document.querySelector('[data-indicator="${info.name}"]');
+\t\t\t\t\tinfo.element.innerHTML = '<span style="color:${info.color}">${info.status}</span>';
+\t\t\t\t}"""
+new = """\t\t\t\t// Keep ui.showIndicator()'s text node intact for future 5s updates.
+\t\t\t\t// Avoid HTML injection, selector interpolation bugs and stale colors.
+\t\t\t\tconst batteryIndicator = document.querySelector(
+\t\t\t\t\t'#indicators > span[data-indicator="' + info.name + '"]');
+\t\t\t\tif (batteryIndicator) {
+\t\t\t\t\tbatteryIndicator.style.color = info.color || '';
+\t\t\t\tbatteryIndicator.title = info.status;
+\t\t\t\t}"""
+body = battery.read_text()
+if old in body:
+    battery.write_text(body.replace(old, new, 1))
+    print("Battery JS: fixed invalid indicator selector and low-battery update")
+elif new in body:
+    print("Battery JS: already patched")
+else:
+    raise SystemExit("::error::Upstream battstatus.js changed; manual review required before overwriting")
+
+# The Aurora shell gives every #indicators span font-size: 0 and icon size 20px.
+# Battery indicators do not have a matching icon mask, so their charge text vanishes.
+css = aurora_css.read_text()
+marker = "/* Photonicat1 Aurora battery indicator compatibility */"
+extra = patch_css.read_text()
+if marker not in extra:
+    raise SystemExit("::error::Battery CSS patch marker missing")
+if marker not in css:
+    aurora_css.write_text(css + "\n" + extra.strip() + "\n")
+    print("Aurora CSS: restored battery percentage visibility and disabled empty icon")
+else:
+    print("Aurora CSS: already patched")
