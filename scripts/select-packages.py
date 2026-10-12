@@ -58,7 +58,10 @@ kept += ['CONFIG_DRIVER_11AC_SUPPORT=y', 'CONFIG_DRIVER_11AX_SUPPORT=y', 'CONFIG
 kept = [line for line in kept if not re.match(r'(?:# )?CONFIG_RUBY_ENABLE_YJIT(?:=| is not set)', line)]
 kept.append('# CONFIG_RUBY_ENABLE_YJIT is not set')
 # Persist OpenWrt compiler objects across GitHub Actions runs (no build_dir cache).
-kept = [line for line in kept if not re.match(r'(?:# )?CONFIG_CCACHE(?:=| is not set)', line)
+# Config-devel.in declares CONFIG_CCACHE only when CONFIG_DEVEL is enabled.
+# Without CONFIG_DEVEL=y, 'make defconfig' silently discards CONFIG_CCACHE=y.
+kept = [line for line in kept if not re.match(r'(?:# )?CONFIG_DEVEL(?:=| is not set)', line)
+        and not re.match(r'(?:# )?CONFIG_CCACHE(?:=| is not set)', line)
         and not re.match(r'(?:# )?CONFIG_CCACHE_DIR(?:=| is not set)', line)]
-kept += ['CONFIG_CCACHE=y', 'CONFIG_CCACHE_DIR=""']
+kept += ['CONFIG_DEVEL=y', 'CONFIG_CCACHE=y', 'CONFIG_CCACHE_DIR=""']
 p.write_text('\n'.join(kept) + '\n')
