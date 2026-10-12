@@ -31,8 +31,44 @@ new = """\t\t\t\t// Keep ui.showIndicator()'s text node intact for future 5s upd
 \t\t\t\tconst batteryIndicator = document.querySelector(
 \t\t\t\t\t'#indicators > span[data-indicator="' + info.name + '"]');
 \t\t\t\tif (batteryIndicator) {
-\t\t\t\t\tbatteryIndicator.style.color = info.color || '';
-\t\t\t\tbatteryIndicator.title = info.status;
+\t\t\t\t\tbatteryIndicator.title = info.status;
+\t\t\t\t\tif (auroraTheme) {
+\t\t\t\t\t\t// Align with the local 28px battery-pill style; override icon-only CSS.
+\t\t\t\t\t\tconst styles = {
+\t\t\t\t\t\t\tdisplay: 'inline-flex',
+\t\t\t\t\t\t\t'align-items': 'center',
+\t\t\t\t\t\t\t'justify-content': 'center',
+\t\t\t\t\t\t\twidth: 'auto',
+\t\t\t\t\t\t\t'min-width': 'max-content',
+\t\t\t\t\t\t\t'max-width': 'none',
+\t\t\t\t\t\t\theight: '28px',
+\t\t\t\t\t\t\t'min-height': '28px',
+\t\t\t\t\t\t\tpadding: '0 10px',
+\t\t\t\t\t\t\tmargin: '0 4px',
+\t\t\t\t\t\t\t'vertical-align': 'middle',
+\t\t\t\t\t\t\t'font-size': '12px',
+\t\t\t\t\t\t\t'line-height': '28px',
+\t\t\t\t\t\t\t'font-weight': '500',
+\t\t\t\t\t\t\tbackground: 'rgba(37,99,235,.10)',
+\t\t\t\t\t\t\tborder: '1px solid rgba(37,99,235,.20)',
+\t\t\t\t\t\t\t'border-radius': '6px',
+\t\t\t\t\t\t\t'text-indent': '0',
+\t\t\t\t\t\t\t'white-space': 'nowrap',
+\t\t\t\t\t\t\toverflow: 'visible',
+\t\t\t\t\t\t\tvisibility: 'visible',
+\t\t\t\t\t\t\topacity: '1',
+\t\t\t\t\t\t\t'box-sizing': 'border-box',
+\t\t\t\t\t\t\t'clip-path': 'none',
+\t\t\t\t\t\t\ttransform: 'none'
+\t\t\t\t\t\t};
+\t\t\t\t\t\tfor (const key in styles)
+\t\t\t\t\t\t\tbatteryIndicator.style.setProperty(key, styles[key], 'important');
+\t\t\t\t\t}
+\t\t\t\t\t// Do not keep the low-battery color after returning above 30%.
+\t\t\t\t\tif (info.color)
+\t\t\t\t\t\tbatteryIndicator.style.setProperty('color', info.color, 'important');
+\t\t\t\t\telse
+\t\t\t\t\t\tbatteryIndicator.style.removeProperty('color');
 \t\t\t\t}"""
 body = battery.read_text()
 
