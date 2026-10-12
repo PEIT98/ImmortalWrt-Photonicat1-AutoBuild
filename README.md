@@ -97,3 +97,16 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 **兼容提醒：** 有驱动且 `lspci` 识别不代表必然支持 AP。尤其 RTL8852BE/RTL8922AE、Wi-Fi 7 设备是否能在光影猫 ARM64 上开启热点，需要以 `iw list` / `iw phy` 的 Supported interface modes 为准。QCNFA765 的特定 board-2.bin 也可能需要另外适配。Wi-Fi 7 相关功能还取决于固件、`wpad` 和内核支持。
 
 新增无线驱动及固件可能显著增大镜像体积和编译资源使用，首次刷入前请检查 flash/存储空间及救砖准备。
+
+## GitHub Actions 编译缓存
+
+缓存已从 2026-10-12 的 `photonicat-cache-v2` 工作流起启用：
+
+- **源码下载**：`immortalwrt/dl`，按 UTC 月份生成缓存键。新的月份可以从旧月份恢复；在 `make download` 成功后立即保存，后续编译失败也能复用下载结果。
+- **OpenWrt CCache**：`CONFIG_CCACHE=y`，缓存目录为 `immortalwrt/.ccache`，限制为 **1536 MiB**。每次恢复最近的同配置缓存；编译完成（包括失败时）尝试保存已产生的 C/C++ 对象。
+- **保留原有磁盘空间保护**：不缓存整个 `build_dir` 或 `staging_dir`，避免缓存空间增长导致再次出现磁盘耗尽。
+- **检查缓存命中**：打开 Actions 中的 `Restore downloaded source cache`、`Restore OpenWrt CCache`、`Report compiler cache` 和 Job Summary，查看源下载是否命中以及 CCache 命中次数。
+- **首次编译**：没有已有缓存，通常不会加速；后续编译如果上游依赖或编译器未发生大的变化才可能加速。CCache **不能跳过所有链接、打包、内核和工具链构建**，不能保证每次 40 分钟。
+- **容量**：缓存配额受 GitHub 仓库/账户设置约束，旧缓存可能被清理；如果被清理，下次将重新编译。
+
+只对原工作流增加缓存步骤；QModem stable、Aurora、ttyd、Wi-Fi 驱动、每周五自动构建以及 Releases 发布保持不变。
