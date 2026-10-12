@@ -16,6 +16,16 @@ remove_prefixes = ('luci-app-passwall_INCLUDE_',)
 force = {
     'qmodem': 'y', 'luci-app-qmodem-next': 'y',
     'sms-forwarder-next': 'y',
+    # LuCI web terminal + Aurora theme
+    'luci-app-ttyd': 'y', 'ttyd': 'y', 'luci-theme-aurora': 'y',
+    # Realtek RTL8922AE / 8852BE / 8852CE (rtw89)
+    'kmod-rtw89-8922ae': 'y', 'kmod-rtw89-8852be': 'y', 'kmod-rtw89-8852ce': 'y',
+    # MediaTek MT7925, MT7921/MT7922 and MT7916
+    'kmod-mt7925e': 'y', 'kmod-mt7921e': 'y', 'kmod-mt7915e': 'y',
+    'kmod-mt7925-firmware': 'y', 'kmod-mt7916-firmware': 'y',
+    # Qualcomm QCNCM865 (WCN7850), QCA9880/9882 (QCA988X)
+    'kmod-ath12k': 'y', 'ath12k-firmware-wcn7850': 'y',
+    'kmod-ath10k': 'y', 'ath10k-firmware-qca988x': 'y',
     'luci-app-mwan3': 'y', 'luci-i18n-mwan3-zh-cn': 'y', 'mwan3': 'y',
     'luci-app-openclash': 'y',
     'cpufreq': 'y', 'luci-app-cpufreq': 'y', 'luci-i18n-cpufreq-zh-cn': 'y',
@@ -40,6 +50,9 @@ for k in sorted(removed - set(force)):
     kept.append(f'# CONFIG_PACKAGE_{k} is not set')
 for k, v in sorted(force.items()):
     kept.append(f'CONFIG_PACKAGE_{k}=y' if v == 'y' else f'# CONFIG_PACKAGE_{k} is not set')
+# Ensure 802.11ac/ax/be support so Wi-Fi 7 PCIe drivers are not dropped by defconfig.
+kept = [line for line in kept if not re.match(r'(?:# )?CONFIG_DRIVER_11(?:AC|AX|BE)_SUPPORT(?:=| is not set)', line)]
+kept += ['CONFIG_DRIVER_11AC_SUPPORT=y', 'CONFIG_DRIVER_11AX_SUPPORT=y', 'CONFIG_DRIVER_11BE_SUPPORT=y']
 # OpenClash 依赖 Ruby，ARM64 默认启用 YJIT 会触发庞大的 Rust/host 构建。
 # 关闭可选 YJIT，不影响 Ruby 与 OpenClash 常规工作。
 kept = [line for line in kept if not re.match(r'(?:# )?CONFIG_RUBY_ENABLE_YJIT(?:=| is not set)', line)]
