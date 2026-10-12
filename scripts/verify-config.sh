@@ -3,6 +3,7 @@ set -euo pipefail
 CFG="${1:-.config}"
 need=(
   CONFIG_TARGET_rockchip_armv8_DEVICE_ariaboard_photonicat
+  CONFIG_CCACHE
   CONFIG_PACKAGE_qmodem
   CONFIG_PACKAGE_luci-app-qmodem-next
   CONFIG_PACKAGE_sms-forwarder-next
