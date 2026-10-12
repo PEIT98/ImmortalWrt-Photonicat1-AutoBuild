@@ -1,24 +1,34 @@
 /* Photonicat1 Aurora battery indicator compatibility */
-/* Aurora's generic indicator rule uses font-size:0 and a 20px masked icon.
-   Battery indicators have no matching mask: restore a visible compact label. */
+/* Align with the user's fix-battery-align.sh: 28px blue pill with centered text.
+   A battery icon/percentage is rendered by luci-mod-battstatus every 5s. */
 #indicators > span[data-indicator^="battery-"] {
   display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
   width: auto !important;
-  height: auto !important;
-  min-height: 26px;
-  min-width: 48px;
-  max-width: 170px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: rgba(127, 127, 127, 0.12);
+  min-width: max-content !important;
+  max-width: none !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  margin: 0 4px !important;
+  vertical-align: middle !important;
   font-size: 12px !important;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: 0;
-  white-space: nowrap;
+  line-height: 28px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  color: inherit;
+  background: rgba(37, 99, 235, .10) !important;
+  border: 1px solid rgba(37, 99, 235, .20) !important;
+  border-radius: 6px !important;
+  text-indent: 0 !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  clip-path: none !important;
+  transform: none !important;
   cursor: default;
 }
 #indicators > span[data-indicator^="battery-"]::before {
@@ -26,14 +36,5 @@
   content: none !important;
 }
 #indicators > span[data-indicator^="battery-"][data-style="inactive"] {
-  opacity: 0.75;
-}
-@media (max-width: 600px) {
-  #indicators > span[data-indicator^="battery-"] {
-    max-width: 105px;
-    padding: 4px 5px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 11px !important;
-  }
+  opacity: .75 !important;
 }
