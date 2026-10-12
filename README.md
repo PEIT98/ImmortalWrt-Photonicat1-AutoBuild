@@ -73,3 +73,13 @@ GitHub Actions 设定 **每周五中国/新加坡时间凌晨 02:00**（UTC 周�
 2026-10-12 检查 Actions #38185529059 的 `.config.before-defconfig`，发现 `scripts/feeds install -a` 之后原先指定的 QModem、mwan3 与电池插件选项全部消失。根因是配置顺序不正确：必须在安装 feeds 后运行 `scripts/select-packages.py`，再执行 `make defconfig`。
 
 原 `luci-app-clash` 无法在原有 ImmortalWrt 25.12 feeds 中找到，改用 [官方维护的 OpenClash](https://github.com/vernesong/OpenClash)，实际包名 `luci-app-openclash`，构建时跟随 `master` 分支。该插件与旧 `luci-app-clash` 并非同一款，请在真机核对需求。
+
+## 2026-10-12：Rust 编译中断定位及修复
+
+Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空间，紧接着 `package/feeds/packages/rust [host]` 编译失败，单线程重试随后中断。
+
+实际配置文件中 `CONFIG_RUBY_ENABLE_YJIT=y`，而 OpenClash 依赖 Ruby，ImmortalWrt/packages `lang/ruby/Makefile` 明确规定 YJIT 为 Ruby 添加 `rust/host` 编译依赖，并且 ARM64 默认开启。现在在 `scripts/select-packages.py` 明确禁用 YJIT，`verify-config.sh` 也将校验禁用状态。
+
+此外构建工作流增加对 CodeQL/无关 Docker 镜像的空间清理、下载后的磁盘检查，以及在编译失败且剩余磁盘不足 3GiB 时禁止重复全量编译。**这些修改还没有成功编译及真机验证。**
+
+当前 Github Ubuntu Runner 的 `/mnt` 不是独立分区，因此不能直接照搬西瓜皮的 `easimon/maximize-build-space` 扩容步骤；盲目在同一文件系统建立 LVM 并不能真正增加容量。
