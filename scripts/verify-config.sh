@@ -19,6 +19,12 @@ need=(
   CONFIG_PACKAGE_kmod-usb-serial-option
 )
 failed=0
+if grep -Fxq '# CONFIG_RUBY_ENABLE_YJIT is not set' "$CFG"; then
+  echo 'OK: Ruby YJIT disabled (skip heavyweight Rust/host dependency)'
+else
+  echo '::error::Ruby YJIT 仍然启用，将触发耗费空间的 Rust 编译' >&2
+  failed=1
+fi
 echo '===== 配置校验：全部必选项 ====='
 for key in "${need[@]}"; do
   if grep -Fxq "$key=y" "$CFG"; then
