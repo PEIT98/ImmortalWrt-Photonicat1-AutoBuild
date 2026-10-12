@@ -24,6 +24,10 @@ jobs:
     timeout-minutes: 360
     env:
       TZ: Asia/Shanghai
+      # photonicat-cache-v2: bounded OpenWrt compiler object cache.
+      CCACHE_DIR: ${{ github.workspace }}/immortalwrt/.ccache
+      CCACHE_MAXSIZE: 1536M
+      CCACHE_COMPILERCHECK: content
     steps:
       - name: Checkout workflow
         uses: actions/checkout@v4
@@ -70,6 +74,11 @@ jobs:
             texinfo unzip vim wget xmlto xxd zlib1g-dev zstd python3-ply python3-docutils re2c
           sudo apt-get clean
           df -h /
+
+      - name: Set download cache month
+        id: cache_epoch
+        shell: bash
+        run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
 
       - name: Prepare Photonicat1 config with QModem
         run: bash scripts/prepare.sh "$GITHUB_WORKSPACE/photonicat-reference" "$GITHUB_WORKSPACE/immortalwrt" "$GITHUB_WORKSPACE/files"
@@ -127,9 +136,47 @@ jobs:
             echo "Reference: $(git -C photonicat-reference rev-parse HEAD)"
           } > immortalwrt/files/etc/photonicat1-build-info
 
+      - name: Restore downloaded source cache
+        id: download_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: immortalwrt/dl
+          key: photonicat1-dl-v2-${{ runner.os }}-${{ steps.cache_epoch.outputs.month }}
+          restore-keys: |
+            photonicat1-dl-v2-${{ runner.os }}-
+
       - name: Download sources
         working-directory: immortalwrt
         run: make download -j4
+
+      - name: Save source downloads
+        if: steps.download_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: immortalwrt/dl
+          key: photonicat1-dl-v2-${{ runner.os }}-${{ steps.cache_epoch.outputs.month }}
+
+      - name: Restore OpenWrt CCache
+        id: compiler_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: immortalwrt/.ccache
+          key: photonicat1-ccache-v2-${{ runner.os }}-${{ hashFiles('immortalwrt/.config') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            photonicat1-ccache-v2-${{ runner.os }}-${{ hashFiles('immortalwrt/.config') }}-
+            photonicat1-ccache-v2-${{ runner.os }}-
+
+      - name: Initialize OpenWrt CCache
+        shell: bash
+        run: |
+          mkdir -p "$CCACHE_DIR"
+          ccache --max-size 1536M
+          ccache --zero-stats
+          echo "Downloaded source cache hit: ${{ steps.download_cache.outputs.cache-hit }}"
+          echo "Compiler cache hit: ${{ steps.compiler_cache.outputs.cache-hit }}"
+          ccache --show-stats
+          du -sh immortalwrt/dl "$CCACHE_DIR" 2>/dev/null || true
+          df -h immortalwrt
 
       - name: Build firmware
         working-directory: immortalwrt
@@ -150,6 +197,32 @@ jobs:
             echo '::warning::双线程编译失败且空间尚充足，尝试单线程 V=s 定位真实错误'
             make -j1 V=s
           fi
+
+      - name: Report compiler cache
+        if: always()
+        shell: bash
+        run: |
+          echo '===== CCache hit/miss report ====='
+          ccache --show-stats || true
+          du -sh immortalwrt/dl "$CCACHE_DIR" 2>/dev/null || true
+          df -h immortalwrt || true
+          {
+            echo '### ImmortalWrt compiler cache'
+            echo
+            echo '- Downloaded source cache hit: ${{ steps.download_cache.outputs.cache-hit }}'
+            echo '- Compiler cache hit: ${{ steps.compiler_cache.outputs.cache-hit }}'
+            echo
+            echo '```text'
+            ccache --show-stats || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save updated CCache
+        if: always() && steps.compiler_cache.outcome == 'success'
+        uses: actions/cache/save@v5
+        with:
+          path: immortalwrt/.ccache
+          key: photonicat1-ccache-v2-${{ runner.os }}-${{ hashFiles('immortalwrt/.config') }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Collect firmware and metadata
         shell: bash
