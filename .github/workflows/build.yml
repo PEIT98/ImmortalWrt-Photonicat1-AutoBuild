@@ -91,6 +91,10 @@ jobs:
           ./scripts/feeds install -a -f -p qmodem
           ./scripts/feeds install -a -f -p openclash
 
+      - name: Fix Aurora battery status display
+        working-directory: immortalwrt
+        run: python3 ../scripts/fix-aurora-battstatus.py .
+
       - name: Resolve and verify package selection
         working-directory: immortalwrt
         run: |
