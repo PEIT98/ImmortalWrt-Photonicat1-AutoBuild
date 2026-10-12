@@ -126,3 +126,12 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 ### Aurora 电池对齐样式（2026-10-12 增补）
 
 根据你之前验证的 `fix-battery-align.sh`，电池插件在 Aurora 下将电池标签设为高度 **28px**、`padding: 0 10px`、`margin: 0 4px`、居中显示、12px 文字、6px 圆角、蓝色半透明背景与描边。所有样式都由电池插件运行时用 `style.setProperty(..., 'important')` 应用于自身标签；仅用于隐藏其多余图标的微型 `<style>` 也由电池插件创建。**Aurora 主题仓库和主题静态文件不修改**。同时保留电量低于 30% 时变色、恢复后清色及完整充电状态悬停提示。无需在路由器上执行临时脚本。
+
+
+## MyOpenWrt tom_modem ACL（2026-10-12）
+
+将终端手动添加的 `/usr/share/rpcd/acl.d/tom_modem.json` 放入仓库 `files/usr/share/rpcd/acl.d/tom_modem.json`，作为固件根文件系统覆盖文件内置。每次固件编译时由 `scripts/prepare.sh` 复制并检查 JSON 格式，**首次启动 rpcd 自动加载，无需执行 `service rpcd restart`**。
+
+授权按原脚本保留 `/usr/bin/tom_modem`、`/bin/cat`、`/sbin/ifup`、`/sbin/ifdown`、`/usr/bin/lsusb`、`/etc/init.d/qmodem_network`、USB `speed` 节点读取和 `ubus file.exec`。这些是具有执行网络管理命令能力的 ACL 权限，请仅授予受信任的 LuCI 用户/会话；这项修改**不提供也不安装** `tom_modem` 或 MyOpenWrt APP 可执行程序，必须确保它们已由其他包提供。
+
+**注意**：本次只添加文件和准备阶段校验，已在进行的 GitHub Actions 编译仍使用启动时的旧提交；下次构建才会包含该文件。
