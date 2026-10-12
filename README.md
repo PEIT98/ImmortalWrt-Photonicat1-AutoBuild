@@ -83,3 +83,17 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 此外构建工作流增加对 CodeQL/无关 Docker 镜像的空间清理、下载后的磁盘检查，以及在编译失败且剩余磁盘不足 3GiB 时禁止重复全量编译。**这些修改还没有成功编译及真机验证。**
 
 当前 Github Ubuntu Runner 的 `/mnt` 不是独立分区，因此不能直接照搬西瓜皮的 `easimon/maximize-build-space` 扩容步骤；盲目在同一文件系统建立 LVM 并不能真正增加容量。
+
+## 2026-10-12：网页终端、Aurora 主题与 PCIe Wi-Fi 扩展
+
+- 网页终端：`luci-app-ttyd` + `ttyd`；通过 LuCI 登录访问，需要保管好管理密码。
+- [Aurora 官方主题](https://github.com/eamonxg/luci-theme-aurora)：从 `master` 编译 `luci-theme-aurora`；源码自带首启默认主题脚本，保持 Bootstrap 主题作为回退选择。
+- Realtek：RTL8922AE、RTL8852BE、RTL8852CE，驱动为 `kmod-rtw89-8922ae`、`kmod-rtw89-8852be`、`kmod-rtw89-8852ce`，对应 firmware 由包依赖安装。
+- MediaTek：MT7925 → `kmod-mt7925e`；MT7921/MT7922 → `kmod-mt7921e`；MT7916 → `kmod-mt7915e` + `kmod-mt7916-firmware`。MT7925/MT7922 firmware 随对应驱动依赖安装。
+- Qualcomm：QCNFA765 → `kmod-ath11k-pci` + `ath11k-firmware-wcn6855`（已有）；QCNCM865/WCN7850 → `kmod-ath12k` + `ath12k-firmware-wcn7850`；mini PCIe QCA9880/9882 → `kmod-ath10k` + `ath10k-firmware-qca988x`。
+- 型号后面的 x3/x4 表示网卡数量，驱动只需安装一次，不需要按网卡数量重复选择。
+- 启用 `DRIVER_11AC_SUPPORT`、`DRIVER_11AX_SUPPORT`、`DRIVER_11BE_SUPPORT`，并参考西瓜皮的脚本调整 `/lib/wifi/mac80211.uc` 的频段默认排序为 2.4G→5G→6G→60G。该脚本仅影响首次无线配置生成时的排序，**不会开启热点，也不会解锁监管限制**。
+
+**兼容提醒：** 有驱动且 `lspci` 识别不代表必然支持 AP。尤其 RTL8852BE/RTL8922AE、Wi-Fi 7 设备是否能在光影猫 ARM64 上开启热点，需要以 `iw list` / `iw phy` 的 Supported interface modes 为准。QCNFA765 的特定 board-2.bin 也可能需要另外适配。Wi-Fi 7 相关功能还取决于固件、`wpad` 和内核支持。
+
+新增无线驱动及固件可能显著增大镜像体积和编译资源使用，首次刷入前请检查 flash/存储空间及救砖准备。
