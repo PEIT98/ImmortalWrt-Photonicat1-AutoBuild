@@ -40,4 +40,8 @@ for k in sorted(removed - set(force)):
     kept.append(f'# CONFIG_PACKAGE_{k} is not set')
 for k, v in sorted(force.items()):
     kept.append(f'CONFIG_PACKAGE_{k}=y' if v == 'y' else f'# CONFIG_PACKAGE_{k} is not set')
+# OpenClash 依赖 Ruby，ARM64 默认启用 YJIT 会触发庞大的 Rust/host 构建。
+# 关闭可选 YJIT，不影响 Ruby 与 OpenClash 常规工作。
+kept = [line for line in kept if not re.match(r'(?:# )?CONFIG_RUBY_ENABLE_YJIT(?:=| is not set)', line)]
+kept.append('# CONFIG_RUBY_ENABLE_YJIT is not set')
 p.write_text('\n'.join(kept) + '\n')
