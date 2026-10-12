@@ -35,6 +35,20 @@ new = """\t\t\t\t// Keep ui.showIndicator()'s text node intact for future 5s upd
 \t\t\t\tbatteryIndicator.title = info.status;
 \t\t\t\t}"""
 body = battery.read_text()
+
+# On Aurora keep the visible header compact, while the title still contains
+# the complete Charging/Not Charging state. Bootstrap keeps upstream wording.
+call_before = '\t\t\t\tui.showIndicator(info.name, info.status, null, info.state);'
+call_after = """\t\t\t\tconst auroraTheme = document.querySelector('link[href*="/luci-static/aurora/main.css"]') != null;
+\t\t\t\tconst batteryLabel = auroraTheme && info.valid
+\t\t\t\t\t? (info.charging ? '⚡ ' : '🔋 ') + info.percentage + '%'
+\t\t\t\t\t: info.status;
+\t\t\t\tui.showIndicator(info.name, batteryLabel, null, info.state);"""
+if call_before in body:
+    body = body.replace(call_before, call_after, 1)
+elif call_after not in body:
+    raise SystemExit("::error::Upstream battery indicator call changed; check manually")
+
 if old in body:
     battery.write_text(body.replace(old, new, 1))
     print("Battery JS: fixed invalid indicator selector and low-battery update")
