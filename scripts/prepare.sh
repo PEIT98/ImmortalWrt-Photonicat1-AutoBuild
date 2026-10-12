@@ -28,6 +28,17 @@ fi
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
+
+# Aurora 官方源码根目录直接包含 Makefile，直接作为 OpenWrt 本地软件包编译。
+# 该软件包含自身的 UCI 首启默认主题设置，无须添加重复脚本。
+THEME_DIR="$SRC/package/luci-theme-aurora"
+if [ ! -f "$THEME_DIR/Makefile" ]; then
+  git clone --depth=1 --branch master https://github.com/eamonxg/luci-theme-aurora.git "$THEME_DIR"
+fi
+[ -f "$THEME_DIR/Makefile" ] || { echo 'Aurora Makefile 不存在' >&2; exit 1; }
+
+# 参考西瓜皮的 Wi-Fi band_order 兼容调整：保留固件上游源码，最小替换频段顺序。
+bash "$(dirname "$0")/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫硬件配置、QModem stable 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'
 echo '首次使用：QModem 模组别名设置 wwan_5g，Wi-Fi STA 绑定 wwan'
