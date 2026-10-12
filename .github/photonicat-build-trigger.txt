@@ -1,3 +1,5 @@
 Photonicat1 one-off build trigger
-2026-10-12: Re-run after enabling CONFIG_DEVEL=y for native CCache (previous build #38262730974 failed at defconfig).
-This file is the explicit manual push-trigger marker; ordinary code pushes do not launch a build.
+2026-10-13: Compile latest main after MyOpenWrt tom_modem ACL integration.
+Confirm /usr/share/rpcd/acl.d/tom_modem.json included in firmware overlay.
+Retain QModem, official Aurora theme, battery-only plugin fix and CCache.
+Only changes to this marker trigger one-off push builds; ordinary pushes do not launch builds.
