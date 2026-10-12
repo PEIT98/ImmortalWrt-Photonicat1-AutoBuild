@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Patch upstream luci-mod-battstatus and the bundled Aurora theme for Photonicat1.
+"""Patch luci-mod-battstatus only; NEVER alter Aurora theme source files.
 
-Only browser presentation is changed; /usr/libexec/rpcd/luci.battstatus stays upstream.
-Run after 'feeds update/install' and before 'make'. Fail if upstream changes incompatibly.
+The plugin sets its own styles at runtime when Aurora is active.
+Battery RPC / pcat-mgr integration remains upstream and unchanged.
 """
 from pathlib import Path
 import sys
@@ -12,12 +12,8 @@ if len(sys.argv) != 2:
 
 root = Path(sys.argv[1]).resolve()
 battery = root / "feeds/luci/modules/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js"
-aurora_css = root / "package/luci-theme-aurora/htdocs/luci-static/aurora/main.css"
-patch_css = Path(__file__).with_name("aurora-battstatus.css")
-
-for p in (battery, aurora_css, patch_css):
-    if not p.is_file():
-        raise SystemExit(f"::error::Battery compatibility patch: required file not found: {p}")
+if not battery.is_file():
+    raise SystemExit(f"::error::Battery plugin not found: {battery}")
 
 # Original plugin incorrectly quotes JS template strings with single quotes.
 # When <= 30%, querySelector() returns null, its innerHTML assignment throws,
@@ -26,14 +22,26 @@ old = """\t\t\t\tif (typeof info.color != 'undefined') {
 \t\t\t\t\tinfo.element = document.querySelector('[data-indicator="${info.name}"]');
 \t\t\t\t\tinfo.element.innerHTML = '<span style="color:${info.color}">${info.status}</span>';
 \t\t\t\t}"""
-new = """\t\t\t\t// Keep ui.showIndicator()'s text node intact for future 5s updates.
-\t\t\t\t// Avoid HTML injection, selector interpolation bugs and stale colors.
-\t\t\t\tconst batteryIndicator = document.querySelector(
-\t\t\t\t\t'#indicators > span[data-indicator="' + info.name + '"]');
-\t\t\t\tif (batteryIndicator) {
-\t\t\t\t\tbatteryIndicator.title = info.status;
+new = """\t\t\t\t// Photonicat1 battery-only patch; no Aurora file changes.
+\t\t\t\t// Keep ui.showIndicator()'s text node intact for 5-second updates.
+\t\t\t\tlet el = null;
+\t\t\t\tfor (const node of document.querySelectorAll('#indicators > span[data-indicator]')) {
+\t\t\t\t\tif (node.getAttribute('data-indicator') == info.name) {
+\t\t\t\t\t\tel = node;
+\t\t\t\t\t\tbreak;
+\t\t\t\t\t}
+\t\t\t\t}
+\t\t\t\tif (el) {
+\t\t\t\t\tel.title = info.status;
 \t\t\t\t\tif (auroraTheme) {
-\t\t\t\t\t\t// Align with the local 28px battery-pill style; override icon-only CSS.
+\t\t\t\t\t\t// The battery plugin hides Aurora's generic empty icon at runtime.
+\t\t\t\t\t\t// Nothing in the Aurora theme package is edited.
+\t\t\t\t\t\tif (!document.getElementById('photonicat-battery-only-style')) {
+\t\t\t\t\t\t\tconst sheet = document.createElement('style');
+\t\t\t\t\t\t\tsheet.id = 'photonicat-battery-only-style';
+\t\t\t\t\t\t\tsheet.textContent = '#indicators span[data-indicator^="battery-"]::before { display:none !important; content:none !important; }';
+\t\t\t\t\t\t\tdocument.head.appendChild(sheet);
+\t\t\t\t\t\t}
 \t\t\t\t\t\tconst styles = {
 \t\t\t\t\t\t\tdisplay: 'inline-flex',
 \t\t\t\t\t\t\t'align-items': 'center',
@@ -62,13 +70,18 @@ new = """\t\t\t\t// Keep ui.showIndicator()'s text node intact for future 5s upd
 \t\t\t\t\t\t\ttransform: 'none'
 \t\t\t\t\t\t};
 \t\t\t\t\t\tfor (const key in styles)
-\t\t\t\t\t\t\tbatteryIndicator.style.setProperty(key, styles[key], 'important');
+\t\t\t\t\t\t\tel.style.setProperty(key, styles[key], 'important');
+\t\t\t\t\t\tif (info.color)
+\t\t\t\t\t\t\tel.style.setProperty('color', info.color, 'important');
+\t\t\t\t\t\telse
+\t\t\t\t\t\t\tel.style.removeProperty('color');
+\t\t\t\t\t} else {
+\t\t\t\t\t\t// Preserve native appearance under Bootstrap/other themes.
+\t\t\t\t\t\tif (info.color)
+\t\t\t\t\t\t\tel.style.setProperty('color', info.color);
+\t\t\t\t\t\telse
+\t\t\t\t\t\t\tel.style.removeProperty('color');
 \t\t\t\t\t}
-\t\t\t\t\t// Do not keep the low-battery color after returning above 30%.
-\t\t\t\t\tif (info.color)
-\t\t\t\t\t\tbatteryIndicator.style.setProperty('color', info.color, 'important');
-\t\t\t\t\telse
-\t\t\t\t\t\tbatteryIndicator.style.removeProperty('color');
 \t\t\t\t}"""
 body = battery.read_text()
 
@@ -87,21 +100,9 @@ elif call_after not in body:
 
 if old in body:
     battery.write_text(body.replace(old, new, 1))
-    print("Battery JS: fixed invalid indicator selector and low-battery update")
+    print("Battery plugin: fixed low-battery indicator and inserted theme-safe presentation")
 elif new in body:
-    print("Battery JS: already patched")
+    print("Battery plugin: already patched")
 else:
     raise SystemExit("::error::Upstream battstatus.js changed; manual review required before overwriting")
 
-# The Aurora shell gives every #indicators span font-size: 0 and icon size 20px.
-# Battery indicators do not have a matching icon mask, so their charge text vanishes.
-css = aurora_css.read_text()
-marker = "/* Photonicat1 Aurora battery indicator compatibility */"
-extra = patch_css.read_text()
-if marker not in extra:
-    raise SystemExit("::error::Battery CSS patch marker missing")
-if marker not in css:
-    aurora_css.write_text(css + "\n" + extra.strip() + "\n")
-    print("Aurora CSS: restored battery percentage visibility and disabled empty icon")
-else:
-    print("Aurora CSS: already patched")
