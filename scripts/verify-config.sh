@@ -9,6 +9,21 @@ need=(
   CONFIG_PACKAGE_luci-app-mwan3
   CONFIG_PACKAGE_mwan3
   CONFIG_PACKAGE_luci-app-openclash
+  CONFIG_PACKAGE_luci-app-ttyd
+  CONFIG_PACKAGE_ttyd
+  CONFIG_PACKAGE_luci-theme-aurora
+  CONFIG_PACKAGE_kmod-rtw89-8922ae
+  CONFIG_PACKAGE_kmod-rtw89-8852be
+  CONFIG_PACKAGE_kmod-rtw89-8852ce
+  CONFIG_PACKAGE_kmod-mt7925e
+  CONFIG_PACKAGE_kmod-mt7921e
+  CONFIG_PACKAGE_kmod-mt7915e
+  CONFIG_PACKAGE_kmod-mt7925-firmware
+  CONFIG_PACKAGE_kmod-mt7916-firmware
+  CONFIG_PACKAGE_kmod-ath12k
+  CONFIG_PACKAGE_ath12k-firmware-wcn7850
+  CONFIG_PACKAGE_kmod-ath10k
+  CONFIG_PACKAGE_ath10k-firmware-qca988x
   CONFIG_PACKAGE_luci-app-cpufreq
   CONFIG_PACKAGE_cpufreq
   CONFIG_PACKAGE_luci-mod-battstatus
@@ -19,6 +34,14 @@ need=(
   CONFIG_PACKAGE_kmod-usb-serial-option
 )
 failed=0
+for f in CONFIG_DRIVER_11AC_SUPPORT CONFIG_DRIVER_11AX_SUPPORT CONFIG_DRIVER_11BE_SUPPORT; do
+  if grep -Fxq "$f=y" "$CFG"; then
+    echo "OK: $f=y"
+  else
+    echo "::error::缺少 Wi-Fi 5/6/7 驱动功能开关 $f" >&2
+    failed=1
+  fi
+done
 if grep -Fxq '# CONFIG_RUBY_ENABLE_YJIT is not set' "$CFG"; then
   echo 'OK: Ruby YJIT disabled (skip heavyweight Rust/host dependency)'
 else
@@ -59,4 +82,4 @@ if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代目标、QModem Next 短信、mwan3、Clash、cpufreq、电池状态及驱动检查通过。'
+echo '光影猫一代目标、QModem、OpenClash、Aurora、网页终端及 RTL/MTK/QCA Wi-Fi 驱动选择检查通过。'
