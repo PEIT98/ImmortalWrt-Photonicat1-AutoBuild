@@ -29,6 +29,13 @@ fi
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
 
+# MyOpenWrt tom_modem ACL is shipped directly in the firmware rootfs overlay.
+# rpcd reads /usr/share/rpcd/acl.d/*.json on startup; no first-boot restart needed.
+TOM_ACL="$SRC/files/usr/share/rpcd/acl.d/tom_modem.json"
+test -f "$TOM_ACL" || { echo "::error::缺少 MyOpenWrt tom_modem ACL 文件" >&2; exit 1; }
+python3 -m json.tool "$TOM_ACL" >/dev/null
+echo "MyOpenWrt ACL 已内置并通过 JSON 校验：/usr/share/rpcd/acl.d/tom_modem.json"
+
 # Aurora 官方源码根目录直接包含 Makefile，直接作为 OpenWrt 本地软件包编译。
 # 该软件包含自身的 UCI 首启默认主题设置，无须添加重复脚本。
 THEME_DIR="$SRC/package/luci-theme-aurora"
