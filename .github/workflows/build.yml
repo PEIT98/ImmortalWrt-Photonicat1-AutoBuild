@@ -1,6 +1,11 @@
 name: Photonicat1 ImmortalWrt QModem Build
 
 on:
+  # Only a deliberate change to the build trigger file starts an extra push build.
+  push:
+    branches: [main]
+    paths:
+      - '.github/photonicat-build-trigger.txt'
   workflow_dispatch:
     inputs:
       publish:
@@ -279,7 +284,7 @@ jobs:
 
   release:
     needs: build
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+    if: github.event_name == 'schedule' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
     runs-on: ubuntu-24.04
     permissions:
       contents: write
