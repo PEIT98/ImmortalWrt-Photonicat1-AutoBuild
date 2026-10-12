@@ -117,7 +117,7 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 
 原 Aurora 顶部状态栏 `#indicators > span[data-indicator]` 设为 20px 图标及 `font-size:0`，而 `luci-mod-battstatus` 没有专用图标，因此电量文字不可见。原插件的 JS 还把 `${info.name}` 和 `${info.color}` 放在普通单引号字符串中，低于 30% 时可能触发错误。
 
-**修复方法：** 构建中的 `Fix Aurora battery status display` 步骤运行 `scripts/fix-aurora-battstatus.py`，在本次编译的 LuCI 源码中修正电池 DOM 访问、更新文字颜色/悬浮标题，并把 `scripts/aurora-battstatus.css` 附加到 Aurora 自带的 `main.css`。只针对 `battery-*` 指示器恢复文字显示，不影响其他顶部状态图标，也不覆盖电池驱动。
+**修复方法（更新）：** 工作流的 `Fix battery plugin indicator (Aurora theme unchanged)` 步骤只修改 `feeds/luci/modules/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js`。在电池插件 JS 中修复 DOM 访问、显示 28px 蓝色电量标签，并由该插件运行时针对自身 `battery-*` 元素插入一条隐藏多余 `::before` 图标的样式规则。**完全不修改 Aurora 主题的源码、`main.css`、配置文件或编译后的主题包**，主题每次都保持官方上游原样。原来的 `scripts/aurora-battstatus.css` 已删除。
 
 **验证：** 刷入新编译固件后，切换到 Aurora 主题，顶部状态栏应能直接显示充电状态和电量百分比；20% 以下为红色、21～30% 为黄色，31% 以上恢复普通文字颜色。如显示 `Need pcat-mgr`，属于底层电池节点缺失，应检查 `pcat-mgr`；如果旧主题正常但 Aurora 不显示，检查浏览器缓存与脚本加载报错。
 
@@ -125,4 +125,4 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 
 ### Aurora 电池对齐样式（2026-10-12 增补）
 
-根据你之前验证的 `fix-battery-align.sh`，Aurora 电池标签改成高度 **28px**、`padding: 0 10px`、`margin: 0 4px`、居中显示、12px 文字、6px 圆角、蓝色半透明背景与描边。补丁在 JS 中使用 `style.setProperty(..., 'important')` 强制覆盖主题通用指示器样式，CSS 同时提供显示规则，并保留电量低于 30% 时变色、恢复后清色、充电状态悬停提示。自动编译时注入，无需路由器执行脚本。
+根据你之前验证的 `fix-battery-align.sh`，电池插件在 Aurora 下将电池标签设为高度 **28px**、`padding: 0 10px`、`margin: 0 4px`、居中显示、12px 文字、6px 圆角、蓝色半透明背景与描边。所有样式都由电池插件运行时用 `style.setProperty(..., 'important')` 应用于自身标签；仅用于隐藏其多余图标的微型 `<style>` 也由电池插件创建。**Aurora 主题仓库和主题静态文件不修改**。同时保留电量低于 30% 时变色、恢复后清色及完整充电状态悬停提示。无需在路由器上执行临时脚本。
