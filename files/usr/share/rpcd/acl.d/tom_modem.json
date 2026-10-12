@@ -1,0 +1,36 @@
+{
+  "tom-modem-access": {
+    "description": "Grant access to execute tom_modem",
+    "read": {},
+    "write": {
+      "file": {
+        "/usr/bin/tom_modem": [
+          "exec"
+        ],
+        "/bin/cat": [
+          "exec"
+        ],
+        "/sbin/ifup": [
+          "exec"
+        ],
+        "/sbin/ifdown": [
+          "exec"
+        ],
+        "/usr/bin/lsusb": [
+          "exec"
+        ],
+        "/etc/init.d/qmodem_network": [
+          "exec"
+        ],
+        "/sys/bus/usb/devices/*/speed": [
+          "read"
+        ]
+      },
+      "ubus": {
+        "file": [
+          "exec"
+        ]
+      }
+    }
+  }
+}
