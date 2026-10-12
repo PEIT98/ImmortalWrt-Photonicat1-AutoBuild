@@ -110,3 +110,15 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - **容量**：缓存配额受 GitHub 仓库/账户设置约束，旧缓存可能被清理；如果被清理，下次将重新编译。
 
 只对原工作流增加缓存步骤；QModem stable、Aurora、ttyd、Wi-Fi 驱动、每周五自动构建以及 Releases 发布保持不变。
+
+## Aurora 主题电池状态显示兼容修复（2026-10-12）
+
+光影猫一代的 `luci-mod-battstatus` 使用 `luci.battstatus` RPC 读取 `/sys/class/power_supply/pcat-battery` 和 `pcat-charger`，不修改该数据接口。
+
+原 Aurora 顶部状态栏 `#indicators > span[data-indicator]` 设为 20px 图标及 `font-size:0`，而 `luci-mod-battstatus` 没有专用图标，因此电量文字不可见。原插件的 JS 还把 `${info.name}` 和 `${info.color}` 放在普通单引号字符串中，低于 30% 时可能触发错误。
+
+**修复方法：** 构建中的 `Fix Aurora battery status display` 步骤运行 `scripts/fix-aurora-battstatus.py`，在本次编译的 LuCI 源码中修正电池 DOM 访问、更新文字颜色/悬浮标题，并把 `scripts/aurora-battstatus.css` 附加到 Aurora 自带的 `main.css`。只针对 `battery-*` 指示器恢复文字显示，不影响其他顶部状态图标，也不覆盖电池驱动。
+
+**验证：** 刷入新编译固件后，切换到 Aurora 主题，顶部状态栏应能直接显示充电状态和电量百分比；20% 以下为红色、21～30% 为黄色，31% 以上恢复普通文字颜色。如显示 `Need pcat-mgr`，属于底层电池节点缺失，应检查 `pcat-mgr`；如果旧主题正常但 Aurora 不显示，检查浏览器缓存与脚本加载报错。
+
+**状态：** 代码已加入编译工作流，但仍需要最新固件构建与真机测试验证。之前已经发布的 Release 不会自动更新。
