@@ -1,0 +1,70 @@
+#!/bin/sh
+# Photonicat1 USB 6-1: QModem 的 UCI 槽位默认别名，即真正的拨号接口名。
+# 不预先创建 network.wwan_5g，让 QModem 使用实际模组协议创建它。
+# 仅设置空别名；保留用户自定义的其他模组别名。
+. /lib/functions.sh
+
+slot_section=""
+find_photonicat_slot() {
+    local slot
+    config_get slot "$1" slot
+    [ "$slot" = "6-1" ] && slot_section="$1"
+}
+config_load qmodem
+config_foreach find_photonicat_slot modem-slot
+
+changed=0
+if [ -z "$slot_section" ]; then
+    slot_section="photonicat1_usb5g"
+    if uci -q get "qmodem.${slot_section}" >/dev/null; then
+        logger -t photonicat-qmodem "Slot section name occupied, skipping"
+        exit 0
+    fi
+    uci -q set "qmodem.${slot_section}=modem-slot" || exit 1
+    uci -q set "qmodem.${slot_section}.type=usb" || exit 1
+    uci -q set "qmodem.${slot_section}.slot=6-1" || exit 1
+    uci -q set "qmodem.${slot_section}.default_metric=20" || exit 1
+    changed=1
+fi
+
+slot_alias="$(uci -q get "qmodem.${slot_section}.alias" 2>/dev/null)"
+case "$slot_alias" in
+    ""|"-")
+        uci -q set "qmodem.${slot_section}.alias=wwan_5g" || exit 1
+        changed=1
+        ;;
+esac
+
+# 首次安装时 QModem 扫描器读取上面的槽位别名；
+# 保留配置升级时，兼容之前已扫描生成的 6_1 模组。
+if [ "$(uci -q get qmodem.6_1 2>/dev/null)" = "modem-device" ]; then
+    modem_path="$(uci -q get qmodem.6_1.path 2>/dev/null)"
+    case "$modem_path" in
+        */6-1|*/6-1/)
+            old_alias="$(uci -q get qmodem.6_1.alias 2>/dev/null)"
+            case "$old_alias" in
+                ""|"-"|"6_1")
+                    # 避免旧 QModem 接口和新接口同时接管相同模组。
+                    uci -q set qmodem.6_1.alias=wwan_5g || exit 1
+                    changed=1
+                    network_changed=0
+                    if [ "$(uci -q get network.6_1.modem_config 2>/dev/null)" = "6_1" ]; then
+                        uci -q delete network.6_1 || exit 1
+                        network_changed=1
+                    fi
+                    if [ "$(uci -q get network.6_1v6.modem_config 2>/dev/null)" = "6_1" ]; then
+                        uci -q delete network.6_1v6 || exit 1
+                        network_changed=1
+                    fi
+                    [ "$network_changed" -eq 0 ] || uci -q commit network || exit 1
+                    ;;
+            esac
+            ;;
+    esac
+fi
+
+if [ "$changed" -eq 1 ]; then
+    uci -q commit qmodem || exit 1
+    logger -t photonicat-qmodem "QModem USB 6-1 default alias: wwan_5g"
+fi
+exit 0
