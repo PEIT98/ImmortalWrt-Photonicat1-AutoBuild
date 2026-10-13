@@ -15,6 +15,7 @@
 |---|---|
 | QModem / QModem Next（含短信） | 保留 |
 | mwan3 多 WAN 路由及 LuCI | 保留 |
+| 状态 → MultiWAN 管理器入口 | 移除（网络 → MultiWAN 配置菜单及后台 mwan3 保留） |
 | luci-app-openclash | 保留 |
 | luci-app-cpufreq | 保留 |
 | luci-mod-battstatus | 保留 |
@@ -184,3 +185,10 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 4. **不改编译启动方式**：不修改专用 push 触发文件 `.github/photonicat-build-trigger.txt`，不手动运行 Actions，不取消或重启现有工作流；原每周五凌晨 02:00 定时构建保持不变。此前新增的 DiskMan、USB/PCIe/网络诊断、定时重启、UPnP 和中文翻译选项也全部保留。
 
 **注意**：这些是基于真实失败日志与 Makefile 的修复提交，尚无新一轮 `make defconfig` 或完整固件编译的成功结果，不能视为已经真机验证。
+
+## LuCI 状态菜单精简
+
+- 移除 **状态 → MultiWAN 管理器** 的概览、状态、网络诊断及故障排查四个子页面；这是无必要的额外状态入口。
+- **网络 → MultiWAN 管理器** 的接口、成员、策略及规则配置入口全部保留；`mwan3` 服务、多 WAN 主备策略、QModem 及系统网络设置不做任何改动。
+- `scripts/hide-mwan3-status-menu.py` 在官方 LuCI feeds 安装完毕后，精准修改 `luci-app-mwan3` 源码中的菜单 JSON。固件内打包的菜单即不含状态入口，不需要额外开机服务。
+- 此项仅影响**后续编译生成的固件**；已刷入的旧固件不会自动改变。
