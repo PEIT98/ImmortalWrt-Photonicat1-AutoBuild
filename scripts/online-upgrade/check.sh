@@ -196,7 +196,14 @@ case "$MODE" in
         /sbin/sysupgrade -b "$BAK" || die '无法生成配置备份'
         [ -s "$BAK" ] || die '配置备份为空'
         if awk '$2=="/boot" && $3!="tmpfs" && $3!="overlay" {ok=1} END{exit !ok}' /proc/mounts; then
-            cp "$BAK" /boot/photonicat-upgrade-backup.tar.gz && echo '备份已存储到持久 /boot 分区' || echo '提示：boot 分区备份失败，请在刷机前从 LuCI 导出备份'
+            BAK_KIB="$(( ($(wc -c < "$BAK" | tr -d ' ') + 1023) / 1024 ))"
+            BOOT_KIB="$(df -Pk /boot | awk 'NR==2 {print $4}')"
+            case "$BOOT_KIB" in ''|*[!0-9]*) BOOT_KIB=0;; esac
+            if [ "$BOOT_KIB" -gt "$(( BAK_KIB + 2048 ))" ]; then
+                cp "$BAK" /boot/photonicat-upgrade-backup.tar.gz && echo '配置备份已额外写入 /boot' || echo '警告：boot 分区备份失败'
+            else
+                echo '警告：boot 分区空间不足，跳过额外备份；不要挤占启动文件空间'
+            fi
         else
             echo '提示：/boot 未挂载为持久分区，临时备份会随重启消失；请事先从 LuCI 导出到电脑'
         fi
