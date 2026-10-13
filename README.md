@@ -211,6 +211,8 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - **编译集成**：相关文件已经通过 scripts/prepare-online-upgrade.sh 写入 package/luci-app-online-upgrade；选包和配置校验保持开启，APK 发布版本更新至 r4。GitHub Actions 仅支持手动 Run workflow；此处源码提交不会自动启动编译。
 - **现有设备**：已经刷入的固件不会因为修改 GitHub 仓库自动更新 LuCI 插件；需要后续刷入新编译的固件，或通过 SSH 单独安装对应新版脚本和 LuCI 前端文件。需要真机检查 GitHub API 连通性、版本匹配及下载流程后再使用自动刷机。
 
+- **已刷机设备的独立修复**：提供可选的 `scripts/online-upgrade/install-live.sh`，从本仓库 HTTPS 下载新版后台/前端/分区校验脚本，下载全部成功并通过 `sh -n` 后才备份并替换路由器现有插件文件。不会刷写固件、改动 UCI 配置或启动 GitHub Actions；浏览器需 Ctrl+F5 刷新。执行前请确认正在使用本仓库自编译版，并保留 SSH 连接；下载失败时不会修改当前系统。
+
 ## 光影猫专用在线固件升级（完整功能 + 严格校验）
 
 上游开源项目：[gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)，GPL-2.0-only，固定源码提交 `6f587f19d7f884ca89e4bfa95bbb9a002a521477`。此项目保留上游许可证，同时提供专属光影猫一代的后端、前端及额外分区保护脚本；不是直接复制无校验的一键升级逻辑。
