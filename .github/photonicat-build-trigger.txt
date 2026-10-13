@@ -4,3 +4,5 @@ Use official ImmortalWrt openwrt-25.12, QModem stable, OpenClash, official Auror
 Keep Bandix Plus traffic collection disabled by default.
 Do not enable email monitoring.
 Only explicit changes to this marker trigger one-off push builds; ordinary pushes do not launch builds.
+
+2026-10-13 12:35 Asia/Singapore: User-requested one-off verification build of latest main, including iStore/Bandix registration fixes and newly selected DiskMan, network/hardware diagnostics, USB ACM, autoreboot and UPnP. Preserve existing QModem/Aurora/Docker. Do not cancel existing builds.
