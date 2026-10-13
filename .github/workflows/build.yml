@@ -98,6 +98,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/prepare-online-upgrade.sh
           sh -n scripts/online-upgrade/check.sh
+          sh -n scripts/online-upgrade/disk-layout.sh
           node --check scripts/online-upgrade/view.js
           python3 -m json.tool scripts/online-upgrade/menu.json >/dev/null
           python3 -m json.tool scripts/online-upgrade/acl.json >/dev/null
