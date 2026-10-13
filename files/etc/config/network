@@ -31,4 +31,4 @@ config interface 'wwan'
 	option metric '10'
 	option peerdns '1'
 
-# QModem 创建 network.wwan_5g（模组 alias 设置为 wwan_5g）
+# QModem 根据模块/插槽动态创建逻辑接口，例如 6_1、6_2；mwan3 自动识别 modem_config。
