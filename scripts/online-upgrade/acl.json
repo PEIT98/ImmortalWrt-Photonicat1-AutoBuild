@@ -1,0 +1,15 @@
+{
+  "luci-app-online-upgrade": {
+    "description": "Allow read-only Photonicat1 GitHub release check",
+    "read": {
+      "cgi-io": [
+        "exec"
+      ],
+      "file": {
+        "/usr/bin/online-upgrade.sh": [
+          "exec"
+        ]
+      }
+    }
+  }
+}
