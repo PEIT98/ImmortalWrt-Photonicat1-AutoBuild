@@ -1,0 +1,77 @@
+#!/bin/sh
+# Read-only RPC metadata for the Photonicat1 LuCI status dashboard.
+# No change to disk partitions, Docker config, network or boot services.
+. /usr/share/libubox/jshn.sh
+
+case "$1" in
+  list)
+    echo '{"get_info":{}}'
+    exit 0
+  ;;
+  call)
+    [ "$2" = "get_info" ] || exit 1
+  ;;
+  *)
+    exit 1
+  ;;
+esac
+
+json_init
+json_add_object "build"
+json_add_string "device" "Ariaboard Photonicat1 (RK3568)"
+if [ -f /etc/photonicat1-build-info ]; then
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      'Build time: '*) json_add_string "time" "${line#Build time: }" ;;
+      'Builder commit: '*) json_add_string "builder_sha" "${line#Builder commit: }" ;;
+      'ImmortalWrt: '*) json_add_string "immortalwrt_sha" "${line#ImmortalWrt: }" ;;
+      'QModem: '*) json_add_string "qmodem_sha" "${line#QModem: }" ;;
+      'Aurora theme: '*) json_add_string "aurora_sha" "${line#Aurora theme: }" ;;
+      'Reference: '*) json_add_string "reference_sha" "${line#Reference: }" ;;
+    esac
+  done < /etc/photonicat1-build-info
+fi
+json_add_string "kernel" "$(uname -r)"
+json_close_object
+
+json_add_object "docker"
+if [ -x /usr/bin/dockerd ]; then
+  json_add_boolean "installed" 1
+else
+  json_add_boolean "installed" 0
+fi
+data_root="$(uci -q get dockerd.globals.data_root 2>/dev/null)"
+[ -n "$data_root" ] || data_root="/opt/docker/"
+json_add_string "data_root" "$data_root"
+
+# Only match data-root against REAL mounted filesystems, never path shape alone.
+external="0"
+json_add_array "mounted_storage"
+while read -r device mountpoint fstype options rest; do
+  case "$mountpoint" in
+    /mnt/*|/media/*|/run/media/*)
+      case "$device" in
+        /dev/*)
+          json_add_string "" "$device ($fstype) → $mountpoint"
+          case "${data_root%/}/" in
+            "$mountpoint/"*) external="1" ;;
+          esac
+        ;;
+      esac
+    ;;
+  esac
+done < /proc/mounts
+json_close_array
+if [ "$external" = "1" ]; then
+  json_add_boolean "data_on_mounted_storage" 1
+else
+  json_add_boolean "data_on_mounted_storage" 0
+fi
+nearest="$data_root"
+while [ ! -d "$nearest" ] && [ "$nearest" != "/" ]; do
+  nearest="$(dirname "$nearest")"
+done
+free="$(df -hP "$nearest" 2>/dev/null | awk 'NR == 2 {print $4}')"
+[ -n "$free" ] && json_add_string "available" "$free"
+json_close_object
+json_dump
