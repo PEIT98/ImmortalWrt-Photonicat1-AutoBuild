@@ -160,3 +160,15 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 **TD-TECH MT5700M-CN USB 串口补丁**：已按要求采用[西瓜皮原版 `999-add-TD-TECH-option-id.patch`](999-add-TD-TECH-option-id.patch)，编译准备时直接复制到 Rockchip 内核 `patches-6.12`，不修改它的厂商 ID 和接口协议匹配行为。此补丁已纳入**下一次编译**，能否在光影猫设备上正常识别仍需编译及真机验证。其他 FM350、FM160/广和通串口补丁对 Linux 6.12 存在重复规则，暂不合入，分析见 [docs/TDTECH-MT5700M-CN.md](docs/TDTECH-MT5700M-CN.md)。
 
 **构建状态**：上述三项和研究文档已提交 GitHub，但尚未经过新的 GitHub Actions 完整编译和真机验证。普通代码提交不会触发新的构建，只会在下一次手动/定时编译生效。
+
+## 2026-10-13：磁盘、硬件与网络诊断插件（下次编译生效）
+
+- **磁盘管理**：从 ImmortalWrt 25.12 官方 LuCI feed 选择 `luci-app-diskman`，明确启用其 `lsblk` 支持；关闭默认可选的 `btrfs-progs`，避免额外编译庞大的 Btrfs 工具链。不附加分区/格式化/自动挂载脚本；实际操作磁盘前应先备份数据。
+- **硬件诊断**：新增 `usbutils`（`lsusb`）、`pciutils`（`lspci`）和 `lsblk`，便于检查光影猫 USB/PCIe 网卡、模组、SSD；`kmod-usb-acm` 增加对 CDC ACM 类型 USB 串口的内核支持，**并不能保证识别所有厂商自定义串口**，也不会修改现有 `option` 驱动/TD-TECH 补丁。
+- **网络诊断**：新增 `iperf3`、`tcpdump` 供手工测速/抓包，未设置后台监听、抓包或开机任务。
+- **定时重启**：新增官方 `luci-app-autoreboot`，不预设任何定时重启任务。
+- **UPnP**：新增官方 `luci-app-upnp`（其依赖会选择 miniupnpd）。不覆写配置，不预设端口映射；miniupnpd 官方初始配置 `option enabled 0`，需要使用时在 LuCI 中手动配置启用。已有升级保留配置的实际状态以设备为准。
+- **编译保障**：原 `scripts/select-packages.py` 在 `feeds install` 完成后选择软件包；`scripts/verify-config.sh` 在 `make defconfig` 后检查全部新增选项以及 DiskMan Btrfs 可选项关闭状态。依赖未满足时构建会直接提示缺项，避免无提示产出缺插件固件。
+- **触发规则不变**：仅更新代码及文档；GitHub Actions 的 push 触发路径仍仅为 `.github/photonicat-build-trigger.txt`，未改动该文件，不会因本次提交自动开启新编译。正在运行的任务继续使用启动时检出的提交；保留每周五既定的定时构建。
+
+**兼容状态**：已核对 `immortalwrt/luci` 的 `openwrt-25.12` 分支包含 DiskMan、Autoreboot、UPnP 软件包定义，但这次提交不代表 GitHub Actions 完整编译和光影猫真机验证通过。
