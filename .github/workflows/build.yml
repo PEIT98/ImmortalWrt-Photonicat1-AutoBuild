@@ -132,6 +132,14 @@ jobs:
           echo '===== defconfig 前核心插件 ====='
           grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
+          echo '===== 核对上游插件是否被注册为目标包 ====='
+          for pkg in luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus; do
+            if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
+              echo "registered: $pkg"
+            else
+              echo "::warning::包元数据中找不到 $pkg；检查对应 Makefile 是否被扫描到"
+            fi
+          done
           echo '===== defconfig 后核心插件 ====='
           grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
           echo '===== defconfig 前已选但后被取消的选项（最多70行）====='
@@ -150,6 +158,7 @@ jobs:
             immortalwrt/.config
             immortalwrt/.config.before-defconfig
             immortalwrt/feeds.conf.default
+            immortalwrt/tmp/.packageinfo
           include-hidden-files: true
           retention-days: 14
 
