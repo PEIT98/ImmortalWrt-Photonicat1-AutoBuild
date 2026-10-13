@@ -12,6 +12,7 @@ need=(
   CONFIG_PACKAGE_mwan3
   CONFIG_PACKAGE_luci-app-openclash
   CONFIG_PACKAGE_luci-app-ttyd
+  CONFIG_PACKAGE_luci-app-online-upgrade
   CONFIG_PACKAGE_ttyd
   CONFIG_PACKAGE_luci-theme-aurora
   CONFIG_PACKAGE_luci-compat
