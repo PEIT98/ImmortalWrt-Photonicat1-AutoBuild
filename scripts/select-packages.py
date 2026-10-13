@@ -25,6 +25,14 @@ force = {
     'docker-compose': 'y',
     # Multi-interface traffic monitor (prebuilt aarch64 backend; disabled by default).
     'luci-app-bandix-plus': 'y', 'bandix-plus': 'y',
+    # DiskMan uses ImmortalWrt 25.12 official LuCI feed; keep lsblk but skip optional Btrfs/RAID toolchains.
+    'luci-app-diskman': 'y', 'luci-app-diskman_INCLUDE_lsblk': 'y',
+    'luci-app-diskman_INCLUDE_btrfs_progs': 'n',
+    # Hardware and network diagnostics for USB/PCIe modems and storage.
+    'usbutils': 'y', 'pciutils': 'y', 'lsblk': 'y',
+    'iperf3': 'y', 'tcpdump': 'y', 'kmod-usb-acm': 'y',
+    # LuCI utilities; scheduled reboot and UPnP are not preconfigured/enabled here.
+    'luci-app-autoreboot': 'y', 'luci-app-upnp': 'y',
     # Realtek RTL8922AE / 8852BE / 8852CE (rtw89)
     'kmod-rtw89-8922ae': 'y', 'kmod-rtw89-8852be': 'y', 'kmod-rtw89-8852ce': 'y',
     # MediaTek MT7925, MT7921/MT7922 and MT7916
