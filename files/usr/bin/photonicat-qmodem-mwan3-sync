@@ -1,0 +1,135 @@
+#!/bin/sh
+# Dynamically synchronize mwan3 with the actual QModem IPv4 network interface.
+# QModem sets network.<ifname>.modem_config; never force a modem alias or DHCP proto.
+command -v uci >/dev/null 2>&1 || exit 0
+[ -f /etc/config/mwan3 ] || exit 0
+LOCK=/tmp/photonicat-qmodem-mwan3.lock
+mkdir "$LOCK" 2>/dev/null || exit 0
+trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+trap 'exit 0' HUP INT TERM
+
+mwan_changed=0
+fw_changed=0
+get() { uci -q get "$1" 2>/dev/null; }
+set_mwan() {
+    [ "$(get "$1")" = "$2" ] && return 0
+    uci -q set "$1=$2" || return 1
+    mwan_changed=1
+}
+remove_mwan() {
+    [ -n "$(get "$1")" ] || return 0
+    uci -q delete "$1" || return 1
+    mwan_changed=1
+}
+member_present() {
+    case " $(get mwan3.failover.use_member) " in *" $1 "*) return 0 ;; esac
+    return 1
+}
+
+# Pick an up IPv4 QModem interface if available, otherwise a configured one.
+# Preserve an existing valid choice when switching or reconnecting.
+old="$(get mwan3.qmodem_priority3.interface)"
+selected=''
+first=''
+first_up=''
+old_valid=''
+for iface in $(uci -q show network 2>/dev/null | sed -n 's/^network\.\([A-Za-z0-9_]*\)\.modem_config=.*/\1/p' | sort -u); do
+    case "$iface" in wan|wwan|lan|loopback|wan6) continue ;; esac
+    [ "$(get "network.$iface")" = interface ] || continue
+    modem="$(get "network.$iface.modem_config")"
+    [ -n "$modem" ] && [ "$(get "qmodem.$modem")" = modem-device ] || continue
+    case "$(get "qmodem.$modem.state")" in disabled|removed|absent) continue ;; esac
+    case "$(get "network.$iface.proto")" in ''|dhcpv6|*ipv6*) continue ;; esac
+    [ -n "$first" ] || first="$iface"
+    [ "$iface" != "$old" ] || old_valid="$iface"
+    is_up="$(ubus -S call "network.interface.$iface" status 2>/dev/null | jsonfilter -e '@.up' 2>/dev/null)"
+    if [ "$is_up" = true ]; then
+        [ "$iface" = "$old" ] && { selected="$iface"; break; }
+        [ -n "$first_up" ] || first_up="$iface"
+    fi
+done
+[ -n "$selected" ] || selected="${first_up:-${old_valid:-$first}}"
+
+# Remove the previous image's fixed 5G member/placeholder.
+legacy=0
+if [ "$(get mwan3.wwan5g_priority3)" = member ]; then
+    legacy=1
+    uci -q del_list mwan3.failover.use_member=wwan5g_priority3 2>/dev/null || true
+    remove_mwan mwan3.wwan5g_priority3 || exit 1
+    mwan_changed=1
+fi
+if [ "$selected" != wwan_5g ] && [ "$legacy" = 1 ] && [ "$(get mwan3.wwan_5g)" = interface ]; then
+    remove_mwan mwan3.wwan_5g || exit 1
+fi
+
+# Remove only a previously managed QModem interface, not the user-owned WAN/STA.
+if [ -n "$old" ] && [ "$old" != "$selected" ] && [ "$old" != wan ] && [ "$old" != wwan ]; then
+    remove_mwan "mwan3.$old" || exit 1
+fi
+
+if [ -n "$selected" ]; then
+    if [ -z "$(get "mwan3.$selected")" ]; then
+        set_mwan "mwan3.$selected" interface || exit 1
+        set_mwan "mwan3.$selected.enabled" 1 || exit 1
+        set_mwan "mwan3.$selected.family" ipv4 || exit 1
+        set_mwan "mwan3.$selected.track_method" ping || exit 1
+        set_mwan "mwan3.$selected.reliability" 2 || exit 1
+        set_mwan "mwan3.$selected.count" 1 || exit 1
+        set_mwan "mwan3.$selected.timeout" 3 || exit 1
+        set_mwan "mwan3.$selected.interval" 5 || exit 1
+        set_mwan "mwan3.$selected.down" 3 || exit 1
+        set_mwan "mwan3.$selected.up" 3 || exit 1
+        for ip in 223.5.5.5 119.29.29.29 1.1.1.1; do
+            uci -q add_list "mwan3.$selected.track_ip=$ip" || exit 1
+        done
+        uci -q add_list "mwan3.$selected.flush_conntrack=disconnected" || exit 1
+    fi
+    [ "$(get "mwan3.$selected")" = interface ] || { logger -t photonicat-mwan3 "Conflicting mwan3 section: $selected"; exit 1; }
+    set_mwan mwan3.qmodem_priority3 member || exit 1
+    set_mwan mwan3.qmodem_priority3.interface "$selected" || exit 1
+    set_mwan mwan3.qmodem_priority3.metric 3 || exit 1
+    set_mwan mwan3.qmodem_priority3.weight 1 || exit 1
+    if [ "$(get mwan3.failover)" = policy ] && ! member_present qmodem_priority3; then
+        uci -q add_list mwan3.failover.use_member=qmodem_priority3 || exit 1
+        mwan_changed=1
+    fi
+else
+    if member_present qmodem_priority3; then
+        uci -q del_list mwan3.failover.use_member=qmodem_priority3 || exit 1
+        mwan_changed=1
+    fi
+    remove_mwan mwan3.qmodem_priority3 || exit 1
+fi
+
+# Add the real dial interface to WAN firewall; clean stale previously tracked links.
+for zone in $(uci -q show firewall 2>/dev/null | sed -n 's/^firewall\.\([^.=]*\)=zone$/\1/p'); do
+    [ "$(get "firewall.$zone.name")" = wan ] || continue
+    if [ -n "$old" ] && [ "$old" != "$selected" ] && [ "$old" != wan ] && [ "$old" != wwan ]; then
+        case " $(get "firewall.$zone.network") " in
+            *" $old "*) uci -q del_list "firewall.$zone.network=$old" || exit 1; fw_changed=1 ;;
+        esac
+    fi
+    if [ "$selected" != wwan_5g ] && [ -z "$(get network.wwan_5g.modem_config)" ]; then
+        case " $(get "firewall.$zone.network") " in
+            *" wwan_5g "*) uci -q del_list "firewall.$zone.network=wwan_5g" || exit 1; fw_changed=1 ;;
+        esac
+    fi
+    if [ -n "$selected" ]; then
+        case " $(get "firewall.$zone.network") " in
+            *" $selected "*) : ;;
+            *) uci -q add_list "firewall.$zone.network=$selected" || exit 1; fw_changed=1 ;;
+        esac
+    fi
+    break
+done
+
+if [ "$mwan_changed" -eq 1 ]; then
+    uci -q commit mwan3 || exit 1
+    /etc/init.d/mwan3 reload >/dev/null 2>&1 || /etc/init.d/mwan3 restart >/dev/null 2>&1 || true
+fi
+if [ "$fw_changed" -eq 1 ]; then
+    uci -q commit firewall || exit 1
+    /etc/init.d/firewall reload >/dev/null 2>&1 || true
+fi
+[ "$mwan_changed" -eq 0 ] && [ "$fw_changed" -eq 0 ] || logger -t photonicat-mwan3 "QModem IPv4 interface: ${selected:-none} (previous: ${old:-none})"
+exit 0
