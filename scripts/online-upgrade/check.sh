@@ -181,6 +181,7 @@ case "$MODE" in
         stage verifying '正在校验 SHA256 与 sysupgrade -T'
         echo "$HASH  $IMAGE" | sha256sum -c - >/dev/null 2>&1 || die 'SHA256 校验不通过'
         /sbin/sysupgrade -T "$IMAGE" >/dev/null 2>&1 || die '固件兼容性检查失败（sysupgrade -T）'
+        /usr/bin/photonicat-ota-disk-layout "$IMAGE" || die '启动磁盘分区布局与镜像不同，已阻止自动升级'
         stage backup '正在生成升级前配置备份'
         BAK="$WORK/pre-upgrade.tar.gz"
         /sbin/sysupgrade -b "$BAK" || die '无法生成配置备份'
