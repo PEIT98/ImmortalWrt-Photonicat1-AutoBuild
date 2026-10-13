@@ -192,3 +192,11 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - **网络 → MultiWAN 管理器** 的接口、成员、策略及规则配置入口全部保留；`mwan3` 服务、多 WAN 主备策略、QModem 及系统网络设置不做任何改动。
 - `scripts/hide-mwan3-status-menu.py` 在官方 LuCI feeds 安装完毕后，精准修改 `luci-app-mwan3` 源码中的菜单 JSON。固件内打包的菜单即不含状态入口，不需要额外开机服务。
 - 此项仅影响**后续编译生成的固件**；已刷入的旧固件不会自动改变。
+
+## 2026-10-13：只保留手动编译
+
+- 根据用户要求，已停止 GitHub Actions 的每周定时构建和 push 专用触发文件构建。工作流仅保留 `workflow_dispatch`。
+- 后续自行打开 **Actions → Photonicat1 ImmortalWrt QModem Build → Run workflow**，选中 `main` 并确认；`publish=true` 时编译成功自动发布 Release。
+- 修改代码或配置本身**不再自动编译**。切换到仅手动编译之前已经开始的运行仍会正常完成。
+- 旧版 `.github/photonicat-build-trigger.txt` 保留作为历史记录，但编辑它也不会触发编译。
+- Docker Engine、CLI、Compose 和 `luci-app-dockerman` 已在成功的编译 #38353246710 中通过配置校验；Dockerman 官方 LuCI 菜单属于 **服务 → Dockerman JS**，需要设备上存在可执行的 `/etc/init.d/dockerd`、`/usr/bin/dockerd` 和有效的 `/etc/config/dockerd` 才会显示。若菜单未显示，应在设备上检查文件和服务，而不是误认成没有编译。
