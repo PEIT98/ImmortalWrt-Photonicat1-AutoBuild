@@ -38,13 +38,18 @@ fi
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
 
-# USB 6-1 默认 QModem 拨号别名：需要确保 overlay 的 uci-defaults 可执行。
-# 由 QModem modem_scand 读取 modem-slot.alias，新建接口仍由 modem_dial.sh 管理。
-QMODEM_ALIAS_DEFAULT="$SRC/files/etc/uci-defaults/99-z-photonicat1-qmodem-alias"
-test -f "$QMODEM_ALIAS_DEFAULT" || { echo "::error::缺少光影猫 QModem 默认别名脚本"; exit 1; }
-chmod 755 "$QMODEM_ALIAS_DEFAULT"
-sh -n "$QMODEM_ALIAS_DEFAULT"
-grep -Fq 'qmodem.${slot_section}.alias=wwan_5g' "$QMODEM_ALIAS_DEFAULT" || exit 1
+# 与 QModem 的动态接口命名解耦：不预设固定模组别名，只同步 mwan3 第三级 WAN。
+QMODEM_MWAN_SYNC="$SRC/files/usr/bin/photonicat-qmodem-mwan3-sync"
+QMODEM_MWAN_INIT="$SRC/files/etc/init.d/photonicat-qmodem-mwan3"
+QMODEM_MWAN_HOTPLUG="$SRC/files/etc/hotplug.d/iface/95-photonicat-qmodem-mwan3"
+QMODEM_MWAN_DEFAULT="$SRC/files/etc/uci-defaults/95-photonicat-qmodem-mwan3"
+for file in "$QMODEM_MWAN_SYNC" "$QMODEM_MWAN_INIT" "$QMODEM_MWAN_HOTPLUG" "$QMODEM_MWAN_DEFAULT"; do
+  test -f "$file" || { echo "::error::缺少 QModem 动态 mwan3 文件 $file" >&2; exit 1; }
+  chmod 755 "$file"
+  sh -n "$file"
+done
+grep -Fq 'modem_config' "$QMODEM_MWAN_SYNC" || exit 1
+grep -Fq 'qmodem_priority3' "$QMODEM_MWAN_SYNC" || exit 1
 
 # MyOpenWrt tom_modem ACL is shipped directly in the firmware rootfs overlay.
 # rpcd reads /usr/share/rpcd/acl.d/*.json on startup; no first-boot restart needed.
