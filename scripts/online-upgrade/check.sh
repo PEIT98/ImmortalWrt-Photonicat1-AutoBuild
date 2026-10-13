@@ -65,6 +65,8 @@ load_release() {
     REPO="$(setting repo)"
     TAG="$(setting tag)"
     PROXY="$(setting proxy)"
+    CUSTOM_URL="$(setting custom_url)"
+    CUSTOM_SHA="$(setting custom_sha256)"
     [ -n "$REPO" ] || REPO="$REPO_DEFAULT"
     [ -n "$TAG" ] || TAG=latest
     valid_repo "$REPO" || die '仓库地址不合法'
@@ -72,6 +74,21 @@ load_release() {
     valid_proxy "$PROXY" || die '代理地址必须为 HTTPS'
     FSTYPE="$(root_type)"
     [ "$FSTYPE" = ext4 ] || [ "$FSTYPE" = squashfs ] || die '无法判定当前 ext4/squashfs 根文件系统，已阻止升级'
+    if [ -n "$CUSTOM_URL" ]; then
+        valid_custom_url "$CUSTOM_URL" || die '自定义固件地址须为 HTTPS .img.gz 直链'
+        valid_sha "$CUSTOM_SHA" || die '自定义固件必须填写 64 位 SHA256'
+        NAME="$(basename "$CUSTOM_URL")"
+        printf '%s\n' "$NAME" | grep -Eq "^immortalwrt-rockchip-armv8-ariaboard_photonicat-$FSTYPE-sysupgrade(_[0-9]{10})?\.img\.gz$" ||
+            die '自定义固件的设备或文件系统格式不匹配'
+        RTAG=custom
+        PUBLISHED='自定义链接'
+        SIZE=0
+        IMG_URL="$CUSTOM_URL"
+        HASH="$CUSTOM_SHA"
+        CURRENT="$(sed -n 's/^Builder commit: //p' /etc/photonicat1-build-info 2>/dev/null | head -n1 || true)"
+        REMOTE=''
+        return 0
+    fi
     tmp_release="$(mktemp "$WORK/release.XXXXXX")"
     if [ "$TAG" = latest ]; then
         API="https://api.github.com/repos/$REPO/releases/latest"
@@ -108,15 +125,25 @@ case "$MODE" in
         echo "repo=$(setting repo)"
         echo "tag=$(setting tag)"
         echo "proxy=$(setting proxy)"
+        echo "custom_url=$(setting custom_url)"
+        echo "custom_sha256=$(setting custom_sha256)"
         exit 0 ;;
     configure)
-        [ "$#" -eq 4 ] || die '配置参数错误'
+        [ "$#" -eq 6 ] || die '配置参数错误'
         valid_repo "$2" || die '仓库格式错误'
         valid_tag "$3" || die '标签格式错误'
         valid_proxy "$4" || die '代理地址必须为 HTTPS'
+        if [ -n "$5" ]; then
+            valid_custom_url "$5" || die '自定义固件必须为 HTTPS .img.gz 直链'
+            valid_sha "$6" || die '自定义固件必须提供 64 位 SHA256'
+        elif [ -n "$6" ]; then
+            die '没有自定义固件链接，请清空多余 SHA256'
+        fi
         uci set "online-upgrade.settings.repo=$2"
         uci set "online-upgrade.settings.tag=$3"
         uci set "online-upgrade.settings.proxy=$4"
+        uci set "online-upgrade.settings.custom_url=$5"
+        uci set "online-upgrade.settings.custom_sha256=$6"
         uci commit online-upgrade
         echo '配置已保存'
         exit 0 ;;
@@ -155,6 +182,7 @@ case "$MODE" in
             echo '版本：构建信息不完整，无法判断是否更新'
         fi
         echo "固件地址：$IMG_URL"
+        if [ "$RTAG" = custom ]; then echo "固件来源：自定义 HTTPS 链接（强制校验自定义 SHA256）"; fi
         echo "更新说明：https://github.com/$REPO/releases/tag/$RTAG"
         # Checking must not overwrite an in-progress flashing status.
         exit 0 ;;
@@ -187,15 +215,19 @@ case "$MODE" in
         IMAGE="$WORK/$NAME"
         FREE="$(df -Pk "$WORK" | awk 'NR==2 {print $4}')"
         case "$FREE" in ''|*[!0-9]*) die '无法取得磁盘可用空间';; esac
-        MIN_FREE="$(( (SIZE + 1023) / 1024 + 81920 ))"
+        if [ "$SIZE" -eq 0 ]; then MIN_FREE=393216; else MIN_FREE="$(( (SIZE + 1023) / 1024 + 81920 ))"; fi
         [ "$FREE" -gt "$MIN_FREE" ] || die '临时空间不足'
         stage downloading "正在下载 $NAME"
         URL="$IMG_URL"
-        [ -z "$PROXY" ] || URL="$PROXY$IMG_URL"
+        case "$IMG_URL" in https://github.com/*) [ -z "$PROXY" ] || URL="$PROXY$IMG_URL" ;; esac
         rm -f "$IMAGE"
         download "$IMAGE" "$URL" || die '镜像下载失败'
         DOWNLOADED="$(wc -c <"$IMAGE" | tr -d ' ')"
-        [ "$DOWNLOADED" = "$SIZE" ] || die '下载大小不匹配'
+        if [ "$SIZE" -gt 0 ]; then
+            [ "$DOWNLOADED" = "$SIZE" ] || die '下载大小不匹配'
+        else
+            [ "$DOWNLOADED" -ge 1048576 ] && [ "$DOWNLOADED" -le 1073741824 ] || die '自定义固件大小异常'
+        fi
         stage verifying '正在校验 SHA256 与 sysupgrade -T'
         echo "$HASH  $IMAGE" | sha256sum -c - >/dev/null 2>&1 || die 'SHA256 校验不通过'
         /sbin/sysupgrade -T "$IMAGE" >/dev/null 2>&1 || die '固件兼容性检查失败（sysupgrade -T）'
