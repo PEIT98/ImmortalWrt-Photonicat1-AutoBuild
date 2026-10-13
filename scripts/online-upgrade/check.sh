@@ -1,79 +1,204 @@
 #!/bin/sh
-# SPDX-License-Identifier: GPL-2.0-only
-# Based on gooyjq/luci-app-online-upgrade; safe Photonicat1 read-only checker.
-# NEVER downloads a firmware image, restores an archive or invokes sysupgrade.
+# GPL-2.0-only; based on gooyjq/luci-app-online-upgrade.
+# Photonicat1 guarded upgrade: never skip device, hash or sysupgrade -T checks.
 set -eu
-
-case "$*" in
-    check|"") ;;
-    *) echo "错误：光影猫固件检查器目前为只读模式；不支持自动刷写或恢复。"; exit 2 ;;
-esac
-
-REPO="PEIT98/ImmortalWrt-Photonicat1-AutoBuild"
-API="https://api.github.com/repos/$REPO/releases/latest"
-TMP="$(mktemp /tmp/photonicat-upgrade.XXXXXX)"
-META="$(mktemp /tmp/photonicat-buildinfo.XXXXXX)"
-trap 'rm -f "$TMP" "$META"' EXIT
+umask 077
+WORK=/tmp/photonicat-upgrade
+mkdir -p "$WORK"
+STATE="$WORK/state"
+LOCK="$WORK/lock"
+LOG="$WORK/upgrade.log"
+REPO_DEFAULT=PEIT98/ImmortalWrt-Photonicat1-AutoBuild
+MODE=check
+[ "$#" -eq 0 ] || MODE="$1"
+ERRORS=0
+tmp_release=
+tmp_hash=
+tmp_sources=
+cleanup() {
+    [ -z "$tmp_release" ] || rm -f "$tmp_release"
+    [ -z "$tmp_hash" ] || rm -f "$tmp_hash"
+    [ -z "$tmp_sources" ] || rm -f "$tmp_sources"
+}
+trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
-
-printf '%s\n' "===== 光影猫一代在线固件检查 =====" "设备：Ariaboard Photonicat1 / Rockchip RK3568" "来源：$REPO"
-if ! curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-    --connect-timeout 10 --max-time 40 --retry 2 \
-    --header 'Accept: application/vnd.github+json' --header 'User-Agent: Photonicat1-Online-Upgrade' \
-    --output "$TMP" "$API"; then
-    echo '错误：无法连接 GitHub Releases，请检查网络或稍后重试。' >&2
-    exit 1
-fi
-
-TAG="$(jsonfilter -i "$TMP" -e '@.tag_name' 2>/dev/null || true)"
-case "$TAG" in
-    ''|*[!A-Za-z0-9._-]*)
-        echo '错误：Release 标签无效，已停止。' >&2
-        exit 1 ;;
-esac
-PUBLISHED="$(jsonfilter -i "$TMP" -e '@.published_at' 2>/dev/null || true)"
-NAMES="$(jsonfilter -i "$TMP" -e '@.assets[*].name' 2>/dev/null || true)"
-EXT4="$(printf '%s\n' "$NAMES" | grep -E '^immortalwrt-rockchip-armv8-ariaboard_photonicat-ext4-sysupgrade(_[0-9]{10})?\.img\.gz$' | head -n1 || true)"
-SQUASHFS="$(printf '%s\n' "$NAMES" | grep -E '^immortalwrt-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade(_[0-9]{10})?\.img\.gz$' | head -n1 || true)"
-SUMS="$(printf '%s\n' "$NAMES" | grep -Fx 'SHA256SUMS.txt' || true)"
-if [ -z "$EXT4" ] && [ -z "$SQUASHFS" ]; then
-    echo '错误：本次 Release 没有光影猫一代 RK3568 镜像；已拒绝其它设备镜像。' >&2
-    exit 1
-fi
-
-[ -n "$PUBLISHED" ] || PUBLISHED="未知"
-echo "最新 Release：$TAG"
-echo "发布时间 (UTC)：$PUBLISHED"
-CURRENT="$(sed -n 's/^Builder commit: //p' /etc/photonicat1-build-info 2>/dev/null | head -n1 || true)"
-[ -n "$CURRENT" ] || CURRENT="未知"
-echo "当前固件构建提交：$CURRENT"
-REMOTE=""
-if printf '%s\n' "$NAMES" | grep -Fxq 'build-sources.txt'; then
-    if curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-        --connect-timeout 8 --max-time 25 \
-        --output "$META" "https://github.com/$REPO/releases/download/$TAG/build-sources.txt" 2>/dev/null; then
-        REMOTE="$(sed -n 's/^Workflow repo commit: //p' "$META" | head -n1)"
-    fi
-fi
-[ -n "$REMOTE" ] || REMOTE="未知"
-echo "最新固件构建提交：$REMOTE"
-if [ "$REMOTE" != "未知" ] && [ "$CURRENT" != "未知" ]; then
-    if [ "$REMOTE" = "$CURRENT" ]; then
-        echo "版本判断：当前固件与最新 Release 的构建提交相同。"
+die() { echo "错误：$1" >&2; printf 'failed|%s\n' "$1" > "$STATE"; exit 1; }
+stage() { printf '%s|%s\n' "$1" "$2" > "$STATE"; echo "$2"; }
+setting() { uci -q get "online-upgrade.settings.$1" 2>/dev/null || true; }
+valid_repo() { printf '%s\n' "$1" | grep -Eq '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'; }
+valid_tag() { [ "$1" = latest ] || printf '%s\n' "$1" | grep -Eq '^[A-Za-z0-9._-]+$'; }
+valid_proxy() {
+    [ -z "$1" ] && return 0
+    printf '%s\n' "$1" | grep -Eq '^https://[A-Za-z0-9.-]+(:[0-9]{2,5})?(/[A-Za-z0-9_./-]*)?$'
+}
+device_ok() {
+    [ -r /proc/device-tree/compatible ] || return 1
+    tr '\000' '\n' </proc/device-tree/compatible | grep -Fxq 'ariaboard,photonicat'
+}
+root_type() {
+    if awk '$2=="/rom" && $3=="squashfs" {found=1} END {exit !found}' /proc/mounts ||
+       awk '$2=="/" && $3=="squashfs" {found=1} END {exit !found}' /proc/mounts; then
+        echo squashfs
+    elif awk '$2=="/" && $3=="ext4" {found=1} END {exit !found}' /proc/mounts; then
+        echo ext4
     else
-        echo "版本判断：发现不同的固件构建提交，请阅读更新说明后决定是否升级。"
+        echo unknown
     fi
-else
-    echo "版本判断：缺少完整的构建提交信息，不能自动判断新旧。"
-fi
-
-echo "镜像列表（只能选择与当前根文件系统类型相同的镜像）："
-[ -z "$EXT4" ] || echo "  ext4： https://github.com/$REPO/releases/download/$TAG/$EXT4"
-[ -z "$SQUASHFS" ] || echo "  squashfs： https://github.com/$REPO/releases/download/$TAG/$SQUASHFS"
-if [ -n "$SUMS" ]; then
-    echo "校验文件： https://github.com/$REPO/releases/download/$TAG/SHA256SUMS.txt"
-else
-    echo "警告：本次 Release 缺少 SHA256SUMS.txt，不能确认镜像完整性。"
-fi
-echo "更新说明： https://github.com/$REPO/releases/tag/$TAG"
-echo '安全提示：当前插件仅查询版本，不下载/刷写固件；请在系统 → 备份/升级手动校验镜像与设备后升级。'
+}
+download() {
+    curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --connect-timeout 15 --max-time 900 \
+        --retry 2 --header 'User-Agent: Photonicat1-OTA' -o "$1" "$2"
+}
+load_release() {
+    REPO="$(setting repo)"
+    TAG="$(setting tag)"
+    PROXY="$(setting proxy)"
+    [ -n "$REPO" ] || REPO="$REPO_DEFAULT"
+    [ -n "$TAG" ] || TAG=latest
+    valid_repo "$REPO" || die '仓库地址不合法'
+    valid_tag "$TAG" || die 'Release 标签不合法'
+    valid_proxy "$PROXY" || die '代理地址必须为 HTTPS'
+    FSTYPE="$(root_type)"
+    [ "$FSTYPE" = ext4 ] || [ "$FSTYPE" = squashfs ] || die '无法判定当前 ext4/squashfs 根文件系统，已阻止升级'
+    tmp_release="$(mktemp "$WORK/release.XXXXXX")"
+    if [ "$TAG" = latest ]; then
+        API="https://api.github.com/repos/$REPO/releases/latest"
+    else
+        API="https://api.github.com/repos/$REPO/releases/tags/$TAG"
+    fi
+    download "$tmp_release" "$API" || die '无法读取 GitHub Release'
+    RTAG="$(jsonfilter -i "$tmp_release" -e '@.tag_name' 2>/dev/null || true)"
+    printf '%s\n' "$RTAG" | grep -Eq '^[A-Za-z0-9._-]+$' || die 'Release 标签无效'
+    PUBLISHED="$(jsonfilter -i "$tmp_release" -e '@.published_at' 2>/dev/null || true)"
+    NAMES="$(jsonfilter -i "$tmp_release" -e '@.assets[*].name' 2>/dev/null || true)"
+    NAME="$(printf '%s\n' "$NAMES" | grep -E "^immortalwrt-rockchip-armv8-ariaboard_photonicat-$FSTYPE-sysupgrade(_[0-9]{10})?\.img\.gz$" | head -n1 || true)"
+    [ -n "$NAME" ] || die "Release 不包含符合当前 $FSTYPE 格式的光影猫一代固件"
+    printf '%s\n' "$NAMES" | grep -Fxq SHA256SUMS.txt || die '缺少 SHA256SUMS.txt'
+    SIZE="$(jsonfilter -i "$tmp_release" -e "@.assets[@.name=\"$NAME\"].size" 2>/dev/null | head -n1 || true)"
+    case "$SIZE" in ''|*[!0-9]*) die '无法读取固件大小';; esac
+    [ "$SIZE" -ge 1048576 ] && [ "$SIZE" -le 1073741824 ] || die '固件大小异常'
+    IMG_URL="https://github.com/$REPO/releases/download/$RTAG/$NAME"
+    tmp_hash="$(mktemp "$WORK/hash.XXXXXX")"
+    download "$tmp_hash" "https://github.com/$REPO/releases/download/$RTAG/SHA256SUMS.txt" || die '无法读取 GitHub 原始 SHA256 清单'
+    HASH="$(awk -v n="$NAME" '($2==n || $2=="./" n) && $1 ~ /^[0-9a-fA-F]+$/ {print $1}' "$tmp_hash" | head -n1)"
+    [ "$(printf '%s' "$HASH" | wc -c)" -eq 64 ] || die 'SHA256 清单没有当前固件'
+    CURRENT="$(sed -n 's/^Builder commit: //p' /etc/photonicat1-build-info 2>/dev/null | head -n1 || true)"
+    REMOTE=""
+    if printf '%s\n' "$NAMES" | grep -Fxq build-sources.txt; then
+        tmp_sources="$(mktemp "$WORK/source.XXXXXX")"
+        if download "$tmp_sources" "https://github.com/$REPO/releases/download/$RTAG/build-sources.txt" 2>/dev/null; then
+            REMOTE="$(sed -n 's/^Workflow repo commit: //p' "$tmp_sources" | head -n1)"
+        fi
+    fi
+}
+case "$MODE" in
+    settings)
+        echo "repo=$(setting repo)"
+        echo "tag=$(setting tag)"
+        echo "proxy=$(setting proxy)"
+        exit 0 ;;
+    configure)
+        [ "$#" -eq 4 ] || die '配置参数错误'
+        valid_repo "$2" || die '仓库格式错误'
+        valid_tag "$3" || die '标签格式错误'
+        valid_proxy "$4" || die '代理地址必须为 HTTPS'
+        uci set "online-upgrade.settings.repo=$2"
+        uci set "online-upgrade.settings.tag=$3"
+        uci set "online-upgrade.settings.proxy=$4"
+        uci commit online-upgrade
+        echo '配置已保存'
+        exit 0 ;;
+    status)
+        if [ -e "$STATE" ]; then cat "$STATE"; else echo 'idle|未执行升级'; fi
+        exit 0 ;;
+    backup)
+        device_ok || die '不是光影猫一代设备'
+        BAK="$WORK/manual-backup.tar.gz"
+        /sbin/sysupgrade -b "$BAK" || die '备份失败'
+        [ -s "$BAK" ] || die '备份文件为空'
+        cp "$BAK" /root/photonicat-online-upgrade-backup.tar.gz || die '保存备份失败'
+        echo '备份成功：/root/photonicat-online-upgrade-backup.tar.gz'
+        echo '推荐另从系统 → 备份/升级下载备份到电脑'
+        exit 0 ;;
+    check)
+        device_ok || die '设备型号不是 Ariaboard Photonicat1'
+        load_release
+        echo "固件来源：$REPO"
+        echo "设备：Ariaboard Photonicat1 (RK3568)"
+        echo "当前根文件系统：$FSTYPE"
+        echo "Release：$RTAG"
+        echo "发布时间 (UTC)：$PUBLISHED"
+        echo "固件名称：$NAME"
+        echo "文件大小：$SIZE 字节"
+        echo "固件 SHA256：$HASH"
+        echo "当前构建提交：$CURRENT"
+        echo "最新构建提交：$REMOTE"
+        if [ -n "$CURRENT" ] && [ -n "$REMOTE" ]; then
+            if [ "$CURRENT" = "$REMOTE" ]; then
+                echo '版本：已是最新构建，可使用强制重装'
+            else
+                echo '版本：发现不同的构建版本'
+            fi
+        else
+            echo '版本：构建信息不完整，无法判断是否更新'
+        fi
+        echo "固件地址：$IMG_URL"
+        echo "更新说明：https://github.com/$REPO/releases/tag/$RTAG"
+        stage checked '校验发布信息完成，等待用户确认升级'
+        exit 0 ;;
+    start)
+        [ "$#" -eq 3 ] || die '升级参数数量错误'
+        case "$2" in keep|reset) ;; *) die '配置选择无效';; esac
+        case "$3" in normal|force) ;; *) die '升级模式无效';; esac
+        [ ! -d "$LOCK" ] || die '已有升级任务运行中'
+        setsid /bin/sh "$0" run "$2" "$3" </dev/null > "$LOG" 2>&1 &
+        echo '后台升级任务已启动'
+        exit 0 ;;
+    run)
+        [ "$#" -eq 3 ] || die '升级参数数量错误'
+        case "$2" in keep|reset) ;; *) die '配置选择无效';; esac
+        case "$3" in normal|force) ;; *) die '升级模式无效';; esac
+        mkdir "$LOCK" 2>/dev/null || die '已有升级任务运行中'
+        trap 'cleanup; rmdir "$LOCK" 2>/dev/null || true' EXIT
+        device_ok || die '设备身份检查失败'
+        stage checking '正在获取 GitHub 发布信息及设备配置'
+        load_release
+        if [ "$3" = normal ] && [ -n "$CURRENT" ] && [ -n "$REMOTE" ] && [ "$CURRENT" = "$REMOTE" ]; then
+            die '当前已是同一构建；如需重新刷写请选择强制重装'
+        fi
+        IMAGE="$WORK/$NAME"
+        FREE="$(df -Pk "$WORK" | awk 'NR==2 {print $4}')"
+        case "$FREE" in ''|*[!0-9]*) die '无法取得磁盘可用空间';; esac
+        MIN_FREE="$(( (SIZE + 1023) / 1024 + 81920 ))"
+        [ "$FREE" -gt "$MIN_FREE" ] || die '临时空间不足'
+        stage downloading "正在下载 $NAME"
+        URL="$IMG_URL"
+        [ -z "$PROXY" ] || URL="$PROXY$IMG_URL"
+        rm -f "$IMAGE"
+        download "$IMAGE" "$URL" || die '镜像下载失败'
+        DOWNLOADED="$(wc -c <"$IMAGE" | tr -d ' ')"
+        [ "$DOWNLOADED" = "$SIZE" ] || die '下载大小不匹配'
+        stage verifying '正在校验 SHA256 与 sysupgrade -T'
+        echo "$HASH  $IMAGE" | sha256sum -c - >/dev/null 2>&1 || die 'SHA256 校验不通过'
+        /sbin/sysupgrade -T "$IMAGE" >/dev/null 2>&1 || die '固件兼容性检查失败（sysupgrade -T）'
+        stage backup '正在生成升级前配置备份'
+        BAK="$WORK/pre-upgrade.tar.gz"
+        /sbin/sysupgrade -b "$BAK" || die '无法生成配置备份'
+        [ -s "$BAK" ] || die '配置备份为空'
+        if awk '$2=="/boot" && $3!="tmpfs" && $3!="overlay" {ok=1} END{exit !ok}' /proc/mounts; then
+            cp "$BAK" /boot/photonicat-upgrade-backup.tar.gz && echo '备份已存储到持久 /boot 分区' || true
+        fi
+        # Force only means reinstall an existing version. Never use sysupgrade -F.
+        stage flashing '校验完成，正在执行 sysupgrade；请勿断电'
+        sync
+        if [ "$2" = keep ]; then
+            /sbin/sysupgrade -f "$BAK" "$IMAGE" || die 'sysupgrade 执行失败'
+        else
+            /sbin/sysupgrade -n "$IMAGE" || die 'sysupgrade 执行失败'
+        fi
+        stage reboot '正在等待重启'
+        exit 0 ;;
+    *)
+        echo 'Usage: check | configure REPO TAG PROXY | settings | status | backup | start keep/reset normal/force'
+        exit 2 ;;
+esac
