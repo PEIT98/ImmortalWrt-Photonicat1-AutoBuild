@@ -39,6 +39,7 @@ endef
 define Package/luci-app-online-upgrade/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) ./root/usr/bin/online-upgrade.sh $(1)/usr/bin/online-upgrade.sh
+	$(INSTALL_BIN) ./root/usr/bin/photonicat-ota-disk-layout $(1)/usr/bin/photonicat-ota-disk-layout
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./root/etc/config/online-upgrade $(1)/etc/config/online-upgrade
 	$(INSTALL_DIR) $(1)/usr/share/luci/menu.d
