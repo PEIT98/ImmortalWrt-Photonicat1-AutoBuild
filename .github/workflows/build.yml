@@ -98,6 +98,9 @@ jobs:
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
 
+      - name: Fix iStore package naming on ImmortalWrt 25.12
+        run: bash scripts/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
+
       - name: Check Photonicat1 status and Docker storage diagnostics
         working-directory: immortalwrt
         shell: bash
@@ -110,7 +113,8 @@ jobs:
           test -x files/usr/bin/photonicat-docker-storage-check
           test -f files/www/luci-static/resources/view/status/include/99_photonicat1_info.js
           grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
-          test -f package/photonicat-luci-app-bandix-plus/Makefile
+          test -f package/luci-app-bandix-plus/Makefile
+          grep -Fxq 'LUCI_NAME:=luci-app-store' package/feeds/istore/luci-app-store/Makefile
           echo '光影猫只读状态卡片已集成，Bandix Plus 首次流量挂钩默认关闭。'
 
       - name: Fix battery plugin indicator (Aurora theme unchanged)
@@ -120,6 +124,8 @@ jobs:
       - name: Resolve and verify package selection
         working-directory: immortalwrt
         run: |
+          # 修改过 iStore Makefile 后，强制重新扫描包定义，避免复用旧缓存。
+          rm -f tmp/.packageinfo tmp/.config-package.in
           # feeds install -a 会重置 .config，因此必须在安装完成后再应用选项
           python3 ../scripts/select-packages.py .config
           cp .config .config.before-defconfig
