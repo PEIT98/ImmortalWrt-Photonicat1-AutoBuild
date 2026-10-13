@@ -34,6 +34,9 @@ need=(
   CONFIG_PACKAGE_kmod-usb-acm
   CONFIG_PACKAGE_luci-app-autoreboot
   CONFIG_PACKAGE_luci-app-upnp
+  CONFIG_PACKAGE_luci-i18n-diskman-zh-cn
+  CONFIG_PACKAGE_luci-i18n-autoreboot-zh-cn
+  CONFIG_PACKAGE_luci-i18n-upnp-zh-cn
   CONFIG_PACKAGE_kmod-rtw89-8922ae
   CONFIG_PACKAGE_kmod-rtw89-8852be
   CONFIG_PACKAGE_kmod-rtw89-8852ce
