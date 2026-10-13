@@ -58,7 +58,7 @@ if [ "$(get mwan3.wwan5g_priority3)" = member ]; then
     remove_mwan mwan3.wwan5g_priority3 || exit 1
     mwan_changed=1
 fi
-if [ "$selected" != wwan_5g ] && [ "$legacy" = 1 ] && [ "$(get mwan3.wwan_5g)" = interface ]; then
+if [ "$selected" != wwan_5g ] && [ "$legacy" = 1 ] && [ -z "$(get network.wwan_5g)" ] && [ "$(get mwan3.wwan_5g)" = interface ]; then
     remove_mwan mwan3.wwan_5g || exit 1
 fi
 
@@ -109,7 +109,7 @@ for zone in $(uci -q show firewall 2>/dev/null | sed -n 's/^firewall\.\([^.=]*\)
             *" $old "*) uci -q del_list "firewall.$zone.network=$old" || exit 1; fw_changed=1 ;;
         esac
     fi
-    if [ "$selected" != wwan_5g ] && [ -z "$(get network.wwan_5g.modem_config)" ]; then
+    if [ "$selected" != wwan_5g ] && [ -z "$(get network.wwan_5g)" ]; then
         case " $(get "firewall.$zone.network") " in
             *" wwan_5g "*) uci -q del_list "firewall.$zone.network=wwan_5g" || exit 1; fw_changed=1 ;;
         esac
