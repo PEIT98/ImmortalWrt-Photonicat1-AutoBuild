@@ -53,6 +53,40 @@ if [ ! -f "$THEME_DIR/Makefile" ]; then
 fi
 [ -f "$THEME_DIR/Makefile" ] || { echo 'Aurora Makefile 不存在' >&2; exit 1; }
 
+# 固件版本/存储卡片只使用 rootfs 覆盖文件；不能修改 Aurora 主题。
+INFO_RPC="$SRC/files/usr/libexec/rpcd/luci.photonicat1"
+DISK_CHECK="$SRC/files/usr/bin/photonicat-docker-storage-check"
+test -f "$INFO_RPC" && test -f "$DISK_CHECK" || { echo "::error::光影猫信息卡片脚本缺失"; exit 1; }
+chmod 755 "$INFO_RPC" "$DISK_CHECK"
+sh -n "$INFO_RPC"
+sh -n "$DISK_CHECK"
+python3 -m json.tool "$SRC/files/usr/share/rpcd/acl.d/luci-photonicat1-info.json" >/dev/null
+test -f "$SRC/files/www/luci-static/resources/view/status/include/99_photonicat1_info.js" || exit 1
+
+# Bandix Plus 是多接口版本。只从上游源码提取两个 OpenWrt 包，
+# 不将原版单网口 Bandix 的 eBPF/限速规则强加于设备。
+BANDIX_TMP="$(mktemp -d)"
+trap 'rm -rf "$BANDIX_TMP"' EXIT
+git clone --quiet --depth 1 --branch main https://github.com/timsaya/openwrt-bandix-plus.git "$BANDIX_TMP/core"
+git clone --quiet --depth 1 --branch main https://github.com/timsaya/luci-app-bandix-plus.git "$BANDIX_TMP/luci"
+CORE_DST="$SRC/package/photonicat-bandix-plus"
+LUCI_DST="$SRC/package/photonicat-luci-app-bandix-plus"
+mkdir -p "$CORE_DST" "$LUCI_DST"
+cp -a "$BANDIX_TMP/core/openwrt-bandix-plus/." "$CORE_DST/"
+cp -a "$BANDIX_TMP/luci/luci-app-bandix-plus/." "$LUCI_DST/"
+test -f "$CORE_DST/Makefile" && test -f "$LUCI_DST/Makefile" || exit 1
+# 官方默认启用 eBPF 流量服务。光影猫有 QModem/mwan3 多 WAN，
+# 为避免首次启动改变数据转发，预置关闭；在 LuCI 配好接口后手动启用。
+BANDIX_CONFIG="$CORE_DST/files/bandix_plus.config"
+test -f "$BANDIX_CONFIG" || exit 1
+if ! grep -Fq "option enable_traffic '1'" "$BANDIX_CONFIG"; then
+  echo "::error::Bandix Plus 默认配置格式变化，请重新确认安全关闭开关" >&2
+  exit 1
+fi
+sed -i "s/option enable_traffic '1'/option enable_traffic '0'/" "$BANDIX_CONFIG"
+grep -Fq "option enable_traffic '0'" "$BANDIX_CONFIG" || exit 1
+echo 'Bandix Plus 前/后端已加入：首次默认不启用流量挂钩和限速。'
+
 # 参考西瓜皮的 Wi-Fi band_order 兼容调整：保留固件上游源码，最小替换频段顺序。
 bash "$(dirname "$0")/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫硬件配置、QModem stable 与 OpenClash 源（插件选择在 feeds 安装后进行）'
