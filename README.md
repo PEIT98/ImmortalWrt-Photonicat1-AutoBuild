@@ -208,6 +208,7 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 
 - 默认安装 `luci-app-online-upgrade`，LuCI 菜单位于 **系统 → 在线升级**，仅查询 `PEIT98/ImmortalWrt-Photonicat1-AutoBuild` 的最新 GitHub Release。优先使用路由器内 `/etc/photonicat1-build-info` 的 Builder commit，与 Release 中 `build-sources.txt` 的 Workflow repo commit 比对；缺少信息时明确提示无法判断。
 - 只识别光影猫一代 `immortalwrt-rockchip-armv8-ariaboard_photonicat-{ext4,squashfs}-sysupgrade_YYYYMMDDHH.img.gz` 镜像（也兼容历史版不带时间戳的 `-sysupgrade.img.gz`）；显示 GitHub 镜像下载地址、`SHA256SUMS.txt` 及 Release 更新说明。未验证用户设备正在使用哪一种文件系统，所以**不自动选择刷机镜像**。
+- **配置保留选项**：在线更新检查页新增单选项 **保留配置（默认）** / **不保留配置**；选择后显示对应风险说明，点击「前往手动升级」会再次弹窗确认并打开 LuCI 原生 **系统 → 备份 / 升级** 页面。当前插件仍是只读模式，不能代替原生升级界面的「Keep settings / 保留配置」复选框：保留时需在原生页面勾选，不保留时需在原生页面取消勾选，并手动确认刷机。**不保留配置不是格式化外接硬盘或 Docker 数据盘**；升级前应独立备份重要数据。
 - **没有一键刷机或自动下载安装**：没有 `sysupgrade` 执行入口、没有上游的 `online-upgrade-restore` CGI（它会解包上传文件到 `/`）、没有 `/etc/uci-defaults/90-online-upgrade-auto`（它会在开机时安装第三方 APK）、没有旧 Lua 备份恢复控制器。`/usr/bin/online-upgrade.sh` 仅允许 `check`；任何 `upgrade/background/backup/reset` 命令均拒绝。
 - 不使用第三方 GitHub 下载代理，不上传令牌，不自动修改网络、WAN、QModem、iStore、Docker 或 mwan3 配置。
 - 手动升级前要核对设备型号、ext4/squashfs 格式、SHA256、可用空间，备份配置及准备救砖方法；光影猫的 `sysupgrade` 直接升级兼容性尚未真机验证，故本安全版不执行刷写。
