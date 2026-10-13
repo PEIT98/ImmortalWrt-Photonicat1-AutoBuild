@@ -83,6 +83,12 @@ jobs:
       - name: Prepare Photonicat1 config with QModem
         run: bash scripts/prepare.sh "$GITHUB_WORKSPACE/photonicat-reference" "$GITHUB_WORKSPACE/immortalwrt" "$GITHUB_WORKSPACE/files"
 
+      - name: Enable onboard QCA9377 SDIO without disabling ath10k PCI
+        run: |
+          python3 scripts/enable-qca9377-ath10k-sdio.py "$GITHUB_WORKSPACE/immortalwrt"
+          grep -Fq 'ATH10K ATH10K_PCI ATH10K_SDIO' immortalwrt/package/kernel/mac80211/ath.mk
+          grep -Fq 'ath10k/ath10k_sdio.ko' immortalwrt/package/kernel/mac80211/ath.mk
+
       - name: Update official and QModem feeds
         working-directory: immortalwrt
         run: |
