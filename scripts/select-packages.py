@@ -13,6 +13,9 @@ remove_exact = {
     'luci-app-zerotier', 'luci-i18n-zerotier-zh-cn', 'zerotier',
     # Explicitly disable custom OTA even if imported reference config selects it.
     'luci-app-online-upgrade',
+    # PCI/SDIO are mutually exclusive ath10k build variants upstream.
+    # We extend the regular PCI package to include SDIO in a separate patch.
+    'kmod-ath10k-sdio',
 }
 remove_prefixes = ('luci-app-passwall_INCLUDE_',)
 force = {
@@ -56,7 +59,8 @@ force = {
     'kmod-ath10k': 'y', 'ath10k-firmware-qca988x': 'y',
     # Photonicat1 onboard QCA1023 / QCA9377-family Wi-Fi uses SDIO, not PCIe.
     # Keep SDIO firmware and board calibration matching the reference image.
-    'kmod-ath10k-sdio': 'y', 'kmod-mmc': 'y',
+    # kmod-ath10k is enhanced at build time with ath10k_sdio.ko.
+    'kmod-mmc': 'y',
     'ath10k-firmware-qca9377-sdio': 'y', 'ath10k-board-qca9377-sdio': 'y',
     'luci-app-mwan3': 'y', 'luci-i18n-mwan3-zh-cn': 'y', 'mwan3': 'y',
     'luci-app-openclash': 'y',
