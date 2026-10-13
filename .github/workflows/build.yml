@@ -98,6 +98,21 @@ jobs:
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
 
+      - name: Check Photonicat1 status and Docker storage diagnostics
+        working-directory: immortalwrt
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh -n files/usr/libexec/rpcd/luci.photonicat1
+          sh -n files/usr/bin/photonicat-docker-storage-check
+          python3 -m json.tool files/usr/share/rpcd/acl.d/luci-photonicat1-info.json >/dev/null
+          test -x files/usr/libexec/rpcd/luci.photonicat1
+          test -x files/usr/bin/photonicat-docker-storage-check
+          test -f files/www/luci-static/resources/view/status/include/99_photonicat1_info.js
+          grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
+          test -f package/photonicat-luci-app-bandix-plus/Makefile
+          echo '光影猫只读状态卡片已集成，Bandix Plus 首次流量挂钩默认关闭。'
+
       - name: Fix battery plugin indicator (Aurora theme unchanged)
         working-directory: immortalwrt
         run: python3 ../scripts/fix-aurora-battstatus.py .
@@ -109,10 +124,10 @@ jobs:
           python3 ../scripts/select-packages.py .config
           cp .config .config.before-defconfig
           echo '===== defconfig 前核心插件 ====='
-          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
+          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
           echo '===== defconfig 后核心插件 ====='
-          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
+          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
           echo '===== defconfig 前已选但后被取消的选项（最多70行）====='
           comm -23 <(grep '^CONFIG_PACKAGE_.*=y$' .config.before-defconfig | sort -u) <(grep '^CONFIG_PACKAGE_.*=y$' .config | sort -u) | head -n 70 || true
           bash ../scripts/verify-config.sh .config
