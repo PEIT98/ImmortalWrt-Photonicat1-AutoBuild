@@ -1,0 +1,6 @@
+#!/bin/sh
+# netifd notifies when QModem starts, stops or changes a dial interface.
+case "$ACTION" in
+    ifup|ifdown|ifupdate) /usr/bin/photonicat-qmodem-mwan3-sync >/dev/null 2>&1 & ;;
+esac
+exit 0
