@@ -25,6 +25,15 @@ else
   printf '\nsrc-git openclash https://github.com/vernesong/OpenClash.git;master\n' >> "$SRC/feeds.conf.default"
 fi
 
+
+# iStore 官方软件中心。只引入软件包定义，随固件源码一起编译；
+# 不使用在线安装脚本，也不替换 ImmortalWrt 的 APK 仓库。
+if grep -Eq '^src-git istore ' "$SRC/feeds.conf.default"; then
+  sed -i -E 's#^src-git istore .*#src-git istore https://github.com/linkease/istore;main#' "$SRC/feeds.conf.default"
+else
+  printf '\nsrc-git istore https://github.com/linkease/istore;main\n' >> "$SRC/feeds.conf.default"
+fi
+
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
