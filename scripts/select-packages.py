@@ -33,6 +33,9 @@ force = {
     'iperf3': 'y', 'tcpdump': 'y', 'kmod-usb-acm': 'y',
     # LuCI utilities; scheduled reboot and UPnP are not preconfigured/enabled here.
     'luci-app-autoreboot': 'y', 'luci-app-upnp': 'y',
+    # Simplified Chinese LuCI translations available in official 25.12 feed.
+    'luci-i18n-diskman-zh-cn': 'y', 'luci-i18n-autoreboot-zh-cn': 'y',
+    'luci-i18n-upnp-zh-cn': 'y',
     # Realtek RTL8922AE / 8852BE / 8852CE (rtw89)
     'kmod-rtw89-8922ae': 'y', 'kmod-rtw89-8852be': 'y', 'kmod-rtw89-8852ce': 'y',
     # MediaTek MT7925, MT7921/MT7922 and MT7916
