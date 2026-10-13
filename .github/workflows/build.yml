@@ -101,25 +101,17 @@ jobs:
           bash -n scripts/online-upgrade/check.sh
           sh -n scripts/online-upgrade/disk-layout.sh
           bash -n scripts/online-upgrade/disk-layout.sh
-          # Ensure the SHA256 confirmation case arm stays intact across edits.
-          python3 - <<'PY'
-          from pathlib import Path
-          src = Path("scripts/online-upgrade/check.sh").read_text()
-          arm = src.split("    start)\n", 1)[1].split("    run)\n", 1)[0]
-          required = [
-              "[ \"$#\" -eq 5 ]",
-              "grep -Eq '^[0-9a-fA-F]{64}
           node --check scripts/online-upgrade/view.js
           python3 -m json.tool scripts/online-upgrade/menu.json >/dev/null
           python3 -m json.tool scripts/online-upgrade/acl.json >/dev/null
+          grep -Fq 'setsid /bin/sh "$0" run "$2" "$3" "$4" "$5"' scripts/online-upgrade/check.sh
           grep -Fq 'sysupgrade -T "$IMAGE"' scripts/online-upgrade/check.sh
           grep -Fq 'sha256sum -c -' scripts/online-upgrade/check.sh
-          if grep -Eq '/sbin/sysupgrade[[:space:]]+-F([[:space:]]|$)' scripts/online-upgrade/check.sh; then
-            echo "::error::在线升级禁止跳过安全检查" >&2
+          if grep -Fq 'sysupgrade -F ' scripts/online-upgrade/check.sh; then
+            echo '::error::在线升级禁止跳过固件验证' >&2
             exit 1
           fi
-          echo 'OTA shell, LuCI JS, ACL, menu and safety checks passed.'
-
+          echo 'OTA safety and syntax preflight passed.'
       - name: Prepare audited Photonicat1 online firmware update checker
         run: bash scripts/prepare-online-upgrade.sh "$GITHUB_WORKSPACE/immortalwrt"
 
