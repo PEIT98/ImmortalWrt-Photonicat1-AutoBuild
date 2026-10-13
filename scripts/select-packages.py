@@ -20,6 +20,10 @@ force = {
     'luci-app-ttyd': 'y', 'ttyd': 'y', 'luci-theme-aurora': 'y',
     # Official LinkEase iStore and legacy Lua LuCI compatibility.
     'luci-app-store': 'y', 'luci-compat': 'y',
+    # iStore UI -> luci-lib-taskd -> taskd dependency chain.
+    # Explicit selection prevents silent disappearance after make defconfig.
+    'luci-lib-taskd': 'y', 'luci-lib-xterm': 'y', 'taskd': 'y',
+    'script-utils': 'y', 'coreutils-stty': 'y', 'mount-utils': 'y',
     # Docker Engine + CLI + Compose and LuCI Dockerman management UI.
     'luci-app-dockerman': 'y', 'docker': 'y', 'dockerd': 'y',
     'docker-compose': 'y',
