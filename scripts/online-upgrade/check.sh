@@ -147,15 +147,21 @@ case "$MODE" in
         # Checking must not overwrite an in-progress flashing status.
         exit 0 ;;
     start)
-        [ "$#" -eq 3 ] || die '升级参数数量错误'
+        [ "$#" -eq 5 ] || die '升级参数数量错误'
         case "$2" in keep|reset) ;; *) die '配置选择无效';; esac
         case "$3" in normal|force) ;; *) die '升级模式无效';; esac
+        valid_tag "$4" || die '已确认的 Release 标签无效'
+        printf '%s\n' "$5" | grep -Eq '^[0-9a-fA-F]{64} || die '已有升级任务运行中'
+        setsid /bin/sh "$0" run "$2" "$3" "$4" "$5" </dev/null > "$LOG" 2>&1 &
+        echo '后台升级任务已启动'
+        exit 0 ;;
+ || die '已确认的 SHA256 无效'
         [ ! -d "$LOCK" ] || die '已有升级任务运行中'
         setsid /bin/sh "$0" run "$2" "$3" </dev/null > "$LOG" 2>&1 &
         echo '后台升级任务已启动'
         exit 0 ;;
     run)
-        [ "$#" -eq 3 ] || die '升级参数数量错误'
+        [ "$#" -eq 5 ] || die '升级参数数量错误'
         case "$2" in keep|reset) ;; *) die '配置选择无效';; esac
         case "$3" in normal|force) ;; *) die '升级模式无效';; esac
         mkdir "$LOCK" 2>/dev/null || die '已有升级任务运行中'
@@ -163,6 +169,8 @@ case "$MODE" in
         device_ok || die '设备身份检查失败'
         stage checking '正在获取 GitHub 发布信息及设备配置'
         load_release
+        [ "$RTAG" = "$4" ] || die '最新 Release 已变化，请重新检查并确认'
+        [ "$HASH" = "$5" ] || die '镜像 SHA256 已变化，请重新检查并确认'
         if [ "$3" = normal ] && [ -n "$CURRENT" ] && [ -n "$REMOTE" ] && [ "$CURRENT" = "$REMOTE" ]; then
             die '当前已是同一构建；如需重新刷写请选择强制重装'
         fi
