@@ -93,6 +93,22 @@ jobs:
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
 
+      - name: Validate Photonicat1 online update package
+        run: |
+          set -euo pipefail
+          bash -n scripts/prepare-online-upgrade.sh
+          sh -n scripts/online-upgrade/check.sh
+          node --check scripts/online-upgrade/view.js
+          python3 -m json.tool scripts/online-upgrade/menu.json >/dev/null
+          python3 -m json.tool scripts/online-upgrade/acl.json >/dev/null
+          grep -Fq 'sysupgrade -T "$IMAGE"' scripts/online-upgrade/check.sh
+          grep -Fq 'sha256sum -c -' scripts/online-upgrade/check.sh
+          if grep -Eq '/sbin/sysupgrade[[:space:]]+-F([[:space:]]|$)' scripts/online-upgrade/check.sh; then
+            echo "::error::在线升级禁止跳过安全检查" >&2
+            exit 1
+          fi
+          echo 'OTA shell, LuCI JS, ACL, menu and safety checks passed.'
+
       - name: Prepare audited Photonicat1 online firmware update checker
         run: bash scripts/prepare-online-upgrade.sh "$GITHUB_WORKSPACE/immortalwrt"
 
