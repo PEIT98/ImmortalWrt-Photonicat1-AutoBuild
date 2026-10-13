@@ -1,0 +1,6 @@
+#!/bin/sh
+# Enable boot reconciliation; the hotplug handler continues to update it.
+test -x /etc/init.d/photonicat-qmodem-mwan3 || exit 1
+/etc/init.d/photonicat-qmodem-mwan3 enable || exit 1
+/usr/bin/photonicat-qmodem-mwan3-sync || exit 1
+exit 0
