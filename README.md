@@ -34,10 +34,10 @@
 
 **有线 WAN（wan） > Wi-Fi 中继（wwan） > QModem 5G/LTE（wwan_5g）**
 
-预置 `files/etc/config/mwan3` 作为 IPv4 故障切换策略。**初次启动必须手动完成：**
+预置 `files/etc/config/mwan3` 作为 IPv4 故障切换策略，并通过 `files/etc/uci-defaults/99-z-photonicat1-qmodem-alias` 预置 6-1 插槽别名（已有自定义别名不覆盖）。**初次启动请检查：**
 
 1. 在 LuCI 无线设置中为 Wi-Fi STA 填写自己的 SSID/密码，绑定网络 `wwan`。
-2. 在 QModem 中扫描并设置模组，将 **Alias/别名** 设为 `wwan_5g`，配置 APN 并拨号。
+2. USB `6-1` 插槽的模组将由首启脚本预设 **Alias/别名为 `wwan_5g`**。在 QModem 中检查拨号配置、APN 并拨号；如果模组连接在其他 USB/PCIe 插槽，仍需手动设置别名。界面中的设备配置编号 `6_1` 不必改变，真正的 network 拨号接口将使用 `wwan_5g`。
 3. 检查 WAN 防火墙区域、`mwan3` 在线状态和真正的主备切换。不要同时让原有 DHCP `usb0` 接口和 QModem 接管同一模组。
 
 **注意**：QModem Next 和传统 `luci-app-qmodem` UI 不应同时选用；其单独的 `luci-app-qmodem-mwan` 依赖传统 UI，所以本工程采用通用 `luci-app-mwan3`。
