@@ -77,8 +77,8 @@ return view.extend({
 					output('升级失败：' + msg + '\n请检查设备上 /tmp/photonicat-upgrade/upgrade.log');
 				} else if (stage === 'flashing' || stage === 'reboot') {
 					progress.textContent = '正在刷写/重启：' + msg + '。请勿断电，等待路由器重新上线。';
-					if (poll) clearInterval(poll);
-					poll = null;
+					// Continue observing: sysupgrade can still fail after entering
+					// the flashing phase; do not report success prematurely.
 				}
 			}).catch(function() {
 				if (upgrading) progress.textContent = '已失去连接，可能正在升级重启。不要断电，请等待设备重新上线。';
