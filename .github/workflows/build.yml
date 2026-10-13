@@ -159,6 +159,7 @@ jobs:
             immortalwrt/.config.before-defconfig
             immortalwrt/feeds.conf.default
             immortalwrt/tmp/.packageinfo
+            immortalwrt/tmp/.config-package.in
           include-hidden-files: true
           retention-days: 14
 
