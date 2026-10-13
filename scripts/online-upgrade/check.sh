@@ -33,8 +33,8 @@ case "$TAG" in
 esac
 PUBLISHED="$(jsonfilter -i "$TMP" -e '@.published_at' 2>/dev/null || true)"
 NAMES="$(jsonfilter -i "$TMP" -e '@.assets[*].name' 2>/dev/null || true)"
-EXT4="$(printf '%s\n' "$NAMES" | grep -E '^immortalwrt-rockchip-armv8-ariaboard_photonicat-ext4-sysupgrade\.img\.gz$' | head -n1 || true)"
-SQUASHFS="$(printf '%s\n' "$NAMES" | grep -E '^immortalwrt-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade\.img\.gz$' | head -n1 || true)"
+EXT4="$(printf '%s\n' "$NAMES" | grep -E '^immortalwrt-rockchip-armv8-ariaboard_photonicat-ext4-sysupgrade(_[0-9]{10})?\.img\.gz$' | head -n1 || true)"
+SQUASHFS="$(printf '%s\n' "$NAMES" | grep -E '^immortalwrt-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade(_[0-9]{10})?\.img\.gz$' | head -n1 || true)"
 SUMS="$(printf '%s\n' "$NAMES" | grep -Fx 'SHA256SUMS.txt' || true)"
 if [ -z "$EXT4" ] && [ -z "$SQUASHFS" ]; then
     echo '错误：本次 Release 没有光影猫一代 RK3568 镜像；已拒绝其它设备镜像。' >&2
