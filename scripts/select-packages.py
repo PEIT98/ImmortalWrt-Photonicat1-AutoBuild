@@ -26,7 +26,8 @@ force = {
     'script-utils': 'y', 'coreutils-stty': 'y', 'mount-utils': 'y',
     # LinkEase luci-app-store Makefile has an unconditional +tar dependency.
     # Failure #38347186158 dropped iStore after defconfig while GNU tar stayed unset.
-    'tar': 'y',
+    'tar': 'y', 'xz-utils': 'y',
+    # GNU tar enables TAR_XZ by default; xz requires the xz-utils metapackage.
     # Docker Engine + CLI + Compose and LuCI Dockerman management UI.
     'luci-app-dockerman': 'y', 'docker': 'y', 'dockerd': 'y',
     'docker-compose': 'y',
