@@ -105,6 +105,7 @@ absent=(
   CONFIG_PACKAGE_luci-app-passwall
   CONFIG_PACKAGE_luci-app-smartdns
   CONFIG_PACKAGE_luci-app-zerotier
+  CONFIG_PACKAGE_luci-app-online-upgrade
   CONFIG_PACKAGE_smartdns
   CONFIG_PACKAGE_zerotier
 )
