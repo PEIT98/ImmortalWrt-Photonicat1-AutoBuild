@@ -144,7 +144,7 @@ case "$MODE" in
         fi
         echo "固件地址：$IMG_URL"
         echo "更新说明：https://github.com/$REPO/releases/tag/$RTAG"
-        stage checked '校验发布信息完成，等待用户确认升级'
+        # Checking must not overwrite an in-progress flashing status.
         exit 0 ;;
     start)
         [ "$#" -eq 3 ] || die '升级参数数量错误'
@@ -186,7 +186,9 @@ case "$MODE" in
         /sbin/sysupgrade -b "$BAK" || die '无法生成配置备份'
         [ -s "$BAK" ] || die '配置备份为空'
         if awk '$2=="/boot" && $3!="tmpfs" && $3!="overlay" {ok=1} END{exit !ok}' /proc/mounts; then
-            cp "$BAK" /boot/photonicat-upgrade-backup.tar.gz && echo '备份已存储到持久 /boot 分区' || true
+            cp "$BAK" /boot/photonicat-upgrade-backup.tar.gz && echo '备份已存储到持久 /boot 分区' || echo '提示：boot 分区备份失败，请在刷机前从 LuCI 导出备份'
+        else
+            echo '提示：/boot 未挂载为持久分区，临时备份会随重启消失；请事先从 LuCI 导出到电脑'
         fi
         # Force only means reinstall an existing version. Never use sysupgrade -F.
         stage flashing '校验完成，正在执行 sysupgrade；请勿断电'
