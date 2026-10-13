@@ -167,6 +167,7 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - **硬件诊断**：新增 `usbutils`（`lsusb`）、`pciutils`（`lspci`）和 `lsblk`，便于检查光影猫 USB/PCIe 网卡、模组、SSD；`kmod-usb-acm` 增加对 CDC ACM 类型 USB 串口的内核支持，**并不能保证识别所有厂商自定义串口**，也不会修改现有 `option` 驱动/TD-TECH 补丁。
 - **网络诊断**：新增 `iperf3`、`tcpdump` 供手工测速/抓包，未设置后台监听、抓包或开机任务。
 - **定时重启**：新增官方 `luci-app-autoreboot`，不预设任何定时重启任务。
+- **中文界面**：为 DiskMan、Autoreboot、UPnP 同时选择官方简体中文语言包（`luci-i18n-diskman-zh-cn`、`luci-i18n-autoreboot-zh-cn`、`luci-i18n-upnp-zh-cn`）。
 - **UPnP**：新增官方 `luci-app-upnp`（其依赖会选择 miniupnpd）。不覆写配置，不预设端口映射；miniupnpd 官方初始配置 `option enabled 0`，需要使用时在 LuCI 中手动配置启用。已有升级保留配置的实际状态以设备为准。
 - **编译保障**：原 `scripts/select-packages.py` 在 `feeds install` 完成后选择软件包；`scripts/verify-config.sh` 在 `make defconfig` 后检查全部新增选项以及 DiskMan Btrfs 可选项关闭状态。依赖未满足时构建会直接提示缺项，避免无提示产出缺插件固件。
 - **触发规则不变**：仅更新代码及文档；GitHub Actions 的 push 触发路径仍仅为 `.github/photonicat-build-trigger.txt`，未改动该文件，不会因本次提交自动开启新编译。正在运行的任务继续使用启动时检出的提交；保留每周五既定的定时构建。
