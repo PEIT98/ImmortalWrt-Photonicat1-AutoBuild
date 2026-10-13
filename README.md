@@ -173,3 +173,16 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - **触发规则不变**：仅更新代码及文档；GitHub Actions 的 push 触发路径仍仅为 `.github/photonicat-build-trigger.txt`，未改动该文件，不会因本次提交自动开启新编译。正在运行的任务继续使用启动时检出的提交；保留每周五既定的定时构建。
 
 **兼容状态**：已核对 `immortalwrt/luci` 的 `openwrt-25.12` 分支包含 DiskMan、Autoreboot、UPnP 软件包定义，但这次提交不代表 GitHub Actions 完整编译和光影猫真机验证通过。
+
+## 2026-10-13：修复 Actions #38344162970 的配置校验失败
+
+失败记录：[GitHub Actions #38344162970](https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/actions/runs/38344162970)；于 2026-10-13 12:06（UTC+8）在 **Resolve and verify package selection** 失败，没有进入固件的实际编译阶段。Runner 当时剩余 105 GiB 左右的磁盘空间，不属于 Rust 或空间不足问题。
+
+失败时上传的 `.config` 显示 `luci-app-store` 与 `luci-app-bandix-plus` 选项完全消失，而 `luci-lib-taskd` 和 `taskd` 为未选中。现修复如下：
+
+1. **Bandix Plus 包名**：上游 UI Makefile 通过 `luci.mk` 的 `$(notdir $(CURDIR))` 推断软件包名，旧目录 `package/photonicat-luci-app-bandix-plus` 错误注册为 `photonicat-luci-app-bandix-plus`。现改为 `package/luci-app-bandix-plus`，保留多接口 Bandix Plus 后端和默认关闭流控的配置。
+2. **iStore 来源保留**：继续从 LinkEase 官方 `istore;main` feed 取源码。feeds 安装之后使用 `scripts/fix-istore-25.12.sh` 校验四个 iStore 包路径，并在官方 `luci-app-store` Makefile 显式定义 `LUCI_NAME` 和 `PKG_NAME`，避免包身份依赖路径推断。此项针对源码已安装但 Kconfig 选项未出现的问题提供兼容修正，最终成效须由新编译验证。
+3. **依赖和检查**：在配置覆盖中显式启用 `luci-lib-taskd`、`luci-lib-xterm`、`taskd`、`script-utils`、`coreutils-stty` 和 `mount-utils`；在 `make defconfig` 后逐项检查。工作流额外报告 `tmp/.packageinfo` 中的实际注册名称，失败时 Artifact 连同配置一起保存元数据，避免再次凭猜测排查。
+4. **不改编译启动方式**：不修改专用 push 触发文件 `.github/photonicat-build-trigger.txt`，不手动运行 Actions，不取消或重启现有工作流；原每周五凌晨 02:00 定时构建保持不变。此前新增的 DiskMan、USB/PCIe/网络诊断、定时重启、UPnP 和中文翻译选项也全部保留。
+
+**注意**：这些是基于真实失败日志与 Makefile 的修复提交，尚无新一轮 `make defconfig` 或完整固件编译的成功结果，不能视为已经真机验证。
