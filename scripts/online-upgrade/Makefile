@@ -5,7 +5,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-online-upgrade
 PKG_VERSION:=1.0.0
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=Photonicat1 community
@@ -22,8 +22,9 @@ define Package/luci-app-online-upgrade
 endef
 
 define Package/luci-app-online-upgrade/description
-  Protected Photonicat1 GitHub OTA with device, image, SHA256 and
-  sysupgrade test checks, plus config backup and optional reset.
+  Asynchronous Photonicat1 OTA with last five GitHub Releases,
+  configurable mirrors, user-provided SHA256-verified HTTPS images,
+  backup and mandatory image / partition compatibility checks.
 endef
 
 define Build/Prepare
