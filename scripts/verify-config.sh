@@ -55,6 +55,10 @@ need=(
   CONFIG_PACKAGE_ath12k-firmware-wcn7850
   CONFIG_PACKAGE_kmod-ath10k
   CONFIG_PACKAGE_ath10k-firmware-qca988x
+  CONFIG_PACKAGE_kmod-ath10k-sdio
+  CONFIG_PACKAGE_kmod-mmc
+  CONFIG_PACKAGE_ath10k-firmware-qca9377-sdio
+  CONFIG_PACKAGE_ath10k-board-qca9377-sdio
   CONFIG_PACKAGE_luci-app-cpufreq
   CONFIG_PACKAGE_cpufreq
   CONFIG_PACKAGE_luci-mod-battstatus
