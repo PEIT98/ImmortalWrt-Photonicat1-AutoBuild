@@ -1,5 +1,5 @@
 # IPv4 故障切换：WAN > Wi-Fi 中继 > QModem 5G
-# QModem 模组 Alias 需设置为 wwan_5g
+# 第三级 QModem 接口由 photonicat-qmodem-mwan3-sync 动态创建/切换
 config globals 'globals'
 	option mmx_mask '0x3F00'
 
@@ -33,21 +33,6 @@ config interface 'wwan'
 	list track_ip '1.1.1.1'
 	list flush_conntrack 'disconnected'
 
-config interface 'wwan_5g'
-	option enabled '1'
-	option family 'ipv4'
-	option track_method 'ping'
-	option reliability '2'
-	option count '1'
-	option timeout '3'
-	option interval '5'
-	option down '3'
-	option up '3'
-	list track_ip '223.5.5.5'
-	list track_ip '119.29.29.29'
-	list track_ip '1.1.1.1'
-	list flush_conntrack 'disconnected'
-
 config member 'wan_priority1'
 	option interface 'wan'
 	option metric '1'
@@ -58,15 +43,9 @@ config member 'wwan_priority2'
 	option metric '2'
 	option weight '1'
 
-config member 'wwan5g_priority3'
-	option interface 'wwan_5g'
-	option metric '3'
-	option weight '1'
-
 config policy 'failover'
 	list use_member 'wan_priority1'
 	list use_member 'wwan_priority2'
-	list use_member 'wwan5g_priority3'
 	option last_resort 'unreachable'
 
 config rule 'default_rule_v4'
