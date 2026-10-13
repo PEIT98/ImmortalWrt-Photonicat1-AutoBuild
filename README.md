@@ -157,6 +157,6 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 
 **安全默认值**：原上游 Bandix Plus 的 `enable_traffic=1` 在本工程构建时改为 **0（关闭）**，避免首启即挂接 eBPF/流控规则。刷机后需要在 **网络 → Bandix Plus** 中检查接口配置并由你自行启用；要监测多个 LAN/WAN 需确认 eBPF 内核支持，且硬件流量卸载可能造成数据漏计。**不会为 Bandix 自动关闭流量卸载，也不会自动开启限速**。实际是否支持全部接口需要真机测试。
 
-**TD-TECH MT5700M-CN 驱动补丁研究**：见 [docs/TDTECH-MT5700M-CN.md](docs/TDTECH-MT5700M-CN.md)。西瓜皮原补丁仅按 `0x3466` 厂商匹配，未限定 USB 产品 `0x3301`；可能影响其他接口。现在**只做研究，不合入内核驱动补丁**；待实测 If2～If5 的接口描述符后，再考虑限制厂商+产品 ID 的精确匹配。
+**TD-TECH MT5700M-CN USB 串口补丁**：已按要求采用[西瓜皮原版 `999-add-TD-TECH-option-id.patch`](999-add-TD-TECH-option-id.patch)，编译准备时直接复制到 Rockchip 内核 `patches-6.12`，不修改它的厂商 ID 和接口协议匹配行为。此补丁已纳入**下一次编译**，能否在光影猫设备上正常识别仍需编译及真机验证。其他 FM350、FM160/广和通串口补丁对 Linux 6.12 存在重复规则，暂不合入，分析见 [docs/TDTECH-MT5700M-CN.md](docs/TDTECH-MT5700M-CN.md)。
 
 **构建状态**：上述三项和研究文档已提交 GitHub，但尚未经过新的 GitHub Actions 完整编译和真机验证。普通代码提交不会触发新的构建，只会在下一次手动/定时编译生效。
