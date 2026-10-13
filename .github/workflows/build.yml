@@ -98,6 +98,9 @@ jobs:
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
 
+      - name: Hide Status MultiWAN menu (keep Network MultiWAN)
+        run: python3 scripts/hide-mwan3-status-menu.py "$GITHUB_WORKSPACE/immortalwrt"
+
       - name: Fix iStore package naming on ImmortalWrt 25.12
         run: bash scripts/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 
