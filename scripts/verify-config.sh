@@ -23,6 +23,7 @@ need=(
   CONFIG_PACKAGE_coreutils-stty
   CONFIG_PACKAGE_mount-utils
   CONFIG_PACKAGE_tar
+  CONFIG_PACKAGE_xz-utils
   CONFIG_PACKAGE_luci-app-dockerman
   CONFIG_PACKAGE_docker
   CONFIG_PACKAGE_dockerd
