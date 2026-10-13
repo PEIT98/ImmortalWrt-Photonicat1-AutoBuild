@@ -93,37 +93,6 @@ jobs:
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
 
-      - name: Validate Photonicat1 online update package
-        run: |
-          set -euo pipefail
-          bash -n scripts/prepare-online-upgrade.sh
-          sh -n scripts/online-upgrade/check.sh
-          bash -n scripts/online-upgrade/check.sh
-          # OTA firmware metadata checks now run in background; these RPC calls must remain fast.
-          for arm in 'check-start)' 'check-status)' 'check-result)' 'tags-start)' 'tags-worker)' 'tags-status)' 'tags-result)'; do
-            grep -Fq "$arm" scripts/online-upgrade/check.sh
-          done
-          grep -Fq 'valid_custom_url()' scripts/online-upgrade/check.sh
-          grep -Fq 'valid_sha()' scripts/online-upgrade/check.sh
-          grep -Fq "option custom_url ''" scripts/online-upgrade/config
-          grep -Fq "option custom_sha256 ''" scripts/online-upgrade/config
-          sh -n scripts/online-upgrade/disk-layout.sh
-          bash -n scripts/online-upgrade/disk-layout.sh
-          node --check scripts/online-upgrade/view.js
-          python3 -m json.tool scripts/online-upgrade/menu.json >/dev/null
-          python3 -m json.tool scripts/online-upgrade/acl.json >/dev/null
-          grep -Fq 'setsid /bin/sh "$0" run "$2" "$3" "$4" "$5"' scripts/online-upgrade/check.sh
-          grep -Fq 'sysupgrade -T "$IMAGE"' scripts/online-upgrade/check.sh
-          grep -Fq 'sha256sum -c -' scripts/online-upgrade/check.sh
-          if grep -Fq 'sysupgrade -F ' scripts/online-upgrade/check.sh; then
-            echo '::error::在线升级禁止跳过固件验证' >&2
-            exit 1
-          fi
-          echo 'OTA safety and syntax preflight passed.'
-
-      - name: Prepare audited Photonicat1 online firmware update checker
-        run: bash scripts/prepare-online-upgrade.sh "$GITHUB_WORKSPACE/immortalwrt"
-
       - name: Hide Status MultiWAN menu (keep Network MultiWAN)
         run: python3 scripts/hide-mwan3-status-menu.py "$GITHUB_WORKSPACE/immortalwrt"
 
