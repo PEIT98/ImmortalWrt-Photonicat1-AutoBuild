@@ -1,0 +1,6 @@
+# Photonicat1 GitHub Releases checker; read-only by design.
+config online-upgrade 'settings'
+	option enabled '0'
+	option repo 'PEIT98/ImmortalWrt-Photonicat1-AutoBuild'
+	option channel 'latest'
+	option check_only '1'
