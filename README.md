@@ -202,6 +202,15 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - 旧版 `.github/photonicat-build-trigger.txt` 保留作为历史记录，但编辑它也不会触发编译。
 - Docker Engine、CLI、Compose 和 `luci-app-dockerman` 已在成功的编译 #38353246710 中通过配置校验；Dockerman 官方 LuCI 菜单属于 **服务 → Dockerman JS**，需要设备上存在可执行的 `/etc/init.d/dockerd`、`/usr/bin/dockerd` 和有效的 `/etc/config/dockerd` 才会显示。若菜单未显示，应在设备上检查文件和服务，而不是误认成没有编译。
 
+### 2026-10-13：修复 LuCI 检查超时、最近 5 个 Release 与下载加速
+
+- **XHR request timed out 修复**：旧版前端通过 fs.exec 同步等待多次 curl；网速慢时 rpcd XHR 先超时。新版改用 check-start → check-worker → check-status → check-result 的后台检查和轻量轮询；后端 GitHub API 与 SHA256 元数据请求限定为每次最多约 25 秒，失败返回实际原因。不会因为页面自动检查而启动刷写。
+- **版本列表**：从填写的 GitHub 仓库读取最近 **5 个已发布的 Release 标签**，提供下拉选择，仍支持手工输入任意有效的 Release 标签。普通 Git commits 不一定存在可刷写的镜像，因此不把最近 5 个 commit SHA 直接当作可升级版本。
+- **下载加速**：默认 GitHub 直连，内置 ghproxy.net、ghfast.top、gh-proxy.org 三个可选 HTTPS 前缀，另外可以自行填写 HTTPS 加速代理。第三方代理可能失效或缓存旧资源；**只代理镜像，发布信息和 SHA256 直接查询 GitHub，刷写前校验文件摘要**。
+- **自定义固件下载**：提供完整的 HTTPS 固件链接及 64 位 SHA256 输入框，供无法访问 GitHub API 或使用自行托管镜像时选择。只接受与当前 Photonicat1 ext4/squashfs 类型严格匹配的 sysupgrade 镜像文件名；自定义链接不会免除设备验证、下载后 SHA256、sysupgrade -T 和磁盘分区表检查。
+- **编译集成**：相关文件已经通过 scripts/prepare-online-upgrade.sh 写入 package/luci-app-online-upgrade；选包和配置校验保持开启，APK 发布版本更新至 r4。GitHub Actions 仅支持手动 Run workflow；此处源码提交不会自动启动编译。
+- **现有设备**：已经刷入的固件不会因为修改 GitHub 仓库自动更新 LuCI 插件；需要后续刷入新编译的固件，或通过 SSH 单独安装对应新版脚本和 LuCI 前端文件。需要真机检查 GitHub API 连通性、版本匹配及下载流程后再使用自动刷机。
+
 ## 光影猫专用在线固件升级（完整功能 + 严格校验）
 
 上游开源项目：[gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)，GPL-2.0-only，固定源码提交 `6f587f19d7f884ca89e4bfa95bbb9a002a521477`。此项目保留上游许可证，同时提供专属光影猫一代的后端、前端及额外分区保护脚本；不是直接复制无校验的一键升级逻辑。
