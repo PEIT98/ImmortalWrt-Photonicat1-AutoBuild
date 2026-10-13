@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # Based on gooyjq/luci-app-online-upgrade at pinned upstream commit.
-# Photonicat1 hardening: check-only; no web flash, unsafe restore CGI, or auto APK install.
+# Photonicat1 hardening: validated upgrades only; no unsafe restore CGI or auto APK install.
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-online-upgrade
 PKG_VERSION:=1.0.0
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=Photonicat1 community
@@ -17,13 +17,13 @@ define Package/luci-app-online-upgrade
   SECTION:=luci
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
-  TITLE:=Photonicat1 GitHub firmware update checker (read-only)
+  TITLE:=Photonicat1 verified GitHub OTA firmware upgrade
   DEPENDS:=+luci-base +curl +jsonfilter
 endef
 
 define Package/luci-app-online-upgrade/description
-  Safe, read-only GitHub Releases update checker for Ariaboard Photonicat1.
-  Does NOT download images or execute sysupgrade.
+  Protected Photonicat1 GitHub OTA with device, image, SHA256 and
+  sysupgrade test checks, plus config backup and optional reset.
 endef
 
 define Build/Prepare
