@@ -1,6 +1,8 @@
-# Photonicat1 GitHub Releases checker; read-only by design.
+# Photonicat1 online firmware upgrades from authenticated GitHub Releases.
+# Never automatically flash; LuCI must explicitly ask the administrator first.
 config online-upgrade 'settings'
-	option enabled '0'
+	option enabled '1'
 	option repo 'PEIT98/ImmortalWrt-Photonicat1-AutoBuild'
-	option channel 'latest'
-	option check_only '1'
+	option tag 'latest'
+	option proxy ''
+	option keep_config '1'
