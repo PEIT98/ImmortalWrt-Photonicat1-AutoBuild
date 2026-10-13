@@ -6,3 +6,5 @@ Do not enable email monitoring.
 Only explicit changes to this marker trigger one-off push builds; ordinary pushes do not launch builds.
 
 2026-10-13 12:35 Asia/Singapore: User-requested one-off verification build of latest main, including iStore/Bandix registration fixes and newly selected DiskMan, network/hardware diagnostics, USB ACM, autoreboot and UPnP. Preserve existing QModem/Aurora/Docker. Do not cancel existing builds.
+
+2026-10-13 13:04 Asia/Singapore: One-off unattended rebuild after #38347186158: select mandatory GNU tar for iStore; verify tar with all existing QModem/Aurora/Docker/Bandix/DiskMan/USB/UPnP selections. Hourly automatic failure review enabled. Preserve all user requirements.
