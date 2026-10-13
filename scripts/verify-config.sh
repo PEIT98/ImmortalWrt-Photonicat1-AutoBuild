@@ -55,7 +55,6 @@ need=(
   CONFIG_PACKAGE_ath12k-firmware-wcn7850
   CONFIG_PACKAGE_kmod-ath10k
   CONFIG_PACKAGE_ath10k-firmware-qca988x
-  CONFIG_PACKAGE_kmod-ath10k-sdio
   CONFIG_PACKAGE_kmod-mmc
   CONFIG_PACKAGE_ath10k-firmware-qca9377-sdio
   CONFIG_PACKAGE_ath10k-board-qca9377-sdio
@@ -110,6 +109,7 @@ absent=(
   CONFIG_PACKAGE_luci-app-smartdns
   CONFIG_PACKAGE_luci-app-zerotier
   CONFIG_PACKAGE_luci-app-online-upgrade
+  CONFIG_PACKAGE_kmod-ath10k-sdio
   CONFIG_PACKAGE_smartdns
   CONFIG_PACKAGE_zerotier
 )
@@ -124,4 +124,4 @@ if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代目标、QModem、OpenClash、Aurora、iStore、Docker/Dockerman、DiskMan、USB/PCIe/网络诊断、ACM、定时重启、UPnP 及 Wi-Fi 驱动选择检查通过。'
+echo '光影猫一代目标、QModem、OpenClash、Aurora、iStore、Docker/Dockerman、DiskMan、USB/PCIe/网络诊断、ACM、定时重启、UPnP、QCA9377 SDIO 固件及 Wi-Fi 驱动选择检查通过。'
