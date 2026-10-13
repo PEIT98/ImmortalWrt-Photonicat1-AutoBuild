@@ -21,8 +21,6 @@
 | iStore 应用商店（luci-app-store） | 新增，使用 LinkEase 官方 main feed |
 | Docker Engine / CLI / Compose + Dockerman 管理界面 | 新增，使用 ImmortalWrt 官方 feeds |
 | ath11k PCI / WCN6855 固件、USB QMI / MBIM 等驱动 | 保留 |
-| 旧 ModemBand、sms-tool-js | 移除 |
-| PassWall、SmartDNS、ZeroTier | 移除 |
 
 ## WAN 优先级
 
