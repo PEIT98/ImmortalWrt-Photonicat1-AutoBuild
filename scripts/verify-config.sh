@@ -24,6 +24,16 @@ need=(
   CONFIG_PACKAGE_docker-compose
   CONFIG_PACKAGE_luci-app-bandix-plus
   CONFIG_PACKAGE_bandix-plus
+  CONFIG_PACKAGE_luci-app-diskman
+  CONFIG_PACKAGE_luci-app-diskman_INCLUDE_lsblk
+  CONFIG_PACKAGE_usbutils
+  CONFIG_PACKAGE_pciutils
+  CONFIG_PACKAGE_lsblk
+  CONFIG_PACKAGE_iperf3
+  CONFIG_PACKAGE_tcpdump
+  CONFIG_PACKAGE_kmod-usb-acm
+  CONFIG_PACKAGE_luci-app-autoreboot
+  CONFIG_PACKAGE_luci-app-upnp
   CONFIG_PACKAGE_kmod-rtw89-8922ae
   CONFIG_PACKAGE_kmod-rtw89-8852be
   CONFIG_PACKAGE_kmod-rtw89-8852ce
@@ -60,6 +70,12 @@ else
   echo '::error::Ruby YJIT 仍然启用，将触发耗费空间的 Rust 编译' >&2
   failed=1
 fi
+if grep -Fxq '# CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs is not set' "$CFG"; then
+  echo 'OK: DiskMan Btrfs optional tooling disabled (lower build footprint)'
+else
+  echo '::error::DiskMan 附加 Btrfs 工具链未关闭，请检查 25.12 Kconfig 选项是否变化' >&2
+  failed=1
+fi
 echo '===== 配置校验：全部必选项 ====='
 for key in "${need[@]}"; do
   if grep -Fxq "$key=y" "$CFG"; then
@@ -94,4 +110,4 @@ if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代目标、QModem、OpenClash、Aurora、iStore、Docker/Dockerman、网页终端及 RTL/MTK/QCA Wi-Fi 驱动选择检查通过。'
+echo '光影猫一代目标、QModem、OpenClash、Aurora、iStore、Docker/Dockerman、DiskMan、USB/PCIe/网络诊断、ACM、定时重启、UPnP 及 Wi-Fi 驱动选择检查通过。'
