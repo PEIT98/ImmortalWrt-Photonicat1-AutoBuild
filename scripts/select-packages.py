@@ -24,6 +24,9 @@ force = {
     # Explicit selection prevents silent disappearance after make defconfig.
     'luci-lib-taskd': 'y', 'luci-lib-xterm': 'y', 'taskd': 'y',
     'script-utils': 'y', 'coreutils-stty': 'y', 'mount-utils': 'y',
+    # LinkEase luci-app-store Makefile has an unconditional +tar dependency.
+    # Failure #38347186158 dropped iStore after defconfig while GNU tar stayed unset.
+    'tar': 'y',
     # Docker Engine + CLI + Compose and LuCI Dockerman management UI.
     'luci-app-dockerman': 'y', 'docker': 'y', 'dockerd': 'y',
     'docker-compose': 'y',
