@@ -23,6 +23,13 @@
 | Docker Engine / CLI / Compose + Dockerman 管理界面 | 新增，使用 ImmortalWrt 官方 feeds |
 | ath11k PCI / WCN6855 固件、USB QMI / MBIM 等驱动 | 保留 |
 
+## 光影猫一代板载 QCA1023 / QCA9377 Wi-Fi (SDIO)
+
+- 参考光影猫一代原作者的固件配置，使用 `ath10k-firmware-qca9377-sdio`、`ath10k-board-qca9377-sdio` 和 `kmod-mmc`。
+- ImmortalWrt 25.12 的 `kmod-ath10k` (PCIe) 与 `kmod-ath10k-sdio` (SDIO) 是互斥构建变体，共用 `ath10k_core.ko`。因此**不同时勾选两个模块包**：`scripts/enable-qca9377-ath10k-sdio.py` 在每次构建时修改上游 `ath.mk`，让原有 `kmod-ath10k` 同时包含 `ath10k_pci.ko` 和 `ath10k_sdio.ko`，继续支持既有 QCA988x PCIe 设备。工作流和配置检查会验证选包及构建定义。
+- 固件内包含驱动不等于硬件一定能识别：光影猫部分板子未焊接板载 Wi-Fi 芯片/座子；对这种板子无法通过软件开启无线。驱动和实际 AP/STA 功能尚待手动编译及真机测试。
+- 提交修改**不会自动启动 Actions**。到 `Actions → Photonicat1 ImmortalWrt QModem Build → Run workflow` 手动执行。
+
 ## WAN 优先级
 
 **有线 WAN（wan） > Wi-Fi 中继（wwan） > QModem 5G/LTE（wwan_5g）**
