@@ -17,7 +17,7 @@ return view.extend({
 		var repo = E('input', {class:'cbi-input-text',type:'text',style:'min-width:260px;width:100%;max-width:450px',value:'PEIT98/ImmortalWrt-Photonicat1-AutoBuild'});
 		var tag = E('input', {class:'cbi-input-text',type:'text',value:'latest'});
 		var proxy = E('input', {class:'cbi-input-text',type:'text',style:'min-width:260px;width:100%;max-width:450px',placeholder:'留空为 GitHub 直连；可填可信 HTTPS 加速前缀'});
-		var buttons = [], checked = false, busy = false, poll = null, upgrading = false;
+		var buttons = [], checked = false, busy = false, poll = null, upgrading = false, selectedRelease = null, selectedHash = null;
 
 		function setBusy(yes) {
 			busy = yes;
@@ -49,6 +49,7 @@ return view.extend({
 			setBusy(true);
 			api(['configure', repo.value.trim(), tag.value.trim() || 'latest', proxy.value.trim()]).then(function(text) {
 				checked = false;
+				selectedRelease = null; selectedHash = null;
 				output(text + '\n请重新检查最新固件。');
 			}).catch(function(e) { output('保存失败：' + e.message); })
 			  .finally(function() { setBusy(false); });
@@ -56,8 +57,13 @@ return view.extend({
 		function checkUpdate() {
 			setBusy(true);
 			checked = false;
+			selectedRelease = null; selectedHash = null;
 			output('正在从 GitHub Releases 检查设备、当前根文件系统及 SHA256 清单...');
 			api(['check']).then(function(text) {
+				var tagMatch = text.match(/^Release：([A-Za-z0-9._-]+)$/m);
+				var hashMatch = text.match(/^固件 SHA256：([0-9a-fA-F]{64})$/m);
+				if (!tagMatch || !hashMatch) throw new Error('固件身份信息不完整');
+				selectedRelease = tagMatch[1]; selectedHash = hashMatch[1];
 				checked = true;
 				output(text);
 			}).catch(function(e) { output('检查失败：' + e.message); })
@@ -85,7 +91,7 @@ return view.extend({
 			});
 		}
 		function startUpgrade(force) {
-			if (!checked) { ui.addNotification(null,E('p',{},'请先检查最新固件并确认设备匹配')); return; }
+			if (!checked || !selectedRelease || !selectedHash) { ui.addNotification(null,E('p',{},'请先检查最新固件并确认设备匹配')); return; }
 			var mode = getKeep();
 			var summary = mode === 'keep'
 				? '保留配置：刷写后尝试恢复已有网络、Wi-Fi、QModem 等配置。'
@@ -102,7 +108,7 @@ return view.extend({
 			setBusy(true);
 			upgrading = true;
 			progress.textContent = '升级状态：正在启动后台任务...';
-			api(['start', mode, force ? 'force' : 'normal']).then(function(t) {
+			api(['start', mode, force ? 'force' : 'normal', selectedRelease, selectedHash]).then(function(t) {
 				output(t);
 				if (poll) clearInterval(poll);
 				poll = setInterval(updateStatus, 3000);
