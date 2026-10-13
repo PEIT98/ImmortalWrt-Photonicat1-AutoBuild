@@ -146,3 +146,17 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - **资源提醒**：Docker/Compose 引入 Go 编译和大量依赖，可能显著增加 GitHub Actions 耗时、磁盘使用量与固件体积。首次编译成功与真机运行仍需验证；不保证能在 6 小时 Actions 限时内完成。
 - **运行存储**：Docker 镜像和容器应尽量放到空间足够的 ext4 外部存储/SSD 上，避免写满路由器系统 overlay。**本次不会自动分区、格式化磁盘、迁移 Docker data-root 或更改防火墙**。刷机后先检查磁盘挂载和 Docker 数据目录，再开始拉取镜像。
 - **与现有功能关系**：不修改 Aurora 主题源码、独立电池修复、QModem stable、MyOpenWrt ACL、mwan3 及当前构建缓存配置。按之前约定，仅提交修改，**不自动触发新编译**。
+
+## 2026-10-13：固件信息卡片、Docker 存储检测、Bandix Plus
+
+**1. 固件信息（只读）**：`files/www/luci-static/resources/view/status/include/99_photonicat1_info.js` 自动加入 LuCI 状态概览，显示 RK3568 型号、构建时间、内核、编译仓库、ImmortalWrt、QModem 和 Aurora 的 Git 提交标识。RPC 文件在 `/usr/libexec/rpcd/luci.photonicat1`，ACL 只授予 `get_info` 读取权限。**不修改 Aurora 主题文件**。
+
+**2. Docker 外部存储检测（只读）**：上述 LuCI 卡片还展示 `dockerd.globals.data_root`、当前目录所在文件系统可用空间，以及 `/mnt`、`/media` 下真实挂载的块设备。CLI 可执行 `photonicat-docker-storage-check` 检查。**不会自动挂载 SSD、分区、格式化、移动容器镜像、改数据目录或重启 Docker**。如果要改 data-root，请手动确认新盘已挂载，再停服务、复制现有容器数据并变更配置。仅凭路径以 `/mnt` 开头不足以证明该目录真实挂载，代码会核对 `/proc/mounts`。
+
+**3. Bandix Plus 多接口流量统计**：新增 [luci-app-bandix-plus](https://github.com/timsaya/luci-app-bandix-plus) 与 [openwrt-bandix-plus](https://github.com/timsaya/openwrt-bandix-plus)。这是官方推荐给多网口场景的版本，而不是西瓜皮使用的单网口 Bandix。编译时浅克隆上游 `main`、提取前后端软件包，选择 `luci-app-bandix-plus=y`、`bandix-plus=y` 并在 `make defconfig` 后验证。后端由上游提供 ARM64 预编译程序，不是让本工程重新从源码编译 Rust。
+
+**安全默认值**：原上游 Bandix Plus 的 `enable_traffic=1` 在本工程构建时改为 **0（关闭）**，避免首启即挂接 eBPF/流控规则。刷机后需要在 **网络 → Bandix Plus** 中检查接口配置并由你自行启用；要监测多个 LAN/WAN 需确认 eBPF 内核支持，且硬件流量卸载可能造成数据漏计。**不会为 Bandix 自动关闭流量卸载，也不会自动开启限速**。实际是否支持全部接口需要真机测试。
+
+**TD-TECH MT5700M-CN 驱动补丁研究**：见 [docs/TDTECH-MT5700M-CN.md](docs/TDTECH-MT5700M-CN.md)。西瓜皮原补丁仅按 `0x3466` 厂商匹配，未限定 USB 产品 `0x3301`；可能影响其他接口。现在**只做研究，不合入内核驱动补丁**；待实测 If2～If5 的接口描述符后，再考虑限制厂商+产品 ID 的精确匹配。
+
+**构建状态**：上述三项和研究文档已提交 GitHub，但尚未经过新的 GitHub Actions 完整编译和真机验证。普通代码提交不会触发新的构建，只会在下一次手动/定时编译生效。
