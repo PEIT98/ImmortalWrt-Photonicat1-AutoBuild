@@ -16,8 +16,13 @@ remove_prefixes = ('luci-app-passwall_INCLUDE_',)
 force = {
     'qmodem': 'y', 'luci-app-qmodem-next': 'y',
     'sms-forwarder-next': 'y',
-    # LuCI web terminal + Aurora theme
+    # LuCI web terminal + official Aurora theme
     'luci-app-ttyd': 'y', 'ttyd': 'y', 'luci-theme-aurora': 'y',
+    # Official LinkEase iStore and legacy Lua LuCI compatibility.
+    'luci-app-store': 'y', 'luci-compat': 'y',
+    # Docker Engine + CLI + Compose and LuCI Dockerman management UI.
+    'luci-app-dockerman': 'y', 'docker': 'y', 'dockerd': 'y',
+    'docker-compose': 'y',
     # Realtek RTL8922AE / 8852BE / 8852CE (rtw89)
     'kmod-rtw89-8922ae': 'y', 'kmod-rtw89-8852be': 'y', 'kmod-rtw89-8852ce': 'y',
     # MediaTek MT7925, MT7921/MT7922 and MT7916
