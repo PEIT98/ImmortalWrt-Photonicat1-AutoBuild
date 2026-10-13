@@ -14,6 +14,14 @@ need=(
   CONFIG_PACKAGE_luci-app-ttyd
   CONFIG_PACKAGE_ttyd
   CONFIG_PACKAGE_luci-theme-aurora
+  CONFIG_PACKAGE_luci-compat
+  CONFIG_PACKAGE_luci-app-store
+  CONFIG_PACKAGE_luci-lib-taskd
+  CONFIG_PACKAGE_taskd
+  CONFIG_PACKAGE_luci-app-dockerman
+  CONFIG_PACKAGE_docker
+  CONFIG_PACKAGE_dockerd
+  CONFIG_PACKAGE_docker-compose
   CONFIG_PACKAGE_kmod-rtw89-8922ae
   CONFIG_PACKAGE_kmod-rtw89-8852be
   CONFIG_PACKAGE_kmod-rtw89-8852ce
@@ -84,4 +92,4 @@ if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代目标、QModem、OpenClash、Aurora、网页终端及 RTL/MTK/QCA Wi-Fi 驱动选择检查通过。'
+echo '光影猫一代目标、QModem、OpenClash、Aurora、iStore、Docker/Dockerman、网页终端及 RTL/MTK/QCA Wi-Fi 驱动选择检查通过。'
