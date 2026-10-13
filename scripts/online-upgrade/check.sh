@@ -157,6 +157,7 @@ case "$MODE" in
         exit 0 ;;
  || die '已确认的 SHA256 无效'
         [ ! -d "$LOCK" ] || die '已有升级任务运行中'
+        stage starting '后台升级程序正在启动'
         setsid /bin/sh "$0" run "$2" "$3" </dev/null > "$LOG" 2>&1 &
         echo '后台升级任务已启动'
         exit 0 ;;
