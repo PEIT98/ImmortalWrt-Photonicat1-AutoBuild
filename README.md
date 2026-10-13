@@ -1,6 +1,6 @@
 # 光影猫一代 ImmortalWrt + QModem 自动编译
 
-适用 **Ariaboard Photonicat 一代（RK3568）**，**不是光影猫二代**。当前为首次编译测试工程，尚未完成 GitHub Actions 编译及真机测试。
+适用 **Ariaboard Photonicat 一代（RK3568）**，**不是光影猫二代**。已有 GitHub Actions 成功编译记录；但新增插件及不同镜像格式仍需分别通过下一次编译和真机验证。
 
 ## 源码组成
 
@@ -19,6 +19,7 @@
 | luci-app-openclash | 保留 |
 | luci-app-cpufreq | 保留 |
 | luci-mod-battstatus | 保留 |
+| luci-app-online-upgrade（光影猫专用安全版） | 新增，仅检查 GitHub Releases 更新，不自动刷写 |
 | iStore 应用商店（luci-app-store） | 新增，使用 LinkEase 官方 main feed |
 | Docker Engine / CLI / Compose + Dockerman 管理界面 | 新增，使用 ImmortalWrt 官方 feeds |
 | ath11k PCI / WCN6855 固件、USB QMI / MBIM 等驱动 | 保留 |
@@ -39,9 +40,9 @@
 
 到 [Actions](../../actions/workflows/build.yml) → **Photonicat1 ImmortalWrt QModem Build** → **Run workflow**，选择 `publish=true`（默认）并运行。
 
-## 自动编译
+## 编译触发方式
 
-GitHub Actions 设定 **每周五中国/新加坡时间凌晨 02:00**（UTC 周四 18:00）自动触发。GitHub 的计划任务可能延迟；需保持仓库 Actions 和定时任务启用。
+目前 **仅保留手动编译**：在 GitHub Actions 中点击 Run workflow。已关闭每周定时编译和 push 自动触发。
 
 构建成功后：
 - **Actions → Artifacts** 保存实际生效的 `.config` 和固件包。
@@ -200,3 +201,14 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - 修改代码或配置本身**不再自动编译**。切换到仅手动编译之前已经开始的运行仍会正常完成。
 - 旧版 `.github/photonicat-build-trigger.txt` 保留作为历史记录，但编辑它也不会触发编译。
 - Docker Engine、CLI、Compose 和 `luci-app-dockerman` 已在成功的编译 #38353246710 中通过配置校验；Dockerman 官方 LuCI 菜单属于 **服务 → Dockerman JS**，需要设备上存在可执行的 `/etc/init.d/dockerd`、`/usr/bin/dockerd` 和有效的 `/etc/config/dockerd` 才会显示。若菜单未显示，应在设备上检查文件和服务，而不是误认成没有编译。
+
+## 光影猫专用在线固件更新检查器（安全模式）
+
+上游：[gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)（GPL-2.0-only），锁定 Git 提交 `6f587f19d7f884ca89e4bfa95bbb9a002a521477`。在 `scripts/prepare-online-upgrade.sh` 中拉取、记录上游许可证，并使用本仓库维护的加固版 Makefile、LuCI 页面及检查脚本替换危险功能。
+
+- 默认安装 `luci-app-online-upgrade`，LuCI 菜单位于 **系统 → 在线升级**，仅查询 `PEIT98/ImmortalWrt-Photonicat1-AutoBuild` 的最新 GitHub Release。优先使用路由器内 `/etc/photonicat1-build-info` 的 Builder commit，与 Release 中 `build-sources.txt` 的 Workflow repo commit 比对；缺少信息时明确提示无法判断。
+- 只识别光影猫一代 `immortalwrt-rockchip-armv8-ariaboard_photonicat-{ext4,squashfs}-sysupgrade.img.gz` 两个精确文件名；显示 GitHub 镜像下载地址、`SHA256SUMS.txt` 及 Release 更新说明。未验证用户设备正在使用哪一种文件系统，所以**不自动选择刷机镜像**。
+- **没有一键刷机或自动下载安装**：没有 `sysupgrade` 执行入口、没有上游的 `online-upgrade-restore` CGI（它会解包上传文件到 `/`）、没有 `/etc/uci-defaults/90-online-upgrade-auto`（它会在开机时安装第三方 APK）、没有旧 Lua 备份恢复控制器。`/usr/bin/online-upgrade.sh` 仅允许 `check`；任何 `upgrade/background/backup/reset` 命令均拒绝。
+- 不使用第三方 GitHub 下载代理，不上传令牌，不自动修改网络、WAN、QModem、iStore、Docker 或 mwan3 配置。
+- 手动升级前要核对设备型号、ext4/squashfs 格式、SHA256、可用空间，备份配置及准备救砖方法；光影猫的 `sysupgrade` 直接升级兼容性尚未真机验证，故本安全版不执行刷写。
+- 已纳入 `scripts/select-packages.py` 和 `scripts/verify-config.sh` 必选项，**只在用户手动启动下一次 GitHub Actions 编译时进入新固件**。此处代码提交不会启动新编译。
