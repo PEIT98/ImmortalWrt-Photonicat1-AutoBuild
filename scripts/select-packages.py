@@ -23,6 +23,8 @@ force = {
     # Docker Engine + CLI + Compose and LuCI Dockerman management UI.
     'luci-app-dockerman': 'y', 'docker': 'y', 'dockerd': 'y',
     'docker-compose': 'y',
+    # Multi-interface traffic monitor (prebuilt aarch64 backend; disabled by default).
+    'luci-app-bandix-plus': 'y', 'bandix-plus': 'y',
     # Realtek RTL8922AE / 8852BE / 8852CE (rtw89)
     'kmod-rtw89-8922ae': 'y', 'kmod-rtw89-8852be': 'y', 'kmod-rtw89-8852ce': 'y',
     # MediaTek MT7925, MT7921/MT7922 and MT7916
