@@ -164,7 +164,11 @@ case "$MODE" in
     check-start)
         rm -f "$WORK/check.out" "$WORK/check.err" "$WORK/check.result.tmp"
         printf 'working|正在后台检查 GitHub 更新\n' > "$WORK/check.status"
-        setsid /bin/sh "$0" check-worker </dev/null > "$WORK/check.log" 2>&1 &
+        if command -v setsid >/dev/null 2>&1; then
+            setsid /bin/sh "$0" check-worker </dev/null > "$WORK/check.log" 2>&1 &
+        else
+            /bin/sh "$0" check-worker </dev/null > "$WORK/check.log" 2>&1 &
+        fi
         echo '后台检查已启动'
         exit 0 ;;
     check-worker)
@@ -188,7 +192,11 @@ case "$MODE" in
         [ "$#" -eq 2 ] && valid_repo "$2" || die '仓库格式无效'
         rm -f "$WORK/tags.out"
         printf 'working|正在获取最近 5 个 Release\n' > "$WORK/tags.status"
-        setsid /bin/sh "$0" tags-worker "$2" </dev/null > "$WORK/tags.log" 2>&1 &
+        if command -v setsid >/dev/null 2>&1; then
+            setsid /bin/sh "$0" tags-worker "$2" </dev/null > "$WORK/tags.log" 2>&1 &
+        else
+            /bin/sh "$0" tags-worker "$2" </dev/null > "$WORK/tags.log" 2>&1 &
+        fi
         echo '正在后台加载标签'
         exit 0 ;;
     tags-worker)
@@ -259,7 +267,11 @@ case "$MODE" in
         printf '%s\n' "$5" | grep -Eq '^[0-9a-fA-F]{64}$' || die '已确认的 SHA256 无效'
         [ ! -d "$LOCK" ] || die '已有升级任务运行中'
         stage starting '后台升级程序正在启动'
-        setsid /bin/sh "$0" run "$2" "$3" "$4" "$5" </dev/null > "$LOG" 2>&1 &
+        if command -v setsid >/dev/null 2>&1; then
+            setsid /bin/sh "$0" run "$2" "$3" "$4" "$5" </dev/null > "$LOG" 2>&1 &
+        else
+            /bin/sh "$0" run "$2" "$3" "$4" "$5" </dev/null > "$LOG" 2>&1 &
+        fi
         echo '后台升级任务已启动'
         exit 0 ;;
     run)
