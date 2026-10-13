@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Integrate audited subset of gooyjq/luci-app-online-upgrade.
-# All unsafe upstream web/CGI/sysupgrade/auto-reinstall files are excluded.
+# Integrate hardened fork of gooyjq/luci-app-online-upgrade.
+# Only validated backend can perform sysupgrade; unsafe CGI and auto-reinstall are excluded.
 set -euo pipefail
 SRC="$1"
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -43,4 +43,4 @@ test ! -e "$PACKAGE/root/www/cgi-bin/online-upgrade-restore"
 test ! -e "$PACKAGE/root/etc/uci-defaults/90-online-upgrade-auto"
 test ! -e "$PACKAGE/root/usr/lib/lua/luci/controller/admin_system/online_upgrade.lua"
 grep -Fq '$(eval $(call BuildPackage,luci-app-online-upgrade))' "$PACKAGE/Makefile"
-echo "Photonicat1 online upgrade checker installed from pinned upstream $UPSTREAM_SHA (read-only, manual flashing only)."
+echo "Photonicat1 verified online upgrade integrated from pinned upstream $UPSTREAM_SHA; no unsafe CGI or auto APK install."
