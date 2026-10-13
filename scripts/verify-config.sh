@@ -17,7 +17,11 @@ need=(
   CONFIG_PACKAGE_luci-compat
   CONFIG_PACKAGE_luci-app-store
   CONFIG_PACKAGE_luci-lib-taskd
+  CONFIG_PACKAGE_luci-lib-xterm
   CONFIG_PACKAGE_taskd
+  CONFIG_PACKAGE_script-utils
+  CONFIG_PACKAGE_coreutils-stty
+  CONFIG_PACKAGE_mount-utils
   CONFIG_PACKAGE_luci-app-dockerman
   CONFIG_PACKAGE_docker
   CONFIG_PACKAGE_dockerd
