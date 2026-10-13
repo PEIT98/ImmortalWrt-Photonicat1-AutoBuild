@@ -54,6 +54,10 @@ force = {
     # Qualcomm QCNCM865 (WCN7850), QCA9880/9882 (QCA988X)
     'kmod-ath12k': 'y', 'ath12k-firmware-wcn7850': 'y',
     'kmod-ath10k': 'y', 'ath10k-firmware-qca988x': 'y',
+    # Photonicat1 onboard QCA1023 / QCA9377-family Wi-Fi uses SDIO, not PCIe.
+    # Keep SDIO firmware and board calibration matching the reference image.
+    'kmod-ath10k-sdio': 'y', 'kmod-mmc': 'y',
+    'ath10k-firmware-qca9377-sdio': 'y', 'ath10k-board-qca9377-sdio': 'y',
     'luci-app-mwan3': 'y', 'luci-i18n-mwan3-zh-cn': 'y', 'mwan3': 'y',
     'luci-app-openclash': 'y',
     'cpufreq': 'y', 'luci-app-cpufreq': 'y', 'luci-i18n-cpufreq-zh-cn': 'y',
