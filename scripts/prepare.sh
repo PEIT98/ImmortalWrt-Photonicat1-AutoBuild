@@ -70,11 +70,16 @@ trap 'rm -rf "$BANDIX_TMP"' EXIT
 git clone --quiet --depth 1 --branch main https://github.com/timsaya/openwrt-bandix-plus.git "$BANDIX_TMP/core"
 git clone --quiet --depth 1 --branch main https://github.com/timsaya/luci-app-bandix-plus.git "$BANDIX_TMP/luci"
 CORE_DST="$SRC/package/photonicat-bandix-plus"
-LUCI_DST="$SRC/package/photonicat-luci-app-bandix-plus"
+LUCI_DST="$SRC/package/luci-app-bandix-plus"
 mkdir -p "$CORE_DST" "$LUCI_DST"
 cp -a "$BANDIX_TMP/core/openwrt-bandix-plus/." "$CORE_DST/"
 cp -a "$BANDIX_TMP/luci/luci-app-bandix-plus/." "$LUCI_DST/"
 test -f "$CORE_DST/Makefile" && test -f "$LUCI_DST/Makefile" || exit 1
+# luci.mk infers LUCI_NAME/PKG_NAME from the folder name. The former
+# package/photonicat-luci-app-bandix-plus registered an incorrect package name.
+# Keep the actual luci-app-bandix-plus directory name to match config selection.
+grep -Fq '# call BuildPackage' "$LUCI_DST/Makefile" || { echo "::error::Bandix LuCI Makefile 缺少包扫描标记" >&2; exit 1; }
+
 # 官方默认启用 eBPF 流量服务。光影猫有 QModem/mwan3 多 WAN，
 # 为避免首次启动改变数据转发，预置关闭；在 LuCI 配好接口后手动启用。
 BANDIX_CONFIG="$CORE_DST/files/bandix_plus.config"
