@@ -18,6 +18,8 @@
 | luci-app-openclash | 保留 |
 | luci-app-cpufreq | 保留 |
 | luci-mod-battstatus | 保留 |
+| iStore 应用商店（luci-app-store） | 新增，使用 LinkEase 官方 main feed |
+| Docker Engine / CLI / Compose + Dockerman 管理界面 | 新增，使用 ImmortalWrt 官方 feeds |
 | ath11k PCI / WCN6855 固件、USB QMI / MBIM 等驱动 | 保留 |
 | 旧 ModemBand、sms-tool-js | 移除 |
 | PassWall、SmartDNS、ZeroTier | 移除 |
@@ -135,3 +137,12 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 授权按原脚本保留 `/usr/bin/tom_modem`、`/bin/cat`、`/sbin/ifup`、`/sbin/ifdown`、`/usr/bin/lsusb`、`/etc/init.d/qmodem_network`、USB `speed` 节点读取和 `ubus file.exec`。这些是具有执行网络管理命令能力的 ACL 权限，请仅授予受信任的 LuCI 用户/会话；这项修改**不提供也不安装** `tom_modem` 或 MyOpenWrt APP 可执行程序，必须确保它们已由其他包提供。
 
 **注意**：本次只添加文件和准备阶段校验，已在进行的 GitHub Actions 编译仍使用启动时的旧提交；下次构建才会包含该文件。
+
+## iStore + Docker（2026-10-13）
+
+- **iStore**：编译时通过 `src-git istore https://github.com/linkease/istore;main` 引入 LinkEase 官方软件源，选择 `luci-app-store`、`luci-compat`；相关 `taskd`、`luci-lib-taskd` 随依赖安装。支持新固件使用的 APK 包管理，但 iStore 仓库内可安装的第三方应用仍取决于版本、架构和依赖，**不保证所有 iStore 应用都能直接安装**。
+- **Docker**：选择 `docker` 命令行、`dockerd` 引擎、`docker-compose` 和 LuCI `luci-app-dockerman` 管理界面；其余内核、网络和存储驱动由软件包依赖/Kconfig 选择。不会预先拉取任何 Docker 容器镜像。
+- **编译检查**：`make defconfig` 后验证以上软件包及 iStore 任务服务是否仍保留；如果上游变化导致包无法选择，工作流会直接报错，避免发布缺插件的固件。
+- **资源提醒**：Docker/Compose 引入 Go 编译和大量依赖，可能显著增加 GitHub Actions 耗时、磁盘使用量与固件体积。首次编译成功与真机运行仍需验证；不保证能在 6 小时 Actions 限时内完成。
+- **运行存储**：Docker 镜像和容器应尽量放到空间足够的 ext4 外部存储/SSD 上，避免写满路由器系统 overlay。**本次不会自动分区、格式化磁盘、迁移 Docker data-root 或更改防火墙**。刷机后先检查磁盘挂载和 Docker 数据目录，再开始拉取镜像。
+- **与现有功能关系**：不修改 Aurora 主题源码、独立电池修复、QModem stable、MyOpenWrt ACL、mwan3 及当前构建缓存配置。按之前约定，仅提交修改，**不自动触发新编译**。
