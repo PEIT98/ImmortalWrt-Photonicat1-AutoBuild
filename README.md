@@ -207,8 +207,15 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 上游：[gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)（GPL-2.0-only），锁定 Git 提交 `6f587f19d7f884ca89e4bfa95bbb9a002a521477`。在 `scripts/prepare-online-upgrade.sh` 中拉取、记录上游许可证，并使用本仓库维护的加固版 Makefile、LuCI 页面及检查脚本替换危险功能。
 
 - 默认安装 `luci-app-online-upgrade`，LuCI 菜单位于 **系统 → 在线升级**，仅查询 `PEIT98/ImmortalWrt-Photonicat1-AutoBuild` 的最新 GitHub Release。优先使用路由器内 `/etc/photonicat1-build-info` 的 Builder commit，与 Release 中 `build-sources.txt` 的 Workflow repo commit 比对；缺少信息时明确提示无法判断。
-- 只识别光影猫一代 `immortalwrt-rockchip-armv8-ariaboard_photonicat-{ext4,squashfs}-sysupgrade.img.gz` 两个精确文件名；显示 GitHub 镜像下载地址、`SHA256SUMS.txt` 及 Release 更新说明。未验证用户设备正在使用哪一种文件系统，所以**不自动选择刷机镜像**。
+- 只识别光影猫一代 `immortalwrt-rockchip-armv8-ariaboard_photonicat-{ext4,squashfs}-sysupgrade_YYYYMMDDHH.img.gz` 镜像（也兼容历史版不带时间戳的 `-sysupgrade.img.gz`）；显示 GitHub 镜像下载地址、`SHA256SUMS.txt` 及 Release 更新说明。未验证用户设备正在使用哪一种文件系统，所以**不自动选择刷机镜像**。
 - **没有一键刷机或自动下载安装**：没有 `sysupgrade` 执行入口、没有上游的 `online-upgrade-restore` CGI（它会解包上传文件到 `/`）、没有 `/etc/uci-defaults/90-online-upgrade-auto`（它会在开机时安装第三方 APK）、没有旧 Lua 备份恢复控制器。`/usr/bin/online-upgrade.sh` 仅允许 `check`；任何 `upgrade/background/backup/reset` 命令均拒绝。
 - 不使用第三方 GitHub 下载代理，不上传令牌，不自动修改网络、WAN、QModem、iStore、Docker 或 mwan3 配置。
 - 手动升级前要核对设备型号、ext4/squashfs 格式、SHA256、可用空间，备份配置及准备救砖方法；光影猫的 `sysupgrade` 直接升级兼容性尚未真机验证，故本安全版不执行刷写。
 - 已纳入 `scripts/select-packages.py` 和 `scripts/verify-config.sh` 必选项，**只在用户手动启动下一次 GitHub Actions 编译时进入新固件**。此处代码提交不会启动新编译。
+
+## Releases 固件文件名时间戳（手动编译后生效）
+
+- GitHub Actions 固件编译成功后，在收集固件阶段统一取北京时间（Asia/Shanghai）`YYYYMMDDHH`（年、月、日、时；24 小时制），仅重命名 `-sysupgrade.img.gz` 为 `-sysupgrade_YYYYMMDDHH.img.gz`，保留 ext4/squashfs 和设备型号。
+- 例如：`immortalwrt-rockchip-armv8-ariaboard_photonicat-ext4-sysupgrade_2026101316.img.gz`、`immortalwrt-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_2026101316.img.gz`。
+- 固件字节内容不变，`SHA256SUMS.txt` 在重命名后生成，因此记录的是新名称和对应镜像摘要；清单和构建元数据保持原样。
+- `luci-app-online-upgrade` 只读检查器同步支持新旧命名。已发布的历史 Release 不会重命名，新规则只对下一次用户手动编译后的 Release 生效。
