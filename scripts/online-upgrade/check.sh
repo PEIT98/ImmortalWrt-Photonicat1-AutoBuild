@@ -103,7 +103,18 @@ load_release() {
     NAME="$(printf '%s\n' "$NAMES" | grep -E "^immortalwrt-rockchip-armv8-ariaboard_photonicat-$FSTYPE-sysupgrade(_[0-9]{10})?\.img\.gz$" | head -n1 || true)"
     [ -n "$NAME" ] || die "Release 不包含符合当前 $FSTYPE 格式的光影猫一代固件"
     printf '%s\n' "$NAMES" | grep -Fxq SHA256SUMS.txt || die '缺少 SHA256SUMS.txt'
-    SIZE="$(jsonfilter -i "$tmp_release" -e "@.assets[@.name=\"$NAME\"].size" 2>/dev/null | head -n1 || true)"
+    # jsonfilter does not guarantee jq-like array predicates; use stable indexes.
+    SIZE=''
+    idx=0
+    while [ "$idx" -lt 80 ]; do
+        asset_name="$(jsonfilter -i "$tmp_release" -e "@.assets[$idx].name" 2>/dev/null || true)"
+        [ -n "$asset_name" ] || break
+        if [ "$asset_name" = "$NAME" ]; then
+            SIZE="$(jsonfilter -i "$tmp_release" -e "@.assets[$idx].size" 2>/dev/null || true)"
+            break
+        fi
+        idx="$((idx+1))"
+    done
     case "$SIZE" in ''|*[!0-9]*) die '无法读取固件大小';; esac
     [ "$SIZE" -ge 1048576 ] && [ "$SIZE" -le 1073741824 ] || die '固件大小异常'
     IMG_URL="https://github.com/$REPO/releases/download/$RTAG/$NAME"
