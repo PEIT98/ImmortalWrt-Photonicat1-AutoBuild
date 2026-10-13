@@ -18,6 +18,8 @@ force = {
     'sms-forwarder-next': 'y',
     # LuCI web terminal + official Aurora theme
     'luci-app-ttyd': 'y', 'ttyd': 'y', 'luci-theme-aurora': 'y',
+    # Photonicat1 read-only online update checker (audited gooyjq upstream fork).
+    'luci-app-online-upgrade': 'y',
     # Official LinkEase iStore and legacy Lua LuCI compatibility.
     'luci-app-store': 'y', 'luci-compat': 'y',
     # iStore UI -> luci-lib-taskd -> taskd dependency chain.
