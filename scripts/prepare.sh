@@ -87,6 +87,20 @@ sed -i "s/option enable_traffic '1'/option enable_traffic '0'/" "$BANDIX_CONFIG"
 grep -Fq "option enable_traffic '0'" "$BANDIX_CONFIG" || exit 1
 echo 'Bandix Plus 前/后端已加入：首次默认不启用流量挂钩和限速。'
 
+# 西瓜皮原版 TD-TECH (3466) USB option 串口内核补丁（保持原内容不修改）。
+# kmod-usb-serial-option 由 select-packages.py 选择；此处仅安装内核补丁源码。
+# 必须确保 Rockchip 目标仍使用 Linux 6.12；如升级到新内核则明确报错，
+# 避免补丁被放进错误目录而悄然失效。
+TD_PATCH_SRC="$(dirname "$0")/../999-add-TD-TECH-option-id.patch"
+TD_PATCH_DIR="$SRC/target/linux/rockchip/patches-6.12"
+test -f "$TD_PATCH_SRC" || { echo "::error::TD-TECH 补丁源文件丢失" >&2; exit 1; }
+test -d "$TD_PATCH_DIR" || { echo "::error::Rockchip Linux 6.12 补丁目录不存在，需检查内核版本" >&2; exit 1; }
+TD_PATCH_DEST="$TD_PATCH_DIR/999-add-TD-TECH-option-id.patch"
+cp -f "$TD_PATCH_SRC" "$TD_PATCH_DEST"
+cmp -s "$TD_PATCH_SRC" "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁复制不一致" >&2; exit 1; }
+grep -Fq 'TDTECH_VENDOR_ID' "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁内容不完整" >&2; exit 1; }
+echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.12。'
+
 # 参考西瓜皮的 Wi-Fi band_order 兼容调整：保留固件上游源码，最小替换频段顺序。
 bash "$(dirname "$0")/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫硬件配置、QModem stable 与 OpenClash 源（插件选择在 feeds 安装后进行）'
