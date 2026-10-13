@@ -11,6 +11,8 @@ remove_exact = {
     'luci-app-passwall', 'luci-i18n-passwall-zh-cn',
     'luci-app-smartdns', 'luci-i18n-smartdns-zh-cn', 'smartdns',
     'luci-app-zerotier', 'luci-i18n-zerotier-zh-cn', 'zerotier',
+    # Explicitly disable custom OTA even if imported reference config selects it.
+    'luci-app-online-upgrade',
 }
 remove_prefixes = ('luci-app-passwall_INCLUDE_',)
 force = {
