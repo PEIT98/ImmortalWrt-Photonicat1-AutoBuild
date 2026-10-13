@@ -1,0 +1,30 @@
+#!/bin/sh
+# Read-only diagnostics: does not modify Docker, filesystem or network.
+echo '=== Photonicat1 Docker 存储检查（只读） ==='
+printf 'dockerd: '
+[ -x /usr/bin/dockerd ] && echo '已安装' || echo '未安装'
+data_root="$(uci -q get dockerd.globals.data_root 2>/dev/null)"
+[ -n "$data_root" ] || data_root='/opt/docker/'
+printf 'Docker data_root: %s\n' "$data_root"
+echo '已挂载在 /mnt 或 /media 的存储设备:'
+found=0
+while read -r device mountpoint fstype options rest; do
+  case "$mountpoint" in
+    /mnt/*|/media/*|/run/media/*)
+      case "$device" in
+        /dev/*)
+          printf '  %s [%s] → %s\n' "$device" "$fstype" "$mountpoint"
+          found=1
+        ;;
+      esac
+    ;;
+  esac
+done < /proc/mounts
+[ "$found" = "1" ] || echo '  未检测到'
+nearest="$data_root"
+while [ ! -d "$nearest" ] && [ "$nearest" != "/" ]; do
+  nearest="$(dirname "$nearest")"
+done
+echo '当前 Docker 所在文件系统空间:'
+df -h "$nearest" 2>/dev/null || true
+echo '本工具不会自动迁移 Docker、执行格式化或修改配置。'
