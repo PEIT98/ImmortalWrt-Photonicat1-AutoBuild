@@ -19,7 +19,7 @@
 | luci-app-openclash | 保留 |
 | luci-app-cpufreq | 保留 |
 | luci-mod-battstatus | 保留 |
-| luci-app-online-upgrade（光影猫专用安全版） | 新增，仅检查 GitHub Releases 更新，不自动刷写 |
+| luci-app-online-upgrade（光影猫专用完整版） | GitHub 更新检查、SHA256、分区校验、下载、一键升级、备份、保留/清空配置 |
 | iStore 应用商店（luci-app-store） | 新增，使用 LinkEase 官方 main feed |
 | Docker Engine / CLI / Compose + Dockerman 管理界面 | 新增，使用 ImmortalWrt 官方 feeds |
 | ath11k PCI / WCN6855 固件、USB QMI / MBIM 等驱动 | 保留 |
@@ -202,21 +202,24 @@ Actions #38186226012 的日志明确显示 GitHub Runner 剩余 98 MB 磁盘空�
 - 旧版 `.github/photonicat-build-trigger.txt` 保留作为历史记录，但编辑它也不会触发编译。
 - Docker Engine、CLI、Compose 和 `luci-app-dockerman` 已在成功的编译 #38353246710 中通过配置校验；Dockerman 官方 LuCI 菜单属于 **服务 → Dockerman JS**，需要设备上存在可执行的 `/etc/init.d/dockerd`、`/usr/bin/dockerd` 和有效的 `/etc/config/dockerd` 才会显示。若菜单未显示，应在设备上检查文件和服务，而不是误认成没有编译。
 
-## 光影猫专用在线固件更新检查器（安全模式）
+## 光影猫专用在线固件升级（完整功能 + 严格校验）
 
-上游：[gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)（GPL-2.0-only），锁定 Git 提交 `6f587f19d7f884ca89e4bfa95bbb9a002a521477`。在 `scripts/prepare-online-upgrade.sh` 中拉取、记录上游许可证，并使用本仓库维护的加固版 Makefile、LuCI 页面及检查脚本替换危险功能。
+上游开源项目：[gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)，GPL-2.0-only，固定源码提交 `6f587f19d7f884ca89e4bfa95bbb9a002a521477`。此项目保留上游许可证，同时提供专属光影猫一代的后端、前端及额外分区保护脚本；不是直接复制无校验的一键升级逻辑。
 
-- 默认安装 `luci-app-online-upgrade`，LuCI 菜单位于 **系统 → 在线升级**，仅查询 `PEIT98/ImmortalWrt-Photonicat1-AutoBuild` 的最新 GitHub Release。优先使用路由器内 `/etc/photonicat1-build-info` 的 Builder commit，与 Release 中 `build-sources.txt` 的 Workflow repo commit 比对；缺少信息时明确提示无法判断。
-- 只识别光影猫一代 `immortalwrt-rockchip-armv8-ariaboard_photonicat-{ext4,squashfs}-sysupgrade_YYYYMMDDHH.img.gz` 镜像（也兼容历史版不带时间戳的 `-sysupgrade.img.gz`）；显示 GitHub 镜像下载地址、`SHA256SUMS.txt` 及 Release 更新说明。未验证用户设备正在使用哪一种文件系统，所以**不自动选择刷机镜像**。
-- **配置保留选项**：在线更新检查页新增单选项 **保留配置（默认）** / **不保留配置**；选择后显示对应风险说明，点击「前往手动升级」会再次弹窗确认并打开 LuCI 原生 **系统 → 备份 / 升级** 页面。当前插件仍是只读模式，不能代替原生升级界面的「Keep settings / 保留配置」复选框：保留时需在原生页面勾选，不保留时需在原生页面取消勾选，并手动确认刷机。**不保留配置不是格式化外接硬盘或 Docker 数据盘**；升级前应独立备份重要数据。
-- **没有一键刷机或自动下载安装**：没有 `sysupgrade` 执行入口、没有上游的 `online-upgrade-restore` CGI（它会解包上传文件到 `/`）、没有 `/etc/uci-defaults/90-online-upgrade-auto`（它会在开机时安装第三方 APK）、没有旧 Lua 备份恢复控制器。`/usr/bin/online-upgrade.sh` 仅允许 `check`；任何 `upgrade/background/backup/reset` 命令均拒绝。
-- 不使用第三方 GitHub 下载代理，不上传令牌，不自动修改网络、WAN、QModem、iStore、Docker 或 mwan3 配置。
-- 手动升级前要核对设备型号、ext4/squashfs 格式、SHA256、可用空间，备份配置及准备救砖方法；光影猫的 `sysupgrade` 直接升级兼容性尚未真机验证，故本安全版不执行刷写。
-- 已纳入 `scripts/select-packages.py` 和 `scripts/verify-config.sh` 必选项，**只在用户手动启动下一次 GitHub Actions 编译时进入新固件**。此处代码提交不会启动新编译。
+- **系统 → 在线升级**：默认使用 `PEIT98/ImmortalWrt-Photonicat1-AutoBuild` 的最新正式 Release。支持自定义 GitHub 仓库、`latest` 或指定 Release 标签、可信 HTTPS 下载代理（只用于镜像下载，不用于校验清单）。打开页面自动检查一次；也可手动点击「检查最新固件」。
+- **设备/镜像安全检查**：必须满足设备树兼容名称 `ariaboard,photonicat`、当前根文件系统为 ext4 或 squashfs、Release 中存在该设备与当前文件系统一致的确切 `...-sysupgrade[_YYYYMMDDHH].img.gz` 文件及 `SHA256SUMS.txt`。固件大小须在合理范围内；下载后验证文件大小和 SHA256。
+- **重要的 Rockchip 磁盘保护**：从实际启动磁盘和已下载镜像提取分区表，要求各分区起始位置与大小完全一致。不同则阻止自动升级，避免重写整张启动盘。通过分区检查后，还必须通过 `/sbin/sysupgrade -T`；任何失败都会终止。
+- **一键升级**：经用户确认后启动后台任务，显示检查/下载/校验/备份/刷写进度；固件通过校验后才调用 `sysupgrade`。如选择「保留配置」，执行 `sysupgrade -f 备份文件 镜像`；如选择「不保留配置」，执行 `sysupgrade -n 镜像`。不保留配置会清空当前系统配置的恢复流程，并不会单独格式化外置 Docker 数据盘。
+- **强制重装**：即便 GitHub 构建提交与当前版本相同，也可重新刷入。强制重装绝不调用 `sysupgrade -F`，不会绕过设备/校验/分区保护。新旧版本比较依据固件内 `/etc/photonicat1-build-info` 与 Release 的 `build-sources.txt`，缺失时会提示无法准确判断。
+- **配置备份**：提供「创建升级前备份」功能；刷写前也会自动生成备份。在 `/boot` **已经挂载为持久分区**时尝试复制备份到 `/boot/photonicat-upgrade-backup.tar.gz`；若未挂载则不会擅自重挂载或修改启动盘，备份只存在临时文件中，可能随升级消失。**请务必先在 LuCI 原生「系统 → 备份/升级」页面下载备份至电脑。**
+- **恢复/下载备份**：手动导出和上传恢复使用系统原生的认证 LuCI 备份/升级功能；不恢复上游直接将未经审计的上传压缩包解压到根目录的 `online-upgrade-restore` CGI。
+- **禁止自动安装 APK**：不会执行上游 `90-online-upgrade-auto` 的第三方 APK 开机下载，不会自动打开 GitHub Actions 构建；仅用户点击「立即升级/强制重装」并确认时才执行固件更新。
+
+**兼容性状态：目前已经提交源码并执行静态和界面模拟测试，但尚未由下次 GitHub Actions 完整编译或在真实光影猫一代设备上测试下载和刷写。** 首次使用时应先做好救砖准备；遇到分区布局不一致，应走人工确认的升级/恢复路径，不建议关闭保护检查。
 
 ## Releases 固件文件名时间戳（手动编译后生效）
 
 - GitHub Actions 固件编译成功后，在收集固件阶段统一取北京时间（Asia/Shanghai）`YYYYMMDDHH`（年、月、日、时；24 小时制），仅重命名 `-sysupgrade.img.gz` 为 `-sysupgrade_YYYYMMDDHH.img.gz`，保留 ext4/squashfs 和设备型号。
 - 例如：`immortalwrt-rockchip-armv8-ariaboard_photonicat-ext4-sysupgrade_2026101316.img.gz`、`immortalwrt-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_2026101316.img.gz`。
 - 固件字节内容不变，`SHA256SUMS.txt` 在重命名后生成，因此记录的是新名称和对应镜像摘要；清单和构建元数据保持原样。
-- `luci-app-online-upgrade` 只读检查器同步支持新旧命名。已发布的历史 Release 不会重命名，新规则只对下一次用户手动编译后的 Release 生效。
+- `luci-app-online-upgrade` 在线升级器同步支持新旧命名，且必须满足其额外安全检查。已发布的历史 Release 不会重命名，新规则只对下一次用户手动编译后的 Release 生效。
