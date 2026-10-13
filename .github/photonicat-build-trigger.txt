@@ -10,3 +10,4 @@ Only explicit changes to this marker trigger one-off push builds; ordinary pushe
 2026-10-13 13:04 Asia/Singapore: One-off unattended rebuild after #38347186158: select mandatory GNU tar for iStore; verify tar with all existing QModem/Aurora/Docker/Bandix/DiskMan/USB/UPnP selections. Hourly automatic failure review enabled. Preserve all user requirements.
 2026-10-13 13:48 Asia/Singapore: retry validation after GNU tar / xz-utils dependency fix; previous failure actions/runs/38349507226.
 2026-10-13: Build firmware with Status > MultiWAN menu removed; preserve Network > MultiWAN, mwan3 failover and all existing plugins.
+2026-10-14 06:25 Asia/Shanghai: compile Photonicat1 QModem default USB 6-1 alias wwan_5g (firmware first-boot UCI defaults).
