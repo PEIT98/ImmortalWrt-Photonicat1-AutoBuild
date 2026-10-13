@@ -1,7 +1,7 @@
 {
   "luci-app-online-upgrade": {
-    "description": "Allow read-only Photonicat1 GitHub release check",
-    "read": {
+    "description": "Authenticated Photonicat1 firmware upgrade; execute only for LuCI write administrators",
+    "write": {
       "cgi-io": [
         "exec"
       ],
