@@ -38,6 +38,14 @@ fi
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
 
+# USB 6-1 默认 QModem 拨号别名：需要确保 overlay 的 uci-defaults 可执行。
+# 由 QModem modem_scand 读取 modem-slot.alias，新建接口仍由 modem_dial.sh 管理。
+QMODEM_ALIAS_DEFAULT="$SRC/files/etc/uci-defaults/99-z-photonicat1-qmodem-alias"
+test -f "$QMODEM_ALIAS_DEFAULT" || { echo "::error::缺少光影猫 QModem 默认别名脚本"; exit 1; }
+chmod 755 "$QMODEM_ALIAS_DEFAULT"
+sh -n "$QMODEM_ALIAS_DEFAULT"
+grep -Fq 'qmodem.${slot_section}.alias=wwan_5g' "$QMODEM_ALIAS_DEFAULT" || exit 1
+
 # MyOpenWrt tom_modem ACL is shipped directly in the firmware rootfs overlay.
 # rpcd reads /usr/share/rpcd/acl.d/*.json on startup; no first-boot restart needed.
 TOM_ACL="$SRC/files/usr/share/rpcd/acl.d/tom_modem.json"
