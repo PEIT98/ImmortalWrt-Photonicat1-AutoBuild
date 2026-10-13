@@ -150,6 +150,59 @@ case "$MODE" in
     status)
         if [ -e "$STATE" ]; then cat "$STATE"; else echo 'idle|未执行升级'; fi
         exit 0 ;;
+    check-start)
+        rm -f "$WORK/check.out" "$WORK/check.err" "$WORK/check.result.tmp"
+        printf 'working|正在后台检查 GitHub 更新\n' > "$WORK/check.status"
+        setsid /bin/sh "$0" check-worker </dev/null > "$WORK/check.log" 2>&1 &
+        echo '后台检查已启动'
+        exit 0 ;;
+    check-worker)
+        if /bin/sh "$0" check > "$WORK/check.result.tmp" 2>"$WORK/check.err"; then
+            mv "$WORK/check.result.tmp" "$WORK/check.out"
+            printf 'ready|固件数据已获取\n' > "$WORK/check.status"
+        else
+            rm -f "$WORK/check.result.tmp"
+            msg="$(tail -n1 "$WORK/check.err" | cut -c1-240)"
+            printf 'failed|%s\n' "$msg" > "$WORK/check.status"
+        fi
+        exit 0 ;;
+    check-status)
+        if [ -f "$WORK/check.status" ]; then cat "$WORK/check.status"; else echo 'idle|尚未检查'; fi
+        exit 0 ;;
+    check-result)
+        [ -f "$WORK/check.out" ] || die '结果还未准备好'
+        cat "$WORK/check.out"
+        exit 0 ;;
+    tags-start)
+        [ "$#" -eq 2 ] && valid_repo "$2" || die '仓库格式无效'
+        rm -f "$WORK/tags.out"
+        printf 'working|正在获取最近 5 个 Release\n' > "$WORK/tags.status"
+        setsid /bin/sh "$0" tags-worker "$2" </dev/null > "$WORK/tags.log" 2>&1 &
+        echo '正在后台加载标签'
+        exit 0 ;;
+    tags-worker)
+        [ "$#" -eq 2 ] && valid_repo "$2" || die '仓库格式无效'
+        tags_json="$(mktemp "$WORK/tags.XXXXXX")"
+        if download_meta "$tags_json" "https://api.github.com/repos/$2/releases?per_page=5"; then
+            jsonfilter -i "$tags_json" -e '@[*].tag_name' 2>/dev/null |
+                grep -E '^[A-Za-z0-9._-]+$' | head -n 5 > "$WORK/tags.out" || true
+            if [ -s "$WORK/tags.out" ]; then
+                printf 'ready|最近 5 个 Release 已加载\n' > "$WORK/tags.status"
+            else
+                printf 'failed|该仓库没有公开 Release 标签\n' > "$WORK/tags.status"
+            fi
+        else
+            printf 'failed|无法连接 GitHub API，可手动输入标签或固件地址\n' > "$WORK/tags.status"
+        fi
+        rm -f "$tags_json"
+        exit 0 ;;
+    tags-status)
+        if [ -f "$WORK/tags.status" ]; then cat "$WORK/tags.status"; else echo 'idle|尚未加载标签'; fi
+        exit 0 ;;
+    tags-result)
+        [ -f "$WORK/tags.out" ] || die '标签列表尚未生成'
+        cat "$WORK/tags.out"
+        exit 0 ;;
     backup)
         device_ok || die '不是光影猫一代设备'
         BAK="$WORK/manual-backup.tar.gz"
