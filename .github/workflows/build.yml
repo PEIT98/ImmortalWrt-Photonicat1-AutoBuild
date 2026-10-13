@@ -93,6 +93,9 @@ jobs:
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
 
+      - name: Prepare audited Photonicat1 online firmware update checker
+        run: bash scripts/prepare-online-upgrade.sh "$GITHUB_WORKSPACE/immortalwrt"
+
       - name: Hide Status MultiWAN menu (keep Network MultiWAN)
         run: python3 scripts/hide-mwan3-status-menu.py "$GITHUB_WORKSPACE/immortalwrt"
 
