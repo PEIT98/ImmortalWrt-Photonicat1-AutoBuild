@@ -150,15 +150,12 @@ case "$MODE" in
         [ "$#" -eq 5 ] || die '升级参数数量错误'
         case "$2" in keep|reset) ;; *) die '配置选择无效';; esac
         case "$3" in normal|force) ;; *) die '升级模式无效';; esac
+        [ "$4" != latest ] || die '请提供已检查的准确 Release 标签'
         valid_tag "$4" || die '已确认的 Release 标签无效'
-        printf '%s\n' "$5" | grep -Eq '^[0-9a-fA-F]{64} || die '已有升级任务运行中'
-        setsid /bin/sh "$0" run "$2" "$3" "$4" "$5" </dev/null > "$LOG" 2>&1 &
-        echo '后台升级任务已启动'
-        exit 0 ;;
- || die '已确认的 SHA256 无效'
+        printf '%s\n' "$5" | grep -Eq '^[0-9a-fA-F]{64}$' || die '已确认的 SHA256 无效'
         [ ! -d "$LOCK" ] || die '已有升级任务运行中'
         stage starting '后台升级程序正在启动'
-        setsid /bin/sh "$0" run "$2" "$3" </dev/null > "$LOG" 2>&1 &
+        setsid /bin/sh "$0" run "$2" "$3" "$4" "$5" </dev/null > "$LOG" 2>&1 &
         echo '后台升级任务已启动'
         exit 0 ;;
     run)
