@@ -29,13 +29,16 @@ mkdir -p "$PACKAGE/root/usr/bin" \
          "$PACKAGE/root/www/luci-static/resources/view/system"
 cp "$PATCH_ROOT/Makefile" "$PACKAGE/Makefile"
 cp "$PATCH_ROOT/check.sh" "$PACKAGE/root/usr/bin/online-upgrade.sh"
+cp "$PATCH_ROOT/disk-layout.sh" "$PACKAGE/root/usr/bin/photonicat-ota-disk-layout"
 cp "$PATCH_ROOT/config" "$PACKAGE/root/etc/config/online-upgrade"
 cp "$PATCH_ROOT/menu.json" "$PACKAGE/root/usr/share/luci/menu.d/luci-app-online-upgrade.json"
 cp "$PATCH_ROOT/acl.json" "$PACKAGE/root/usr/share/rpcd/acl.d/luci-app-online-upgrade.json"
 cp "$PATCH_ROOT/view.js" "$PACKAGE/root/www/luci-static/resources/view/system/online-upgrade.js"
 chmod 755 "$PACKAGE/root/usr/bin/online-upgrade.sh"
+chmod 755 "$PACKAGE/root/usr/bin/photonicat-ota-disk-layout"
 
 sh -n "$PACKAGE/root/usr/bin/online-upgrade.sh"
+sh -n "$PACKAGE/root/usr/bin/photonicat-ota-disk-layout"
 python3 -m json.tool "$PACKAGE/root/usr/share/luci/menu.d/luci-app-online-upgrade.json" >/dev/null
 python3 -m json.tool "$PACKAGE/root/usr/share/rpcd/acl.d/luci-app-online-upgrade.json" >/dev/null
 
