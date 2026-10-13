@@ -22,6 +22,8 @@ need=(
   CONFIG_PACKAGE_docker
   CONFIG_PACKAGE_dockerd
   CONFIG_PACKAGE_docker-compose
+  CONFIG_PACKAGE_luci-app-bandix-plus
+  CONFIG_PACKAGE_bandix-plus
   CONFIG_PACKAGE_kmod-rtw89-8922ae
   CONFIG_PACKAGE_kmod-rtw89-8852be
   CONFIG_PACKAGE_kmod-rtw89-8852ce
