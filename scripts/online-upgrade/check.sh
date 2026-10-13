@@ -22,7 +22,11 @@ cleanup() {
 }
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
-die() { echo "错误：$1" >&2; printf 'failed|%s\n' "$1" > "$STATE"; exit 1; }
+die() {
+    echo "错误：$1" >&2
+    case "$MODE" in run|start|backup) printf 'failed|%s\n' "$1" > "$STATE";; esac
+    exit 1
+}
 stage() { printf '%s|%s\n' "$1" "$2" > "$STATE"; echo "$2"; }
 setting() { uci -q get "online-upgrade.settings.$1" 2>/dev/null || true; }
 valid_repo() { printf '%s\n' "$1" | grep -Eq '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'; }
@@ -45,6 +49,14 @@ root_type() {
         echo unknown
     fi
 }
+download_meta() {
+    curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --connect-timeout 8 --max-time 25 --retry 0 \
+        --header 'User-Agent: Photonicat1-OTA' -o "$1" "$2"
+}
+valid_custom_url() {
+    printf '%s\n' "$1" | grep -Eq '^https://[A-Za-z0-9.-]+(:[0-9]{2,5})?(/[A-Za-z0-9._~%+-]+)+\.img\.gz$'
+}
+valid_sha() { printf '%s\n' "$1" | grep -Eq '^[0-9a-fA-F]{64}$'; }
 download() {
     curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --connect-timeout 15 --max-time 900 \
         --retry 2 --header 'User-Agent: Photonicat1-OTA' -o "$1" "$2"
@@ -66,7 +78,7 @@ load_release() {
     else
         API="https://api.github.com/repos/$REPO/releases/tags/$TAG"
     fi
-    download "$tmp_release" "$API" || die '无法读取 GitHub Release'
+    download_meta "$tmp_release" "$API" || die 'GitHub API 连接失败或超时；可重试或使用自定义固件直链'
     RTAG="$(jsonfilter -i "$tmp_release" -e '@.tag_name' 2>/dev/null || true)"
     printf '%s\n' "$RTAG" | grep -Eq '^[A-Za-z0-9._-]+$' || die 'Release 标签无效'
     PUBLISHED="$(jsonfilter -i "$tmp_release" -e '@.published_at' 2>/dev/null || true)"
@@ -79,14 +91,14 @@ load_release() {
     [ "$SIZE" -ge 1048576 ] && [ "$SIZE" -le 1073741824 ] || die '固件大小异常'
     IMG_URL="https://github.com/$REPO/releases/download/$RTAG/$NAME"
     tmp_hash="$(mktemp "$WORK/hash.XXXXXX")"
-    download "$tmp_hash" "https://github.com/$REPO/releases/download/$RTAG/SHA256SUMS.txt" || die '无法读取 GitHub 原始 SHA256 清单'
+    download_meta "$tmp_hash" "https://github.com/$REPO/releases/download/$RTAG/SHA256SUMS.txt" || die 'GitHub SHA256 文件获取失败'
     HASH="$(awk -v n="$NAME" '($2==n || $2=="./" n) && $1 ~ /^[0-9a-fA-F]+$/ {print $1}' "$tmp_hash" | head -n1)"
     [ "$(printf '%s' "$HASH" | wc -c)" -eq 64 ] || die 'SHA256 清单没有当前固件'
     CURRENT="$(sed -n 's/^Builder commit: //p' /etc/photonicat1-build-info 2>/dev/null | head -n1 || true)"
     REMOTE=""
     if printf '%s\n' "$NAMES" | grep -Fxq build-sources.txt; then
         tmp_sources="$(mktemp "$WORK/source.XXXXXX")"
-        if download "$tmp_sources" "https://github.com/$REPO/releases/download/$RTAG/build-sources.txt" 2>/dev/null; then
+        if download_meta "$tmp_sources" "https://github.com/$REPO/releases/download/$RTAG/build-sources.txt" 2>/dev/null; then
             REMOTE="$(sed -n 's/^Workflow repo commit: //p' "$tmp_sources" | head -n1)"
         fi
     fi
