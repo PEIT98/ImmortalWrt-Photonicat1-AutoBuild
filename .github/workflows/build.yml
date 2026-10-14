@@ -1,11 +1,8 @@
 name: Photonicat1 ImmortalWrt QModem Build
 
 on:
-  # Temporary single-use trigger; restore manual-only after marker update.
-  push:
-    branches: [main]
-    paths:
-      - '.github/photonicat-build-trigger.txt'
+  # Manual-only: build only when the user clicks Actions > Run workflow.
+  # No scheduled builds or push-triggered builds.
   workflow_dispatch:
     inputs:
       publish:
@@ -333,7 +330,7 @@ jobs:
 
   release:
     needs: build
-    if: (github.event_name == 'workflow_dispatch' && inputs.publish == true) || github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && inputs.publish == true
     runs-on: ubuntu-24.04
     permissions:
       contents: write
