@@ -27,7 +27,7 @@
 
 ## 电池指示插件
 
-已在项目中直接集成修改版 [battstatus.js](files/www/luci-static/resources/preload/battstatus.js)。它由 `files/` 自动打包，无须在编译过程中运行电池修复脚本。保留原版 LuCI 电池 RPC、5 秒更新和其他主题下的原始外观，仅在 Aurora 中使用紧凑样式。以后直接编辑该 JS 文件即可。
+完整的 [luci-mod-battstatus](packages/luci-mod-battstatus/) 已放进项目：包含电池 RPC、ACL 权限、上游全部语言和修改版 [battstatus.js](packages/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js)。直接作为本地 LuCI 包参与编译，不再使用 `files/` 单独覆盖 JS 或运行 Python 修复脚本；保留 5 秒轮询及 Aurora 紧凑显示。
 
 ## 配置与脚本说明
 

@@ -51,6 +51,22 @@ grep -Fxq 'LUCI_DEPENDS:=+cpufreq' "$CPUFREQ_DST/Makefile"
 grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$CPUFREQ_DST/Makefile"
 echo 'CPU 调频管理：本地 luci-app-cpufreq（网页、ACL、中文翻译）已安装到源码树。'
 
+# 完整电池插件直接由本仓库维护：网页、电池 RPC、ACL 权限与全部上游翻译。
+# 保留原版光影猫电池读取方式，不修改 Aurora 主题与其他组件。
+BATTERY_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-mod-battstatus"
+BATTERY_PACKAGE_DST="$SRC/package/luci-mod-battstatus"
+test -f "$BATTERY_PACKAGE_SRC/Makefile" || { echo "::error::缺少项目内置 luci-mod-battstatus" >&2; exit 1; }
+test ! -e "$BATTERY_PACKAGE_DST" || { echo "::error::目标 luci-mod-battstatus 路径已存在，禁止覆盖" >&2; exit 1; }
+mkdir -p "$BATTERY_PACKAGE_DST"
+cp -a "$BATTERY_PACKAGE_SRC/." "$BATTERY_PACKAGE_DST/"
+test -f "$BATTERY_PACKAGE_DST/htdocs/luci-static/resources/preload/battstatus.js"
+test -x "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
+test -f "$BATTERY_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-mod-battstatus.json"
+test -f "$BATTERY_PACKAGE_DST/po/zh_Hans/battstatus.po"
+grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$BATTERY_PACKAGE_DST/Makefile"
+grep -Fq 'pcat-battery' "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
+echo '电池插件已复制至本地 package：保留原版 rpcd 服务及电池显示修改。'
+
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"

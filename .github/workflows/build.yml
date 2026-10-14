@@ -110,6 +110,17 @@ jobs:
           test -f package/luci-app-cpufreq/Makefile
           grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' package/luci-app-cpufreq/Makefile
           echo 'CPUFreq 插件将以项目内源码编译，保留 cpufreq 后端与简体中文翻译。'
+          # 移除 LuCI Feed 的同名符号链接，避免双份电池插件注册。
+          battery_feed_link=package/feeds/luci/luci-mod-battstatus
+          if [ -L "$battery_feed_link" ]; then
+            rm -- "$battery_feed_link"
+          elif [ -e "$battery_feed_link" ]; then
+            echo "::error::官方电池插件不是符号链接，停止以保护 Feeds 文件"
+            exit 1
+          fi
+          test -f package/luci-mod-battstatus/Makefile
+          grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' package/luci-mod-battstatus/Makefile
+          echo '项目内置 luci-mod-battstatus 将提供电池 RPC、翻译和 Aurora 修复。'
 
       - name: 隐藏状态页重复的 MultiWAN 菜单
         run: python3 scripts/patches/hide-mwan3-status-menu.py "$GITHUB_WORKSPACE/immortalwrt"
@@ -128,12 +139,18 @@ jobs:
           test -x files/usr/libexec/rpcd/luci.photonicat1
           test -x files/usr/bin/photonicat-docker-storage-check
           test -f files/www/luci-static/resources/view/status/include/99_photonicat1_info.js
-          # 直接打包已修改的电池 LuCI JS，保持电池 RPC、轮询和 Aurora 显示逻辑。
-          batt_js="files/www/luci-static/resources/preload/battstatus.js"
+          # 检查完整本地电池插件，避免与官方 Feeds 产生重复软件包。
+          test -f package/luci-mod-battstatus/Makefile
+          test ! -e package/feeds/luci/luci-mod-battstatus && test ! -L package/feeds/luci/luci-mod-battstatus
+          batt_js="package/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js"
           test -s "$batt_js"
           grep -Fq "object: 'luci.battstatus'" "$batt_js"
           grep -Fq "photonicat-battery-only-style" "$batt_js"
           grep -Fq "poll.add(L.bind(this.updateIndicator, this), 5)" "$batt_js"
+          test -x package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
+          grep -Fq "pcat-battery" package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
+          python3 -m json.tool package/luci-mod-battstatus/root/usr/share/rpcd/acl.d/luci-mod-battstatus.json >/dev/null
+          test -f package/luci-mod-battstatus/po/zh_Hans/battstatus.po
           grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
           test -f package/luci-app-bandix-plus/Makefile
           test -f package/luci-app-cpufreq/Makefile
@@ -158,7 +175,7 @@ jobs:
           grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
           echo '===== 核对上游插件是否被注册为目标包 ====='
-          for pkg in luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq; do
+          for pkg in luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-mod-battstatus; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
               echo "registered: $pkg"
             else

@@ -22,13 +22,13 @@
 
 ## 电池指示插件（直接集成）
 
-- 修改后的 [battstatus.js](../files/www/luci-static/resources/preload/battstatus.js) 直接放入 `files/` 固件覆盖目录。
-- 编译时随固件文件复制，覆盖 LuCI 原版静态资源；仍使用上游 `luci-mod-battstatus` 的 RPC、权限和翻译，**不修改 Aurora 主题源码**。
-- 不再使用 `fix-aurora-battstatus.py`，以后直接修改项目中的 JS 文件即可。
-- 此文件基于 ImmortalWrt LuCI `openwrt-25.12`，来源提交 `d6167ea`。如上游电池模块接口变化，需要同步检查本地 JS。
+- 完整的 [luci-mod-battstatus](../packages/luci-mod-battstatus/) 直接放入项目，包含 [battstatus.js](../packages/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js)、原版电池 RPC、ACL 和全部上游翻译。
+- 编译时由 `build/prepare.sh` 将本地插件复制进 `package/`，随后移除 Feeds 的同名符号链接。
+- 不再需要 `fix-aurora-battstatus.py` 或 `files/www/` 静态覆盖，**不修改 Aurora 主题源码**。
 
 ## 项目内置的 LuCI 插件
 
+- [电池状态 luci-mod-battstatus](../packages/luci-mod-battstatus/README.md)：整套插件源码内置，含 Aurora 电池显示修改、RPC 及翻译。
 - [CPU 调频管理 luci-app-cpufreq](../packages/luci-app-cpufreq/README.md)：整个插件直接存放在项目内；可修改网页、菜单、权限及简体中文翻译。后台仍采用官方 `cpufreq`，无需另外的修改脚本。
 - 编译时 `build/prepare.sh` 复制本地源码；随后移除 Feeds 中同名符号链接以避免重复注册。
 
