@@ -21,6 +21,16 @@
 
 **默认设置：** Bandix Plus 流量功能不开启；Docker 存储检测仅显示信息，不执行挂载、迁移或格式化。
 
+## 配置管理与编译优化
+
+- [`photonicat1.config`](photonicat1.config)：集中维护所有强制启用及明确禁用的插件、驱动和编译开关（不是完整的 OpenWrt `.config`）。
+- [`scripts/prepare.sh`](scripts/prepare.sh)：继承原光影猫参考配置，准备 Feeds、补丁和系统文件；不覆盖现有网络设计。
+- [`scripts/select-packages.py`](scripts/select-packages.py)：在 Feeds 安装后应用上述配置，继承未明确修改的选项。
+- [`scripts/verify-config.sh`](scripts/verify-config.sh)：在 `make defconfig` 后校验必需插件和依赖；缺失则停止编译，防止静默丢包。
+- 编译并行度最多 3 线程且不超过实际 CPU 数；保留源码下载缓存、1.5GB CCache 和失败时单线程诊断机制。
+
+仅在 GitHub Actions 手动启动编译；普通提交不会触发编译。
+
 ## 多 WAN 优先级
 
 **主备优先级（从高到低）：第一，有线 WAN（`wan`）；第二，Wi-Fi 中继（`wwan`）；第三，QModem 5G/LTE（动态接口）。**
@@ -51,4 +61,4 @@ mwan3 status
 - **2026-10-12**：Aurora 主题、ttyd 网页终端。
 - **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、Bandix Plus、DiskMan、定时重启、UPnP。
 
-其余插件和驱动以 [当前选包脚本](scripts/select-packages.py) 为准。
+其余插件和驱动以 [独立选包配置](photonicat1.config) 为准。

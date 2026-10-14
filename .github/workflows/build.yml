@@ -231,7 +231,11 @@ jobs:
           echo '===== 开始编译前的磁盘与内存 ====='
           df -h .
           free -h
-          if ! make -j2 V=0; then
+          # GitHub runners vary in available CPUs: use up to 3 jobs, never exceed nproc.
+          jobs="$(nproc)"
+          [ "$jobs" -le 3 ] || jobs=3
+          echo "Build concurrency: -j$jobs (capped at 3)"
+          if ! make -j"$jobs" V=0; then
             echo '===== 首次编译失败，检查剩余空间 ====='
             df -h .
             free -h
@@ -240,7 +244,7 @@ jobs:
               echo "::error::剩余磁盘不足 3GiB，禁止再次编译：应先释放空间或减少依赖"
               exit 1
             fi
-            echo '::warning::双线程编译失败且空间尚充足，尝试单线程 V=s 定位真实错误'
+            echo '::warning::并行编译失败且空间尚充足，尝试单线程 V=s 定位真实错误'
             make -j1 V=s
           fi
 
