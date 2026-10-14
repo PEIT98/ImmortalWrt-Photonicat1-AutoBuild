@@ -27,7 +27,7 @@
 
 mwan3 使用数值越小优先级越高的 `metric`。QModem 的 IPv4 拨号接口由同步脚本自动识别，可能是 `6_1`、`6_2` 或自定义别名；更换模组、接口变化及重启后会尝试自动同步。无需手动设置固定接口名。
 
-首次使用时，为 Wi-Fi STA 配置 `wwan`，并在 QModem 中设置 APN、完成拨号。检查动态绑定：
+Wi-Fi 中继使用 `wwan` 接口；QModem 拨号接口由系统自动识别，无需手动指定接口名称。mwan3 自动按照有线 WAN、Wi-Fi、5G 的顺序进行故障切换。查看当前动态绑定和在线状态：
 
 ```sh
 uci -q get mwan3.qmodem_priority3.interface
