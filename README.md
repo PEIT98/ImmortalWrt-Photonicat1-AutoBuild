@@ -38,7 +38,7 @@
 
 1. 在 LuCI 无线设置中为 Wi-Fi STA 填写自己的 SSID/密码，绑定网络 `wwan`。
 2. 在 QModem 中扫描、配置 APN 并拨号。**无需指定固定别名**：如当前拨号网络为 `6_1`，mwan3 第三级自动使用 `6_1`；更换模块生成 `6_2` 后自动切换为 `6_2`。IPv6（如 `6_1v6`）不会参与本 IPv4 故障切换。
-3. 检查 WAN 防火墙区域、`mwan3` 在线状态和真正的主备切换。动态同步可用 `/usr/bin/photonicat-qmodem-mwan3-sync` 手动执行；通过 `uci show mwan3 | grep -E 'qmodem_priority3|\.modem_config'` 或 `uci get mwan3.qmodem_priority3.interface` 查看当前绑定。不要同时让原有 DHCP `usb0` 接口和 QModem 接管同一模组。
+3. 检查 WAN 防火墙区域、`mwan3` 在线状态和真正的主备切换。动态同步可用 `/usr/bin/photonicat-qmodem-mwan3-sync` 手动执行；通过 `uci -q get mwan3.qmodem_priority3.interface` 查看当前绑定；使用 `uci show network | grep modem_config` 查看 QModem 实际创建的接口。不要同时让原有 DHCP `usb0` 接口和 QModem 接管同一模组。
 
 **注意**：QModem Next 和传统 `luci-app-qmodem` UI 不应同时选用；其单独的 `luci-app-qmodem-mwan` 依赖传统 UI，所以本工程采用通用 `luci-app-mwan3`。
 
