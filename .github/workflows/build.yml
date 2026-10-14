@@ -122,9 +122,6 @@ jobs:
           grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' package/luci-mod-battstatus/Makefile
           echo '项目内置 luci-mod-battstatus 将提供电池 RPC、翻译和 Aurora 修复。'
 
-      - name: 隐藏状态页重复的 MultiWAN 菜单
-        run: python3 scripts/patches/hide-mwan3-status-menu.py "$GITHUB_WORKSPACE/immortalwrt"
-
       - name: 修复 iStore 软件包名称
         run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 
