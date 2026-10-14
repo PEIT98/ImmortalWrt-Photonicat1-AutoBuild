@@ -21,6 +21,10 @@
 
 **默认设置：** Bandix Plus 流量功能不开启；Docker 存储检测仅显示信息，不执行挂载、迁移或格式化。
 
+## CPU 调频插件
+
+已将完整 [luci-app-cpufreq](packages/luci-app-cpufreq/) 放入项目，包含网页设置、LuCI 菜单、RPC 权限与中文翻译。构建时优先使用本地源码，避免 Feeds 同名插件冲突；实际 CPU 调频服务依然使用官方 `cpufreq` 包。以后可直接编辑项目中的插件源码，不必新增修复脚本。
+
 ## 电池指示插件
 
 已在项目中直接集成修改版 [battstatus.js](files/www/luci-static/resources/preload/battstatus.js)。它由 `files/` 自动打包，无须在编译过程中运行电池修复脚本。保留原版 LuCI 电池 RPC、5 秒更新和其他主题下的原始外观，仅在 Aurora 中使用紧凑样式。以后直接编辑该 JS 文件即可。

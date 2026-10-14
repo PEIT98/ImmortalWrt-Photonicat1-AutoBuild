@@ -35,6 +35,22 @@ else
   printf '\nsrc-git istore https://github.com/linkease/istore;main\n' >> "$SRC/feeds.conf.default"
 fi
 
+# 将项目内的 CPU 调频 LuCI 插件直接安装进 OpenWrt 本地软件包目录。
+# 使用本地完整源码（含网页、菜单、rpcd ACL、简体中文翻译），而不是编译时修改 Feeds 插件。
+# cpufreq 后端仍使用 ImmortalWrt 官方包；LuCI 构建规则仍取自官方 LuCI Feed。
+CPUFREQ_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-cpufreq"
+CPUFREQ_DST="$SRC/package/luci-app-cpufreq"
+test -f "$CPUFREQ_SRC/Makefile" || { echo "::error::项目内缺少 luci-app-cpufreq 插件源码" >&2; exit 1; }
+test ! -e "$CPUFREQ_DST" || { echo "::error::本地 luci-app-cpufreq 路径已被上游占用，禁止覆盖" >&2; exit 1; }
+mkdir -p "$CPUFREQ_DST"
+cp -a "$CPUFREQ_SRC/." "$CPUFREQ_DST/"
+test -f "$CPUFREQ_DST/root/usr/share/rpcd/acl.d/luci-app-cpufreq.json"
+test -f "$CPUFREQ_DST/htdocs/luci-static/resources/view/cpufreq.js"
+test -f "$CPUFREQ_DST/po/zh_Hans/cpufreq.po"
+grep -Fxq 'LUCI_DEPENDS:=+cpufreq' "$CPUFREQ_DST/Makefile"
+grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$CPUFREQ_DST/Makefile"
+echo 'CPU 调频管理：本地 luci-app-cpufreq（网页、ACL、中文翻译）已安装到源码树。'
+
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"

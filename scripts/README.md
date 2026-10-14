@@ -27,6 +27,11 @@
 - 不再使用 `fix-aurora-battstatus.py`，以后直接修改项目中的 JS 文件即可。
 - 此文件基于 ImmortalWrt LuCI `openwrt-25.12`，来源提交 `d6167ea`。如上游电池模块接口变化，需要同步检查本地 JS。
 
+## 项目内置的 LuCI 插件
+
+- [CPU 调频管理 luci-app-cpufreq](../packages/luci-app-cpufreq/README.md)：整个插件直接存放在项目内；可修改网页、菜单、权限及简体中文翻译。后台仍采用官方 `cpufreq`，无需另外的修改脚本。
+- 编译时 `build/prepare.sh` 复制本地源码；随后移除 Feeds 中同名符号链接以避免重复注册。
+
 ## 配置来源与构建顺序
 
 1. `build/prepare.sh` 继承参考设备配置，并加载兼容补丁。

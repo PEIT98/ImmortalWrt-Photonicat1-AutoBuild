@@ -98,6 +98,18 @@ jobs:
           ./scripts/feeds install -a -f -p openclash
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
+          # 优先使用项目内的完整 luci-app-cpufreq，不保留 Feeds 重名软件包链接。
+          # 只移除软件源生成的符号链接；若上游布局变化为真实目录则停止，避免误删除。
+          cpu_feed_link=package/feeds/luci/luci-app-cpufreq
+          if [ -L "$cpu_feed_link" ]; then
+            rm -- "$cpu_feed_link"
+          elif [ -e "$cpu_feed_link" ]; then
+            echo "::error::官方 CPUFreq 插件不是符号链接，需人工检查；已停止替换"
+            exit 1
+          fi
+          test -f package/luci-app-cpufreq/Makefile
+          grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' package/luci-app-cpufreq/Makefile
+          echo 'CPUFreq 插件将以项目内源码编译，保留 cpufreq 后端与简体中文翻译。'
 
       - name: 隐藏状态页重复的 MultiWAN 菜单
         run: python3 scripts/patches/hide-mwan3-status-menu.py "$GITHUB_WORKSPACE/immortalwrt"
@@ -124,6 +136,12 @@ jobs:
           grep -Fq "poll.add(L.bind(this.updateIndicator, this), 5)" "$batt_js"
           grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
           test -f package/luci-app-bandix-plus/Makefile
+          test -f package/luci-app-cpufreq/Makefile
+          test -f package/luci-app-cpufreq/htdocs/luci-static/resources/view/cpufreq.js
+          test -f package/luci-app-cpufreq/root/usr/share/luci/menu.d/luci-app-cpufreq.json
+          test -f package/luci-app-cpufreq/root/usr/share/rpcd/acl.d/luci-app-cpufreq.json
+          test -f package/luci-app-cpufreq/po/zh_Hans/cpufreq.po
+          test ! -e package/feeds/luci/luci-app-cpufreq && test ! -L package/feeds/luci/luci-app-cpufreq
           grep -Fxq 'LUCI_NAME:=luci-app-store' package/feeds/istore/luci-app-store/Makefile
           echo '光影猫只读状态卡片已集成，Bandix Plus 首次流量挂钩默认关闭。'
 
@@ -140,7 +158,7 @@ jobs:
           grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
           echo '===== 核对上游插件是否被注册为目标包 ====='
-          for pkg in luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus; do
+          for pkg in luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
               echo "registered: $pkg"
             else
