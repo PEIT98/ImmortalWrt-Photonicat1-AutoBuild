@@ -1,6 +1,6 @@
 #!/bin/sh
 # Dynamically synchronize mwan3 with the actual QModem IPv4 network interface.
-# QModem sets network.<ifname>.modem_config; never force a modem alias or DHCP proto.
+# QModem creates routed IPv4, IPv6 and bridge-management interfaces. Never force an alias.
 command -v uci >/dev/null 2>&1 || exit 0
 [ -f /etc/config/mwan3 ] || exit 0
 LOCK=/tmp/photonicat-qmodem-mwan3.lock
@@ -26,8 +26,8 @@ member_present() {
     return 1
 }
 
-# Pick an up IPv4 QModem interface if available, otherwise a configured one.
-# Preserve an existing valid choice when switching or reconnecting.
+# Pick an up QModem IPv4 dial interface if available, otherwise a configured one.
+# Require the true dial interface name (alias or modem section name), not bridge management.
 old="$(get mwan3.qmodem_priority3.interface)"
 selected=''
 first=''
@@ -39,7 +39,12 @@ for iface in $(uci -q show network 2>/dev/null | sed -n 's/^network\.\([A-Za-z0-
     modem="$(get "network.$iface.modem_config")"
     [ -n "$modem" ] && [ "$(get "qmodem.$modem")" = modem-device ] || continue
     case "$(get "qmodem.$modem.state")" in disabled|removed|absent) continue ;; esac
-    case "$(get "network.$iface.proto")" in ''|dhcpv6|*ipv6*) continue ;; esac
+    expected="$(get "qmodem.$modem.alias")"
+    case "$expected" in ''|-) expected="$modem" ;; esac
+    [ "$iface" = "$expected" ] || continue
+    # Never select IPv6, non-routed passthrough or a disabled default route.
+    case "$(get "network.$iface.proto")" in ''|none|dhcpv6|*ipv6*) continue ;; esac
+    [ "$(get "network.$iface.defaultroute")" != 0 ] || continue
     [ -n "$first" ] || first="$iface"
     [ "$iface" != "$old" ] || old_valid="$iface"
     is_up="$(ubus -S call "network.interface.$iface" status 2>/dev/null | jsonfilter -e '@.up' 2>/dev/null)"
@@ -49,6 +54,15 @@ for iface in $(uci -q show network 2>/dev/null | sed -n 's/^network\.\([A-Za-z0-
     fi
 done
 [ -n "$selected" ] || selected="${first_up:-${old_valid:-$first}}"
+
+# Validate a pre-existing section before changing any mwan3 or firewall settings.
+if [ -n "$selected" ]; then
+    existing="$(get "mwan3.$selected")"
+    if [ -n "$existing" ] && [ "$existing" != interface ]; then
+        logger -t photonicat-mwan3 "Conflicting mwan3 section: $selected ($existing)"
+        exit 1
+    fi
+fi
 
 # Remove the previous image's fixed 5G member/placeholder.
 legacy=0
@@ -84,7 +98,6 @@ if [ -n "$selected" ]; then
         done
         uci -q add_list "mwan3.$selected.flush_conntrack=disconnected" || exit 1
     fi
-    [ "$(get "mwan3.$selected")" = interface ] || { logger -t photonicat-mwan3 "Conflicting mwan3 section: $selected"; exit 1; }
     set_mwan mwan3.qmodem_priority3 member || exit 1
     set_mwan mwan3.qmodem_priority3.interface "$selected" || exit 1
     set_mwan mwan3.qmodem_priority3.metric 3 || exit 1
