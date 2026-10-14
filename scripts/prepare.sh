@@ -123,4 +123,4 @@ echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.
 bash "$(dirname "$0")/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫硬件配置、QModem stable 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'
-echo '首次使用：QModem 模组别名设置 wwan_5g，Wi-Fi STA 绑定 wwan'
+echo '首次使用：QModem 扫描拨号即可，无需固定别名；mwan3 自动识别实际 IPv4 接口，Wi-Fi STA 绑定 wwan'
