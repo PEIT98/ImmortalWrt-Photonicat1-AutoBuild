@@ -11,7 +11,7 @@
 | 分类 | 内置功能 |
 | --- | --- |
 | 5G / 网络 | QModem Next（含短信）、mwan3、OpenClash |
-| 系统界面 | Aurora 主题、电池状态、CPU 调频、ttyd 网页终端、固件信息卡片 |
+| 系统界面 | Aurora 主题、电池状态、光影猫一代电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
 | 管理工具 | DiskMan、Bandix Plus、定时重启、UPnP |
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
@@ -28,6 +28,10 @@
 ## 电池指示插件
 
 完整的 [luci-mod-battstatus](packages/luci-mod-battstatus/) 已放进项目：包含电池 RPC、ACL 权限、上游全部语言和修改版 [battstatus.js](packages/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js)。直接作为本地 LuCI 包参与编译，不再使用 `files/` 单独覆盖 JS 或运行 Python 修复脚本；保留 5 秒轮询及 Aurora 紧凑显示。
+
+## 光影猫一代电源管理（实验性）
+
+内置 [luci-app-photonicat-power](packages/luci-app-photonicat-power/)：系统 → 光影猫电源管理，支持手动、车载/UPS 延时关机、每日定时开关机。按官方 [pcat-manager v1 协议](https://github.com/photonicat/rockchip_rk3568_pcat_manager/tree/v1) 实现，仅使用控制 Socket，不操作 MCU 串口。**现用 Go 版 pcat-mgr 与官方 C 版接口并不保证兼容**：没有 `/tmp/pcat-manager.sock` 时会显示不可用，不替换现有守护进程、不影响电池指示或 QModem。具体限制见插件 README。
 
 ## 配置与脚本说明
 
@@ -73,5 +77,6 @@ mwan3 status
 
 - **2026-10-12**：Aurora 主题、ttyd 网页终端。
 - **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、Bandix Plus、DiskMan、定时重启、UPnP。
+- **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
 
 其余插件和驱动以 [独立选包配置](photonicat1.config) 为准。
