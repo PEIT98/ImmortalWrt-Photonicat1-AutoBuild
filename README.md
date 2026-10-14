@@ -21,6 +21,10 @@
 
 **默认设置：** Bandix Plus 流量功能不开启；Docker 存储检测仅显示信息，不执行挂载、迁移或格式化。
 
+## 电池指示插件
+
+已在项目中直接集成修改版 [battstatus.js](files/www/luci-static/resources/preload/battstatus.js)。它由 `files/` 自动打包，无须在编译过程中运行电池修复脚本。保留原版 LuCI 电池 RPC、5 秒更新和其他主题下的原始外观，仅在 Aurora 中使用紧凑样式。以后直接编辑该 JS 文件即可。
+
 ## 配置与脚本说明
 
 - [构建脚本分类及中文说明](scripts/README.md)：查看所有编译管理和兼容补丁脚本。

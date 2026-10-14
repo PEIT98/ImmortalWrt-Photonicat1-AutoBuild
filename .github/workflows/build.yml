@@ -116,14 +116,17 @@ jobs:
           test -x files/usr/libexec/rpcd/luci.photonicat1
           test -x files/usr/bin/photonicat-docker-storage-check
           test -f files/www/luci-static/resources/view/status/include/99_photonicat1_info.js
+          # 直接打包已修改的电池 LuCI JS，保持电池 RPC、轮询和 Aurora 显示逻辑。
+          batt_js="files/www/luci-static/resources/preload/battstatus.js"
+          test -s "$batt_js"
+          grep -Fq "object: 'luci.battstatus'" "$batt_js"
+          grep -Fq "photonicat-battery-only-style" "$batt_js"
+          grep -Fq "poll.add(L.bind(this.updateIndicator, this), 5)" "$batt_js"
           grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
           test -f package/luci-app-bandix-plus/Makefile
           grep -Fxq 'LUCI_NAME:=luci-app-store' package/feeds/istore/luci-app-store/Makefile
           echo '光影猫只读状态卡片已集成，Bandix Plus 首次流量挂钩默认关闭。'
 
-      - name: 修复 Aurora 主题下的电池插件
-        working-directory: immortalwrt
-        run: python3 ../scripts/patches/fix-aurora-battstatus.py .
 
       - name: 应用并核对固件配置
         working-directory: immortalwrt

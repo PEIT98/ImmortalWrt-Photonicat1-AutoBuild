@@ -16,10 +16,16 @@
 | 脚本 | 作用 |
 | --- | --- |
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
-| [fix-aurora-battstatus.py](patches/fix-aurora-battstatus.py) | 修复 Aurora 下的电池指示，不改主题源码 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
 | [hide-mwan3-status-menu.py](patches/hide-mwan3-status-menu.py) | 隐藏状态页重复 mwan3 菜单，保留网络页入口 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 使用上游 Wi-Fi 脚本并调整频段显示顺序 |
+
+## 电池指示插件（直接集成）
+
+- 修改后的 [battstatus.js](../files/www/luci-static/resources/preload/battstatus.js) 直接放入 `files/` 固件覆盖目录。
+- 编译时随固件文件复制，覆盖 LuCI 原版静态资源；仍使用上游 `luci-mod-battstatus` 的 RPC、权限和翻译，**不修改 Aurora 主题源码**。
+- 不再使用 `fix-aurora-battstatus.py`，以后直接修改项目中的 JS 文件即可。
+- 此文件基于 ImmortalWrt LuCI `openwrt-25.12`，来源提交 `d6167ea`。如上游电池模块接口变化，需要同步检查本地 JS。
 
 ## 配置来源与构建顺序
 
