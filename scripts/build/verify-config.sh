@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# 功能：核对目标设备、插件、驱动及关键依赖。
 set -euo pipefail
 CFG="${1:-.config}"
 need=(
@@ -77,13 +78,13 @@ for f in CONFIG_DRIVER_11AC_SUPPORT CONFIG_DRIVER_11AX_SUPPORT CONFIG_DRIVER_11B
   fi
 done
 if grep -Fxq '# CONFIG_RUBY_ENABLE_YJIT is not set' "$CFG"; then
-  echo 'OK: Ruby YJIT disabled (skip heavyweight Rust/host dependency)'
+  echo '通过：Ruby YJIT 已关闭，避免大型 Rust 构建依赖'
 else
   echo '::error::Ruby YJIT 仍然启用，将触发耗费空间的 Rust 编译' >&2
   failed=1
 fi
 if grep -Fxq '# CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs is not set' "$CFG"; then
-  echo 'OK: DiskMan Btrfs optional tooling disabled (lower build footprint)'
+  echo '通过：DiskMan 可选 Btrfs 组件已关闭，降低编译负担'
 else
   echo '::error::DiskMan 附加 Btrfs 工具链未关闭，请检查 25.12 Kconfig 选项是否变化' >&2
   failed=1

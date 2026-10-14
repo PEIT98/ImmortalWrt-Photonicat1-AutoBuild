@@ -80,12 +80,12 @@ jobs:
         shell: bash
         run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
 
-      - name: Prepare Photonicat1 config with QModem
-        run: bash scripts/prepare.sh "$GITHUB_WORKSPACE/photonicat-reference" "$GITHUB_WORKSPACE/immortalwrt" "$GITHUB_WORKSPACE/files"
+      - name: 准备光影猫配置与 QModem
+        run: bash scripts/build/prepare.sh "$GITHUB_WORKSPACE/photonicat-reference" "$GITHUB_WORKSPACE/immortalwrt" "$GITHUB_WORKSPACE/files"
 
-      - name: Enable onboard QCA9377 SDIO without disabling ath10k PCI
+      - name: 启用板载 QCA9377 SDIO 并保留 PCIe
         run: |
-          python3 scripts/enable-qca9377-ath10k-sdio.py "$GITHUB_WORKSPACE/immortalwrt"
+          python3 scripts/patches/enable-qca9377-ath10k-sdio.py "$GITHUB_WORKSPACE/immortalwrt"
           grep -Fq 'ATH10K ATH10K_PCI ATH10K_SDIO' immortalwrt/package/kernel/mac80211/ath.mk
           grep -Fq 'ath10k/ath10k_sdio.ko' immortalwrt/package/kernel/mac80211/ath.mk
 
@@ -99,11 +99,11 @@ jobs:
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
 
-      - name: Hide Status MultiWAN menu (keep Network MultiWAN)
-        run: python3 scripts/hide-mwan3-status-menu.py "$GITHUB_WORKSPACE/immortalwrt"
+      - name: 隐藏状态页重复的 MultiWAN 菜单
+        run: python3 scripts/patches/hide-mwan3-status-menu.py "$GITHUB_WORKSPACE/immortalwrt"
 
-      - name: Fix iStore package naming on ImmortalWrt 25.12
-        run: bash scripts/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
+      - name: 修复 iStore 软件包名称
+        run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 
       - name: Check Photonicat1 status and Docker storage diagnostics
         working-directory: immortalwrt
@@ -121,17 +121,17 @@ jobs:
           grep -Fxq 'LUCI_NAME:=luci-app-store' package/feeds/istore/luci-app-store/Makefile
           echo '光影猫只读状态卡片已集成，Bandix Plus 首次流量挂钩默认关闭。'
 
-      - name: Fix battery plugin indicator (Aurora theme unchanged)
+      - name: 修复 Aurora 主题下的电池插件
         working-directory: immortalwrt
-        run: python3 ../scripts/fix-aurora-battstatus.py .
+        run: python3 ../scripts/patches/fix-aurora-battstatus.py .
 
-      - name: Resolve and verify package selection
+      - name: 应用并核对固件配置
         working-directory: immortalwrt
         run: |
           # 修改过 iStore Makefile 后，强制重新扫描包定义，避免复用旧缓存。
           rm -f tmp/.packageinfo tmp/.config-package.in
           # feeds install -a 会重置 .config，因此必须在安装完成后再应用选项
-          python3 ../scripts/select-packages.py .config
+          python3 ../scripts/build/select-packages.py .config
           cp .config .config.before-defconfig
           echo '===== defconfig 前核心插件 ====='
           grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
@@ -148,7 +148,7 @@ jobs:
           grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
           echo '===== defconfig 前已选但后被取消的选项（最多70行）====='
           comm -23 <(grep '^CONFIG_PACKAGE_.*=y$' .config.before-defconfig | sort -u) <(grep '^CONFIG_PACKAGE_.*=y$' .config | sort -u) | head -n 70 || true
-          bash ../scripts/verify-config.sh .config
+          bash ../scripts/build/verify-config.sh .config
           echo '===== 确认 Ruby YJIT 未启用 ====='
           grep -F '# CONFIG_RUBY_ENABLE_YJIT is not set' .config
           df -h .
@@ -224,7 +224,7 @@ jobs:
           du -sh immortalwrt/dl "$CCACHE_DIR" 2>/dev/null || true
           df -h immortalwrt
 
-      - name: Build firmware
+      - name: 编译光影猫固件
         working-directory: immortalwrt
         shell: bash
         run: |
@@ -274,7 +274,7 @@ jobs:
           path: immortalwrt/.ccache
           key: photonicat1-ccache-v2-${{ runner.os }}-${{ hashFiles('immortalwrt/.config') }}-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Collect firmware and metadata
+      - name: 收集固件及编译信息
         shell: bash
         run: |
           set -euo pipefail
@@ -313,7 +313,7 @@ jobs:
           } > release/build-sources.txt
           git -C immortalwrt log -n 25 --format='%h %cs %s' > release/immortalwrt-recent-commits.txt
           (cd release && find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS.txt)
-          bash scripts/release-notes.sh release
+          bash scripts/build/release-notes.sh release
           ls -lah release
 
       - name: Build diagnostic on failure

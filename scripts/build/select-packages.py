@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Apply photonicat1.config AFTER feeds install, preserving reference settings."""
+# 功能：读取独立配置，保留参考固件的其他选项。
+"""安装 Feeds 后应用独立插件配置，保留参考设备的其他选项。"""
 from pathlib import Path
 import re
 import sys
 
 p = Path(sys.argv[1])
-overrides_file = Path(__file__).resolve().parent.parent / "photonicat1.config"
+overrides_file = Path(__file__).resolve().parent.parent.parent / "photonicat1.config"
 original = p.read_text()
 if not overrides_file.is_file():
     raise SystemExit(f"Missing package override file: {overrides_file}")
@@ -24,8 +25,7 @@ for lineno, raw in enumerate(overrides_file.read_text().splitlines(), 1):
         raise SystemExit(f"{overrides_file}:{lineno}: duplicate config key: {key}")
     overrides[key] = line
 
-# The old reference can still contain PassWall sub-options, even when PassWall
-# itself is excluded. Disable only those sub-options; preserve unrelated options.
+# 参考配置可能残留 PassWall 子选项；只关闭这些子选项，不改变其他插件。
 passwall_prefix = "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_"
 removed_passwall = set()
 kept = []

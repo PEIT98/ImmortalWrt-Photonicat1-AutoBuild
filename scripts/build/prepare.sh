@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# 功能：准备参考硬件配置、官方软件源、固件覆盖文件和内核补丁。
 set -euo pipefail
 REF="${1:?缺少光影猫参考仓库路径}"
 SRC="${2:?缺少 ImmortalWrt 源码路径}"
@@ -51,8 +52,8 @@ done
 grep -Fq 'modem_config' "$QMODEM_MWAN_SYNC" || exit 1
 grep -Fq 'qmodem_priority3' "$QMODEM_MWAN_SYNC" || exit 1
 
-# MyOpenWrt tom_modem ACL is shipped directly in the firmware rootfs overlay.
-# rpcd reads /usr/share/rpcd/acl.d/*.json on startup; no first-boot restart needed.
+# MyOpenWrt 的 tom_modem 权限文件直接放进固件根文件系统。
+# rpcd 启动时会读取 acl.d，无须额外设置首启重启。
 TOM_ACL="$SRC/files/usr/share/rpcd/acl.d/tom_modem.json"
 test -f "$TOM_ACL" || { echo "::error::缺少 MyOpenWrt tom_modem ACL 文件" >&2; exit 1; }
 python3 -m json.tool "$TOM_ACL" >/dev/null
@@ -109,7 +110,7 @@ echo 'Bandix Plus 前/后端已加入：首次默认不启用流量挂钩和限�
 # kmod-usb-serial-option 由 select-packages.py 选择；此处仅安装内核补丁源码。
 # 必须确保 Rockchip 目标仍使用 Linux 6.12；如升级到新内核则明确报错，
 # 避免补丁被放进错误目录而悄然失效。
-TD_PATCH_SRC="$(dirname "$0")/../999-add-TD-TECH-option-id.patch"
+TD_PATCH_SRC="$(dirname "$0")/../../999-add-TD-TECH-option-id.patch"
 TD_PATCH_DIR="$SRC/target/linux/rockchip/patches-6.12"
 test -f "$TD_PATCH_SRC" || { echo "::error::TD-TECH 补丁源文件丢失" >&2; exit 1; }
 test -d "$TD_PATCH_DIR" || { echo "::error::Rockchip Linux 6.12 补丁目录不存在，需检查内核版本" >&2; exit 1; }
@@ -120,7 +121,7 @@ grep -Fq 'TDTECH_VENDOR_ID' "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁�
 echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.12。'
 
 # 参考西瓜皮的 Wi-Fi band_order 兼容调整：保留固件上游源码，最小替换频段顺序。
-bash "$(dirname "$0")/wifi-band-order.sh" "$SRC"
+bash "$(dirname "$0")/../patches/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫硬件配置、QModem stable 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'
 echo '首次使用：QModem 扫描拨号即可，无需固定别名；mwan3 自动识别实际 IPv4 接口，Wi-Fi STA 绑定 wwan'

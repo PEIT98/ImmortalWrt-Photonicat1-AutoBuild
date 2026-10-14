@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""Patch luci-mod-battstatus only; NEVER alter Aurora theme source files.
-
-The plugin sets its own styles at runtime when Aurora is active.
-Battery RPC / pcat-mgr integration remains upstream and unchanged.
-"""
+# 功能：修正 Aurora 下的电池状态显示，不修改主题源码。
+"""只修改 luci-mod-battstatus 电池插件的显示兼容性，不修改 Aurora 主题，也不改变 RPC 读取方式。"""
 from pathlib import Path
 import sys
 

@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-"""Enable PCIe and SDIO ath10k in one regular kmod for Photonicat1 onboard QCA9377.
-
-OpenWrt mac80211 ath10k and ath10k-sdio are mutually exclusive package variants
-because they each ship ath10k_core.ko. Do NOT select both Kconfig packages.
-Instead, extend the existing PCI regular variant with ath10k_sdio.ko and
-enable ATH10K_SDIO in the same kernel build.
-"""
+# 功能：为板载 QCA9377 增加 ath10k SDIO 支持，并保留 PCIe 支持。
+"""在同一个 kmod-ath10k 内加入 PCIe 和 SDIO 驱动。不能同时选择共享 ath10k_core.ko 的两个变体。"""
 from pathlib import Path
 import sys
 

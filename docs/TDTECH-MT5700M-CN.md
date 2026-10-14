@@ -7,7 +7,7 @@
 来源：[zzzz0317/immortalwrt-xgp-auto-build/999-add-TD-TECH-option-id.patch](https://github.com/zzzz0317/immortalwrt-xgp-auto-build/blob/main/999-add-TD-TECH-option-id.patch)。
 
 - 本仓库 [999-add-TD-TECH-option-id.patch](../999-add-TD-TECH-option-id.patch) **逐字采用西瓜皮原文件，不缩减或改变匹配条件**。
-- 构建时 `scripts/prepare.sh` 复制到 `immortalwrt/target/linux/rockchip/patches-6.12/999-add-TD-TECH-option-id.patch`，校验目标文件一致。
+- 构建时 `scripts/build/prepare.sh` 复制到 `immortalwrt/target/linux/rockchip/patches-6.12/999-add-TD-TECH-option-id.patch`，校验目标文件一致。
 - 原补丁修改内核 `drivers/usb/serial/option.c`，增加 `TDTECH_VENDOR_ID 0x3466`，并匹配接口类/子类/协议 `ff/06/{10,12,13,14,1b,1c}`。
 - 对此前使用的 MT5700M-CN（`3466:3301`）可尝试自动绑定 USB 串口，免去 `usbserial_generic/new_id` 的临时绑定；仍需确认网络接口继续由 `cdc_ether` 接管。
 - 此匹配基于 **厂商 ID + 接口描述符，不限制产品 ID**，与西瓜皮补丁行为相同；实际匹配取决于 USB 接口描述符。

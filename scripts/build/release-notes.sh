@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# 功能：生成 Release 的中文说明和版本信息。
 set -euo pipefail
 dir="${1:-release}"
 test -f "$dir/build-sources.txt"

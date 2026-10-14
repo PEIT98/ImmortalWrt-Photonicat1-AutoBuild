@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Stabilize package names in the official LinkEase iStore feed on ImmortalWrt 25.12.
-# Apply after scripts/feeds install; only changes GitHub runner source tree.
+# 功能：兼容 iStore 在 ImmortalWrt 25.12 中的包名和依赖。
+# 修正官方 LinkEase iStore 在 ImmortalWrt 25.12 中的软件包名称。
+# 在安装 Feeds 后执行；仅修改编译机的临时源码。
 set -euo pipefail
 SRC="${1:?用法: fix-istore-25.12.sh IMMORTALWRT_SRC}"
 APP="$SRC/package/feeds/istore/luci-app-store/Makefile"

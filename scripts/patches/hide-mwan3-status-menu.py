@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""Hide only Status > MultiWAN Manager, retaining Network > MultiWAN Manager.
-
-Applied to the ImmortalWrt 25.12 LuCI feed *before* luci-app-mwan3 is built,
-so the resulting APK itself carries the cleaned menu, not a runtime overlay.
-"""
+# 功能：隐藏状态页重复的 mwan3 菜单，保留网络设置入口。
+"""仅隐藏“状态→MultiWAN”重复菜单，保留“网络→MultiWAN”入口；在编译 LuCI 软件包前修改 Feed 文件。"""
 import json
 import sys
 from pathlib import Path

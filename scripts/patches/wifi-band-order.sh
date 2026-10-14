@@ -1,4 +1,5 @@
 #!/bin/sh
+# 功能：修正 Wi-Fi 频段显示顺序。
 # 参考西瓜皮脚本的频段排序修正，但使用当前 ImmortalWrt 自己的 mac80211.uc 源码。
 set -eu
 SRC="${1:?需要 ImmortalWrt 根目录}"
