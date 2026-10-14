@@ -1,0 +1,119 @@
+#!/bin/sh
+# Photonicat v1: only use the official Unix control socket.
+# Never open /dev/ttyS4 or stop the existing pcat-mgr/watchdog.
+. /usr/share/libubox/jshn.sh
+
+SOCK=/tmp/pcat-manager.sock
+BOARD="$(cat /tmp/sysinfo/board_name 2>/dev/null)"
+
+fail() {
+    json_init
+    json_add_boolean ok 0
+    json_add_string error "$1"
+    json_dump
+    exit 0
+}
+
+require_controller() {
+    [ "$BOARD" = "ariaboard,photonicat" ] || fail "仅支持光影猫一代（ariaboard,photonicat）"
+    command -v socat >/dev/null 2>&1 || fail "缺少 socat 通信程序"
+    [ -S "$SOCK" ] || fail "没有检测到官方 pcat-manager Socket；当前 Go 版 pcat-mgr 可能不提供该接口。为保护 MCU/看门狗，禁止直接访问串口。"
+}
+
+query() {
+    # Socket protocol: one JSON object terminated by a NUL byte.
+    # -T bounds idle time because the official daemon may keep the connection open.
+    MCU_REPLY="$(printf '%s\000' "$1" | socat -T 2 - "UNIX-CONNECT:$SOCK" 2>/dev/null | tr -d '\000')"
+    [ -n "$MCU_REPLY" ] || return 1
+    json_load "$MCU_REPLY" 2>/dev/null || return 1
+    json_get_var _code code
+    json_get_var _command command
+    [ "$_code" = "0" ] && [ "$_command" = "$2" ]
+}
+
+send_checked() {
+    query "$1" "$2" || fail "MCU 命令 $2 执行失败；请检查后台服务，部分设置可能已生效"
+}
+
+valid_time() {
+    case "$1" in
+        0[0-9]:[0-5][0-9]|1[0-9]:[0-5][0-9]|2[0-3]:[0-5][0-9]) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+event_for() {
+    _time="$1"
+    _action="$2"
+    _hour="${_time%:*}"
+    _minute="${_time#*:}"
+    _hour="${_hour#0}"
+    _minute="${_minute#0}"
+    [ -n "$_hour" ] || _hour=0
+    [ -n "$_minute" ] || _minute=0
+    printf '{"action":%s,"enabled":1,"enable-bits":56,"hour":%s,"minute":%s,"dow-bits":127}' "$_action" "$_hour" "$_minute"
+}
+
+case "$1" in
+    list)
+        printf '%s\n' '{"status":{},"set_mode":{"mode":"str","minutes":"int"},"set_daily":{"start":"str","stop":"str"}}'
+        ;;
+    call)
+        require_controller
+        case "$2" in
+            status)
+                query '{"command":"charger-on-auto-start-get"}' "charger-on-auto-start-get" || fail "读取车载模式失败：控制 Socket 未响应"
+                json_get_var car_state state
+                json_get_var car_seconds timeout
+                case "$car_state:$car_seconds" in *[!0-9:]*|'') fail "车载模式返回无效数据" ;; esac
+                query '{"command":"schedule-power-event-get"}' "schedule-power-event-get" || fail "读取定时计划失败"
+                schedule="$MCU_REPLY"
+                json_init
+                json_add_boolean ok 1
+                json_add_int car_state "${car_state:-0}"
+                json_add_int car_seconds "${car_seconds:-0}"
+                json_add_string schedule "$schedule"
+                json_add_string backend "pcat-manager v1 Socket"
+                json_dump
+                ;;
+            set_mode)
+                json_load "$3" 2>/dev/null || fail "参数 JSON 错误"
+                json_get_var mode mode
+                json_get_var minutes minutes
+                case "$mode" in
+                    manual)
+                        send_checked '{"command":"charger-on-auto-start-set","state":0,"timeout":0}' "charger-on-auto-start-set"
+                        send_checked '{"command":"schedule-power-event-set","event-list":[]}' "schedule-power-event-set"
+                        ;;
+                    car)
+                        case "$minutes" in ''|*[!0-9]*) fail "延时必须为 0～600 分钟的整数" ;; esac
+                        [ "$minutes" -le 600 ] || fail "延时不能超过 600 分钟"
+                        seconds=$((minutes * 60))
+                        send_checked '{"command":"schedule-power-event-set","event-list":[]}' "schedule-power-event-set"
+                        send_checked "{\"command\":\"charger-on-auto-start-set\",\"state\":1,\"timeout\":$seconds}" "charger-on-auto-start-set"
+                        ;;
+                    *) fail "未知模式" ;;
+                esac
+                json_init
+                json_add_boolean ok 1
+                json_dump
+                ;;
+            set_daily)
+                json_load "$3" 2>/dev/null || fail "参数 JSON 错误"
+                json_get_var start start
+                json_get_var stop stop
+                valid_time "$start" && valid_time "$stop" || fail "时间格式必须为 HH:MM"
+                [ "$start" != "$stop" ] || fail "开机和关机时间不能相同"
+                start_ev="$(event_for "$start" 1)"
+                stop_ev="$(event_for "$stop" 0)"
+                send_checked '{"command":"charger-on-auto-start-set","state":0,"timeout":0}' "charger-on-auto-start-set"
+                send_checked "{\"command\":\"schedule-power-event-set\",\"event-list\":[$start_ev,$stop_ev]}" "schedule-power-event-set"
+                json_init
+                json_add_boolean ok 1
+                json_dump
+                ;;
+            *) fail "不支持的方法" ;;
+        esac
+        ;;
+    *) exit 1 ;;
+esac

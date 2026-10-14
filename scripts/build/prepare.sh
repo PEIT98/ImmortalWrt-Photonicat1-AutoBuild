@@ -67,6 +67,24 @@ grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$BATTERY_PACKAGE_DST/Makefile"
 grep -Fq 'pcat-battery' "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
 echo '电池插件已复制至本地 package：保留原版 rpcd 服务及电池显示修改。'
 
+# 安全移植光影猫一代电源管理页面；仅连接已存在的官方 MCU Socket。
+# 保留当前 Go 版 pcat-mgr、电池插件和 QModem，不引入第二套 MCU 守护进程。
+POWER_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-photonicat-power"
+POWER_PACKAGE_DST="$SRC/package/luci-app-photonicat-power"
+test -f "$POWER_PACKAGE_SRC/Makefile" || { echo "::error::缺少 luci-app-photonicat-power 本地源码" >&2; exit 1; }
+test ! -e "$POWER_PACKAGE_DST" || { echo "::error::电源管理目标路径被上游占用，禁止覆盖" >&2; exit 1; }
+mkdir -p "$POWER_PACKAGE_DST"
+cp -a "$POWER_PACKAGE_SRC/." "$POWER_PACKAGE_DST/"
+POWER_RPC="$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_power"
+test -f "$POWER_RPC" || exit 1
+chmod 755 "$POWER_RPC"
+sh -n "$POWER_RPC"
+python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/luci/menu.d/luci-app-photonicat-power.json" >/dev/null
+python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
+test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/view/photonicat-power.js"
+grep -Fq 'include $(TOPDIR)/feeds/luci/luci.mk' "$POWER_PACKAGE_DST/Makefile"
+echo '光影猫一代电源管理 LuCI 页面已安装；现有 pcat-mgr 保持不变。'
+
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"

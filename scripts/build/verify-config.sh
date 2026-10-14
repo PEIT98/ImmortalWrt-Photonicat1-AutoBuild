@@ -62,6 +62,8 @@ need=(
   CONFIG_PACKAGE_luci-app-cpufreq
   CONFIG_PACKAGE_cpufreq
   CONFIG_PACKAGE_luci-mod-battstatus
+  CONFIG_PACKAGE_luci-app-photonicat-power
+  CONFIG_PACKAGE_socat
   CONFIG_PACKAGE_kmod-ath11k-pci
   CONFIG_PACKAGE_ath11k-firmware-wcn6855
   CONFIG_PACKAGE_kmod-usb-net-qmi-wwan

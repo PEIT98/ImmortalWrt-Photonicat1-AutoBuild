@@ -1,0 +1,20 @@
+{
+  "luci-app-photonicat-power": {
+    "description": "Photonicat v1 MCU power policy",
+    "read": {
+      "ubus": {
+        "luci.photonicat_power": [
+          "status"
+        ]
+      }
+    },
+    "write": {
+      "ubus": {
+        "luci.photonicat_power": [
+          "set_mode",
+          "set_daily"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "admin/system/photonicat-power": {
+    "title": "光影猫电源管理",
+    "order": 87,
+    "action": {
+      "type": "view",
+      "path": "photonicat-power"
+    },
+    "depends": {
+      "acl": [
+        "luci-app-photonicat-power"
+      ]
+    }
+  }
+}
