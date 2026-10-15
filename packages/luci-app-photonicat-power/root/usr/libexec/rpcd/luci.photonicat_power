@@ -25,7 +25,7 @@ query() {
     # immediately after printf, causing the daemon to close before flushing the reply.
     # STDIO,ignoreeof keeps the write half open until the response arrives.
     # -T bounds idle time because the daemon intentionally keeps clients connected.
-    MCU_REPLY="$(printf '%s\000' "$1" | socat -T 1 STDIO,ignoreeof "UNIX-CONNECT:$SOCK" 2>/dev/null | tr -d '\000')"
+    MCU_REPLY="$(printf '%s\000' "$1" | socat -T "${3:-1}" STDIO,ignoreeof "UNIX-CONNECT:$SOCK" 2>/dev/null | tr -d '\000')"
     [ -n "$MCU_REPLY" ] || return 1
     validate_reply "$MCU_REPLY" "$2"
 }
@@ -37,14 +37,30 @@ validate_reply() {
     [ "$_code" = "0" ] && [ "$_command" = "$2" ]
 }
 
-query_status_batch() {
-    # Three read-only commands in one Socket connection: one timeout, not three.
-    _status_replies="$(printf '%s\000' '{"command":"pmu-status"}' '{"command":"charger-on-auto-start-get"}' '{"command":"schedule-power-event-get"}' |
-        socat -T 1 STDIO,ignoreeof "UNIX-CONNECT:$SOCK" 2>/dev/null | tr '\000' '\n')"
+# socat's -T 1 adds a noticeable post-response wait because the daemon
+# keeps the control connection open. On a local Unix socket, use a short
+# read-only grace period and retry with the original timeout if necessary.
+# Never change the timeout/validation used for MCU write commands.
+decode_status_batch() {
     _pmu_reply="$(printf '%s\n' "$_status_replies" | sed -n '1p')"
     _car_reply="$(printf '%s\n' "$_status_replies" | sed -n '2p')"
     _schedule_reply="$(printf '%s\n' "$_status_replies" | sed -n '3p')"
-    [ -n "$_pmu_reply" ] && [ -n "$_car_reply" ] && [ -n "$_schedule_reply" ]
+    [ -n "$_pmu_reply" ] && [ -n "$_car_reply" ] && [ -n "$_schedule_reply" ] || return 1
+    validate_reply "$_pmu_reply" "pmu-status" &&
+        validate_reply "$_car_reply" "charger-on-auto-start-get" &&
+        validate_reply "$_schedule_reply" "schedule-power-event-get"
+}
+
+query_status_batch() {
+    _status_replies="$(printf '%s\000' '{"command":"pmu-status"}' '{"command":"charger-on-auto-start-get"}' '{"command":"schedule-power-event-get"}' |
+        socat -T 0.25 STDIO,ignoreeof "UNIX-CONNECT:$SOCK" 2>/dev/null | tr '\000' '\n')"
+    if decode_status_batch; then
+        return 0
+    fi
+    # Retry the whole read-only request; never apply this to mode changes.
+    _status_replies="$(printf '%s\000' '{"command":"pmu-status"}' '{"command":"charger-on-auto-start-get"}' '{"command":"schedule-power-event-get"}' |
+        socat -T 1 STDIO,ignoreeof "UNIX-CONNECT:$SOCK" 2>/dev/null | tr '\000' '\n')"
+    decode_status_batch
 }
 
 parse_battery() {
@@ -109,7 +125,9 @@ case "$1" in
         require_controller
         case "$2" in
             battery)
-                query '{"command":"pmu-status"}' "pmu-status" || fail "MCU 电池状态读取失败"
+                query '{"command":"pmu-status"}' "pmu-status" 0.25 ||
+                    query '{"command":"pmu-status"}' "pmu-status" 1 ||
+                    fail "MCU 电池状态读取失败"
                 parse_battery
                 json_init
                 json_add_boolean ok 1
