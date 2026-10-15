@@ -4,6 +4,8 @@
 
 - 原厂 v1 守护进程独占 `/dev/ttyS4`，替代 ImmortalWrt Go 版 `pcat-mgr`，提供 `/tmp/pcat-manager.sock`。
 - 保留 MCU 心跳/看门狗、关机、电池、定时和充电模式协议。
+- 车载/UPS 修复：原厂 v1 的断电关机仅接受 MCU 开机事件 3/4；现在在车载模式下观察到一次真实外部供电后，也允许随后拔电触发延时关机。手动电池开机且从未检测到外部供电时，不新增关机触发；倒计时仍使用秒。
+- 修改模式会重新布防断电识别；通过 `files/patch-photonicat-ups.py` 严格匹配锁定的上游 C 代码，结构变化会停止构建而不是盲目修改。
 - 将上游 modem-manager 改为无操作实现，避免与 QModem 在 USB、Modem GPIO、RF-kill 等方面冲突。
 - 使用上游 `--distro` 模式，禁用旧式网络状态和 mwan3 检查线程。
 - 上游 C 程序在收到普通 SIGTERM 时会触发整机重启；已对此改为关闭 MCU watchdog 后平稳退出。真实关机操作仍遵循原流程。
