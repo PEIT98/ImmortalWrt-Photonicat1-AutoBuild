@@ -101,6 +101,10 @@ jobs:
           test -f feeds/qmodem/luci/luci-app-qmodem-next/Makefile
           grep -Fq 'qmodem-smsd' feeds/qmodem/application/qmodem/Makefile
           command -v rustup >/dev/null && command -v cargo >/dev/null
+          # Rust 的 Cargo linker 必须是单个可执行文件；OpenWrt TARGET_CC 带 ccache 前缀。
+          # 仅为 QModem Rust 使用真正的交叉 GCC，其余 C 编译仍保留 CCache。
+          python3 ../scripts/patches/fix-qmodem-rust-linker.py feeds/qmodem/application/qmodem/Makefile
+          grep -Fq 'TARGET_CC="$(TARGET_CROSS)gcc"' feeds/qmodem/application/qmodem/Makefile
           ./scripts/feeds install -a -f -p openclash
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
