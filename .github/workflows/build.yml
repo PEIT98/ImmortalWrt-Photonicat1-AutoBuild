@@ -1,8 +1,7 @@
 name: Photonicat1 ImmortalWrt QModem Build
 
+# Only manual builds. No push or schedule trigger.
 on:
-  # Manual-only: build only when the user clicks Actions > Run workflow.
-  # No scheduled builds or push-triggered builds.
   workflow_dispatch:
     inputs:
       publish:
