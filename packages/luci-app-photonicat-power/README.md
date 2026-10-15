@@ -17,7 +17,8 @@
 
 ### 页面加载优化
 
-- 页面立即呈现，状态查询后台异步完成，不阻塞 LuCI 导航。
-- 首次状态读取将 `pmu-status`、`charger-on-auto-start-get`、`schedule-power-event-get` 合并在一个 Socket 会话里，仅等待一次空闲超时。
-- 15 秒自动刷新改为轻量级 `battery` 接口，只查电量；模式写入仍保留逐条命令响应校验。
+- 页面先显示，再异步加载电量和模式；手机端说明文字已精简。
+- 首次查询仍将 `pmu-status`、`charger-on-auto-start-get`、`schedule-power-event-get` 合并为一个只读请求。
+- 只读请求使用 `socat -T 0.25` 减少 MCU Socket 关闭等待；响应不完整或校验失败则用原有 `-T 1` 自动重试。
+- 每 15 秒仅查询电池状态；保存模式的 MCU 写入及其应答校验仍保持 `-T 1`。
 - 不变更 pcat-manager-v1、MCU 串口或 QModem 配置。
