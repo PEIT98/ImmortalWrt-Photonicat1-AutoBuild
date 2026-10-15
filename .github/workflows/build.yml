@@ -88,22 +88,18 @@ jobs:
           grep -Fq 'ATH10K ATH10K_PCI ATH10K_SDIO' immortalwrt/package/kernel/mac80211/ath.mk
           grep -Fq 'ath10k/ath10k_sdio.ko' immortalwrt/package/kernel/mac80211/ath.mk
 
-      - name: Update official and LianXia QModem feeds
+      - name: Update official FUjr QModem stable feed
         working-directory: immortalwrt
         run: |
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           ./scripts/feeds install -a -f -p qmodem
-          # 魔改版将短信转发等服务并入 qmodem；提前校验布局和 Rust 工具链。
-          test -f feeds/qmodem/rust/Cargo.toml
-          test -f feeds/qmodem/application/qmodem/build-rust.sh
+          # 官方 stable：qmodem 核心、Next 界面与 SMS 转发为独立软件包。
+          test -f feeds/qmodem/application/qmodem/Makefile
           test -f feeds/qmodem/luci/luci-app-qmodem-next/Makefile
-          grep -Fq 'qmodem-smsd' feeds/qmodem/application/qmodem/Makefile
-          command -v rustup >/dev/null && command -v cargo >/dev/null
-          # Rust 的 Cargo linker 必须是单个可执行文件；OpenWrt TARGET_CC 带 ccache 前缀。
-          # 仅为 QModem Rust 使用真正的交叉 GCC，其余 C 编译仍保留 CCache。
-          python3 ../scripts/patches/fix-qmodem-rust-linker.py feeds/qmodem/application/qmodem/Makefile
-          grep -Fq 'TARGET_CC="$(TARGET_CROSS)gcc"' feeds/qmodem/application/qmodem/Makefile
+          test -f feeds/qmodem/application/sms_forwarder_next/Makefile
+          grep -Fq 'LUCI_DEPENDS:=+qmodem +luci-base +sms-forwarder-next' feeds/qmodem/luci/luci-app-qmodem-next/Makefile
+          ! test -e feeds/qmodem/application/qmodem/build-rust.sh
           ./scripts/feeds install -a -f -p openclash
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
@@ -349,7 +345,7 @@ jobs:
             echo 'Device: Ariaboard Photonicat1 (RK3568)'
             echo "ImmortalWrt source: $(git -C immortalwrt rev-parse HEAD)"
             echo "Reference config: $(git -C photonicat-reference rev-parse HEAD)"
-            echo "QModem feed: LianXia233/QModem main"
+            echo "QModem feed: FUjr/QModem stable"
             echo "QModem feed: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
             echo "Aurora theme: $(git -C immortalwrt/package/luci-theme-aurora rev-parse HEAD)"
             echo "Workflow repo commit: $GITHUB_SHA"

@@ -4,7 +4,7 @@
 
 - 固件源码：[ImmortalWrt](https://github.com/immortalwrt/immortalwrt) `openwrt-25.12`
 - 设备参考：[光影猫一代](https://github.com/a757814283/ImmortalWrt_Photonicat1)
-- 5G 模组管理：[LianXia233/QModem](https://github.com/LianXia233/QModem) `main`（内置短信转发、Rust AT 后端）
+- 5G 模组管理：[官方 FUjr/QModem](https://github.com/FUjr/QModem) `stable`（QModem Next + 独立短信转发）
 
 ## 主要功能
 
