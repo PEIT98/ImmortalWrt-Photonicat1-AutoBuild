@@ -4,7 +4,8 @@
     "read": {
       "ubus": {
         "luci.photonicat_power": [
-          "status"
+          "status",
+          "battery"
         ]
       }
     },

@@ -11,7 +11,7 @@
 | 分类 | 内置功能 |
 | --- | --- |
 | 5G / 网络 | QModem Next（含短信）、mwan3、OpenClash |
-| 系统界面 | Aurora 主题、光影猫一代电池/电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
+| 系统界面 | Aurora 主题、右上角电池状态、光影猫一代电池/电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
 | 管理工具 | DiskMan、Bandix Plus、定时重启、UPnP |
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
@@ -27,7 +27,7 @@
 
 ## 电池管理器与电量显示
 
-原顶部 [luci-mod-battstatus](packages/luci-mod-battstatus/) **暂停编入固件，源代码完整保留**。新 [pcat-manager-v1 PMU-only 管理器](packages/pcat-manager-v1/) 接管唯一 MCU 串口 `/dev/ttyS4`，直接为系统 → 光影猫电源管理页面提供电量百分比、充电状态、电压和板温。
+已恢复顶部 [luci-mod-battstatus](packages/luci-mod-battstatus/) 电池显示及简体中文翻译，保留 Aurora 紧凑样式。顶部图标通过电源插件只读 UBUS 获取电量，与系统 → 光影猫电源管理页面共享 [pcat-manager-v1 PMU-only](packages/pcat-manager-v1/) 数据来源；新管理器仍是 `/dev/ttyS4` 唯一访问者，不依赖旧 Go FUSE。
 
 已隔离官方 C 版的旧 5G 模组 GPIO、拨号及路由自动检查，不影响现有 QModem/mwan3 功能。新后台首次启用尚未完成真机测试，请先做好固件备份及恢复准备。
 

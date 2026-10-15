@@ -12,18 +12,37 @@ case "$1" in
 	call)
 		case "$2" in
 			getBatteryStatus)
+				# On Photonicat v1, reuse the PMU controller's read-only battery RPC.
+				# Parse BEFORE json_init, since json_load resets the jshn output state.
+				pcat_valid=0
+				if [ "$board" = "ariaboard,photonicat" ]; then
+					pcat_reply="$(ubus call luci.photonicat_power battery 2>/dev/null)" || pcat_reply=""
+					if [ -n "$pcat_reply" ] && json_load "$pcat_reply" 2>/dev/null; then
+						json_get_var pcat_ok ok
+						json_get_var pcat_pct battery_percentage
+						json_get_var pcat_on_battery on_battery
+						case "$pcat_ok" in 1|true) pcat_ok=1 ;; *) pcat_ok=0 ;; esac
+						case "$pcat_pct" in ''|*[!0-9]*) pcat_pct='' ;; esac
+						case "$pcat_on_battery" in 0|1) ;; *) pcat_on_battery='' ;; esac
+						if [ "$pcat_ok" = 1 ] && [ -n "$pcat_pct" ] &&
+						   [ "$pcat_pct" -le 100 ] && [ -n "$pcat_on_battery" ]; then
+							pcat_valid=1
+						fi
+					fi
+				fi
 				json_init
 				json_add_object "$model"
 
 				case "$board" in
 					ariaboard,photonicat)
-						if [ -d /sys/class/power_supply/pcat-charger ] && [ -d /sys/class/power_supply/pcat-battery ]; then
+						if [ "$pcat_valid" = 1 ]; then
 							json_add_boolean valid 1
-							json_add_boolean charging $(cat /sys/class/power_supply/pcat-charger/online)
-							json_add_int percentage $(cat /sys/class/power_supply/pcat-battery/capacity)
+							# 0 = external power present; 1 = running from battery.
+							json_add_boolean charging "$((1 - pcat_on_battery))"
+							json_add_int percentage "$pcat_pct"
 						else
 							json_add_boolean valid 0
-							json_add_string message "Need pcat-mgr"
+							json_add_string message "PMU battery RPC unavailable"
 						fi
 					;;
 					ariaboard,photonicat2)

@@ -51,8 +51,8 @@ grep -Fxq 'LUCI_DEPENDS:=+cpufreq' "$CPUFREQ_DST/Makefile"
 grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$CPUFREQ_DST/Makefile"
 echo 'CPU 调频管理：本地 luci-app-cpufreq（网页、ACL、中文翻译）已安装到源码树。'
 
-# 完整电池插件直接由本仓库维护：网页、电池 RPC、ACL 权限与全部上游翻译。
-# 保留原版光影猫电池读取方式，不修改 Aurora 主题与其他组件。
+# 右上角电池图标复用现有 luci-mod-battstatus，RPC 数据由新 PMU-only 管理器提供。
+# 不启用旧 Go FUSE 电池路径，不修改 Aurora 主题与其它设备支持。
 BATTERY_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-mod-battstatus"
 BATTERY_PACKAGE_DST="$SRC/package/luci-mod-battstatus"
 test -f "$BATTERY_PACKAGE_SRC/Makefile" || { echo "::error::缺少项目内置 luci-mod-battstatus" >&2; exit 1; }
@@ -64,8 +64,8 @@ test -x "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
 test -f "$BATTERY_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-mod-battstatus.json"
 test -f "$BATTERY_PACKAGE_DST/po/zh_Hans/battstatus.po"
 grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$BATTERY_PACKAGE_DST/Makefile"
-grep -Fq 'pcat-battery' "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
-echo '电池插件已复制至本地 package：保留原版 rpcd 服务及电池显示修改。'
+grep -Fq 'luci.photonicat_power battery' "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
+echo '顶部电池插件已复制：光影猫一代通过 PMU-only RPC 获取状态，保留 Aurora 5 秒指示。'
 
 # 唯一 MCU 串口管理器：光影猫一代官方 PMU-only C 后台。
 # 设备默认包也需要切换，否则设备定义还会自动拉入 Go pcat-mgr。
@@ -85,7 +85,7 @@ python3 -m py_compile "$PMU_DST/files/patch-main.py"
 echo '光影猫一代 PMU-only 管理器已添加；Go 版 pcat-mgr 从设备默认包移除。'
 
 # 一代电源管理页面由 PMU Socket 同时提供电池状态和电源模式。
-# 暂停顶部电池指示打包（完整源码保留），QModem 独立控制模组。
+# 顶部电池指示与页面电池状态使用同一 PMU Socket 后台，QModem 独立控制模组。
 POWER_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-photonicat-power"
 POWER_PACKAGE_DST="$SRC/package/luci-app-photonicat-power"
 test -f "$POWER_PACKAGE_SRC/Makefile" || { echo "::error::缺少 luci-app-photonicat-power 本地源码" >&2; exit 1; }

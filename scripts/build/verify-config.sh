@@ -65,6 +65,8 @@ need=(
   CONFIG_PACKAGE_cpufreq
   CONFIG_PACKAGE_pcat-manager-v1
   CONFIG_PACKAGE_luci-app-photonicat-power
+  CONFIG_PACKAGE_luci-mod-battstatus
+  CONFIG_PACKAGE_luci-i18n-battstatus-zh-cn
   CONFIG_PACKAGE_socat
   CONFIG_PACKAGE_kmod-ath11k-pci
   CONFIG_PACKAGE_ath11k-firmware-wcn6855
@@ -113,8 +115,6 @@ done
 absent=(
   CONFIG_PACKAGE_pcat-mgr
   CONFIG_DEFAULT_pcat-mgr
-  CONFIG_PACKAGE_luci-mod-battstatus
-  CONFIG_PACKAGE_luci-i18n-battstatus-zh-cn
   CONFIG_PACKAGE_luci-app-modemband
   CONFIG_PACKAGE_luci-app-sms-tool-js
   CONFIG_PACKAGE_luci-app-qmodem
