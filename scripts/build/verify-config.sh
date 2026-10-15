@@ -72,7 +72,12 @@ need=(
   CONFIG_PACKAGE_ath11k-firmware-wcn6855
   CONFIG_PACKAGE_kmod-usb-net-qmi-wwan
   CONFIG_PACKAGE_kmod-usb-net-cdc-mbim
+  CONFIG_PACKAGE_kmod-usb-net-cdc-ether
+  CONFIG_PACKAGE_kmod-usb-net-cdc-ncm
+  CONFIG_PACKAGE_kmod-usb-net-huawei-cdc-ncm
+  CONFIG_PACKAGE_kmod-usb-net-rndis
   CONFIG_PACKAGE_kmod-usb-serial-option
+  CONFIG_PACKAGE_kmod-usb-serial-qualcomm
 )
 failed=0
 # 只关闭 ext4 固件镜像，不移除 ext4 磁盘驱动。
@@ -135,9 +140,9 @@ for key in "${absent[@]}"; do
     failed=1
   fi
 done
-# 官方 stable QModem 将厂商驱动选项放在传统 LuCI 包；本项目明确保留通用 QMI 内核驱动。
+# 官方 stable QModem 会依赖部分 USB 驱动；这里核对全部常用 USB 数据协议和 AT 串口驱动。
 if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代目标、QModem、OpenClash、Aurora、iStore、Docker/Dockerman、DiskMan、USB/PCIe/网络诊断、ACM、定时重启、UPnP、QCA9377 SDIO 固件及 Wi-Fi 驱动选择检查通过。'
+echo '光影猫一代目标、QModem、OpenClash、Aurora、iStore、Docker/Dockerman、DiskMan、USB/PCIe/网络诊断、QModem USB 数据协议与串口、定时重启、UPnP、QCA9377 SDIO 固件及 Wi-Fi 驱动选择检查通过。'

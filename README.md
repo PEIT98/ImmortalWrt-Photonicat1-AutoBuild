@@ -15,7 +15,7 @@
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
 | 管理工具 | DiskMan、Bandix Plus、定时重启、UPnP |
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
-| 驱动支持 | USB QMI / MBIM / 串口、PCIe / SDIO 无线网卡 |
+| 驱动支持 | USB QMI / MBIM / ECM / NCM / RNDIS、AT 串口、PCIe / SDIO 无线网卡 |
 
 无线驱动包括 Realtek RTL8922AE / RTL8852BE / RTL8852CE、MediaTek MT7921 / MT7925 / MT7916、Qualcomm ath10k / ath11k / ath12k。板载 QCA9377 系列使用 SDIO 驱动，是否可用取决于板子实际硬件和固件支持。内置 [TD-TECH 3466 USB 串口补丁](999-add-TD-TECH-option-id.patch)。
 
