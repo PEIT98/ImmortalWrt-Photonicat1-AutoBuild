@@ -83,8 +83,15 @@ return view.extend({
             if (on) start.value = prettyTime(on);
             if (off) stop.value = prettyTime(off);
             var name = { manual: '手动模式', car: '车载 / UPS 模式', timer: '定时模式' }[current];
-            info.textContent = '当前：' + name + '（使用 ' + data.backend + '）';
-            detail.textContent = '当前 MCU 定时计划：' + schedules.length + ' 条。切换模式将清除其它模式的计划；不会影响网络和 QModem 配置。';
+            var onBattery = Number(data.on_battery) === 1;
+            var supply = onBattery ? '电池供电（外部电源已断开）' : '外部供电';
+            var left = Number(data.car_countdown);
+            var countdown = onBattery && Number.isFinite(left) && left >= 0
+                ? '；剩余约 ' + Math.ceil(left) + ' 秒' : (onBattery ? '；倒计时已到或不可用' : '');
+            info.textContent = '当前：' + name + '（使用 ' + data.backend + '）' +
+                (current === 'car' ? '；供电：' + supply + countdown : '');
+            detail.textContent = '当前 MCU 定时计划：' + schedules.length + ' 条。切换模式将清除其它模式的计划；不会影响网络和 QModem 配置。' +
+                (current === 'car' ? ' 车载模式剩余时间请点击“刷新状态”更新；拔电后应显示“电池供电”。' : '');
             button.disabled = false;
             displayMode();
         }
