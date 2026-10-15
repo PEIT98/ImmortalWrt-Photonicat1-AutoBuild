@@ -75,7 +75,10 @@ case "$1" in
                 done
                 case "${board_temp#-}" in ''|*[!0-9]*) board_temp=0 ;; esac
                 [ "$battery_mv" -gt 0 ] || fail "MCU 尚未上报有效电压，暂时禁止修改电源模式"
-                [ "$battery_percentage" -le 100 ] || battery_percentage=100
+                # Upstream PMU reports charge-percentage in 1/100% units
+                # (e.g. 10000 = 100%, 7550 = 75.50%).
+                [ "$battery_percentage" -le 10000 ] || battery_percentage=10000
+                battery_percentage=$(( (battery_percentage + 50) / 100 ))
                 query '{"command":"charger-on-auto-start-get"}' "charger-on-auto-start-get" || fail "读取车载模式失败：控制 Socket 未响应"
                 json_get_var car_state state
                 json_get_var car_seconds timeout
