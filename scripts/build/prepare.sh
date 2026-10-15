@@ -80,8 +80,10 @@ test -x "$PMU_DST/files/pcat-manager.init"
 test -f "$PMU_DST/files/pcat-manager.conf"
 test -f "$PMU_DST/files/modem-manager-noop.c"
 test -f "$PMU_DST/files/patch-main.py"
+test -f "$PMU_DST/files/patch-photonicat-ups.py"
 sh -n "$PMU_DST/files/pcat-manager.init"
-python3 -m py_compile "$PMU_DST/files/patch-main.py"
+python3 -m py_compile "$PMU_DST/files/patch-main.py" "$PMU_DST/files/patch-photonicat-ups.py"
+grep -Fq 'patch-photonicat-ups.py' "$PMU_DST/Makefile"
 echo '光影猫一代 PMU-only 管理器已添加；Go 版 pcat-mgr 从设备默认包移除。'
 
 # 一代电源管理页面由 PMU Socket 同时提供电池状态和电源模式。
