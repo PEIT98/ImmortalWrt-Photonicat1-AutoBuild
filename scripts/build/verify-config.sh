@@ -63,7 +63,7 @@ need=(
   CONFIG_PACKAGE_ath10k-board-qca9377-sdio
   CONFIG_PACKAGE_luci-app-cpufreq
   CONFIG_PACKAGE_cpufreq
-  CONFIG_PACKAGE_luci-mod-battstatus
+  CONFIG_PACKAGE_pcat-manager-v1
   CONFIG_PACKAGE_luci-app-photonicat-power
   CONFIG_PACKAGE_socat
   CONFIG_PACKAGE_kmod-ath11k-pci
@@ -111,6 +111,10 @@ for key in "${need[@]}"; do
   fi
 done
 absent=(
+  CONFIG_PACKAGE_pcat-mgr
+  CONFIG_DEFAULT_pcat-mgr
+  CONFIG_PACKAGE_luci-mod-battstatus
+  CONFIG_PACKAGE_luci-i18n-battstatus-zh-cn
   CONFIG_PACKAGE_sms-forwarder-next
   CONFIG_PACKAGE_qmodem_INCLUDE_vendor-qmi-wwan
   CONFIG_PACKAGE_luci-app-modemband

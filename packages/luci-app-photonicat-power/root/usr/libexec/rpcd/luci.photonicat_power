@@ -1,6 +1,6 @@
 #!/bin/sh
 # Photonicat v1: only use the official Unix control socket.
-# Never open /dev/ttyS4 or stop the existing pcat-mgr/watchdog.
+# Never open /dev/ttyS4; only pcat-manager-v1 holds the MCU serial port.
 . /usr/share/libubox/jshn.sh
 
 SOCK=/tmp/pcat-manager.sock
@@ -17,7 +17,7 @@ fail() {
 require_controller() {
     [ "$BOARD" = "ariaboard,photonicat" ] || fail "仅支持光影猫一代（ariaboard,photonicat）"
     command -v socat >/dev/null 2>&1 || fail "缺少 socat 通信程序"
-    [ -S "$SOCK" ] || fail "没有检测到官方 pcat-manager Socket；当前 Go 版 pcat-mgr 可能不提供该接口。为保护 MCU/看门狗，禁止直接访问串口。"
+    [ -S "$SOCK" ] || fail "未检测到 PMU 管理器 Socket；请检查 pcat-manager 服务和 /dev/ttyS4。"
 }
 
 query() {
@@ -62,6 +62,18 @@ case "$1" in
         require_controller
         case "$2" in
             status)
+                query '{"command":"pmu-status"}' "pmu-status" || fail "MCU 电池状态读取失败"
+                json_get_var battery_mv battery-voltage
+                json_get_var charger_mv charger-voltage
+                json_get_var battery_percentage charge-percentage
+                json_get_var on_battery on-battery
+                json_get_var board_temp board-temperature
+                for _n in "$battery_mv" "$charger_mv" "$battery_percentage" "$on_battery"; do
+                    case "$_n" in ''|*[!0-9]*) fail "电池状态数据格式错误" ;; esac
+                done
+                case "${board_temp#-}" in ''|*[!0-9]*) board_temp=0 ;; esac
+                [ "$battery_mv" -gt 0 ] || fail "MCU 尚未上报有效电压，暂时禁止修改电源模式"
+                [ "$battery_percentage" -le 100 ] || battery_percentage=100
                 query '{"command":"charger-on-auto-start-get"}' "charger-on-auto-start-get" || fail "读取车载模式失败：控制 Socket 未响应"
                 json_get_var car_state state
                 json_get_var car_seconds timeout
@@ -70,10 +82,15 @@ case "$1" in
                 schedule="$MCU_REPLY"
                 json_init
                 json_add_boolean ok 1
+                json_add_int battery_percentage "$battery_percentage"
+                json_add_int battery_mv "$battery_mv"
+                json_add_int charger_mv "$charger_mv"
+                json_add_int on_battery "$on_battery"
+                json_add_int board_temp "$board_temp"
                 json_add_int car_state "${car_state:-0}"
                 json_add_int car_seconds "${car_seconds:-0}"
                 json_add_string schedule "$schedule"
-                json_add_string backend "pcat-manager v1 Socket"
+                json_add_string backend "pcat-manager-v1 PMU Socket"
                 json_dump
                 ;;
             set_mode)

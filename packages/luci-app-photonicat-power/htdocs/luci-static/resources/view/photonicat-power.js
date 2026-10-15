@@ -2,6 +2,7 @@
 'require view';
 'require rpc';
 'require ui';
+'require poll';
 
 var statusCall = rpc.declare({ object: 'luci.photonicat_power', method: 'status', expect: {} });
 var modeCall = rpc.declare({ object: 'luci.photonicat_power', method: 'set_mode', params: [ 'mode', 'minutes' ], expect: {} });
@@ -32,6 +33,7 @@ return view.extend({
             E('p', {}, [ '每天关机时间： ', stop ]),
             E('p', { 'class': 'cbi-value-description' }, '简单定时模式：每天各执行一次。保存会替换 MCU 原有全部定时计划。')
         ]);
+        var batteryInfo = E('div', { 'class': 'cbi-section', style: 'margin:8px 0 16px;padding:12px 16px;border-radius:8px' }, '正在读取电池状态……');
         var info = E('p', {}, '正在读取 MCU 电源状态……');
         var detail = E('p', { 'class': 'cbi-value-description' });
         var button = E('button', { 'class': 'btn cbi-button cbi-button-apply', disabled: 'disabled' }, '保存电源模式');
@@ -40,7 +42,23 @@ return view.extend({
             carBox.style.display = mode.value === 'car' ? '' : 'none';
             timerBox.style.display = mode.value === 'timer' ? '' : 'none';
         }
+        function updateBattery(data) {
+            if (!data || !data.ok) {
+                batteryInfo.textContent = '电池数据暂不可用';
+                return;
+            }
+            var pct = Number(data.battery_percentage), mv = Number(data.battery_mv), cv = Number(data.charger_mv);
+            if (!Number.isFinite(pct) || !Number.isFinite(mv) || mv <= 0) {
+                batteryInfo.textContent = '等待 MCU 电池数据';
+                return;
+            }
+            batteryInfo.textContent = '电量 ' + pct + '%  ·  ' +
+                (Number(data.on_battery) === 1 ? '电池供电' : '外部供电/充电') +
+                '  ·  电池 ' + (mv / 1000).toFixed(2) + 'V  ·  外部 ' +
+                (cv / 1000).toFixed(2) + 'V  ·  板温 ' + data.board_temp + '°C';
+        }
         function update(data) {
+            updateBattery(data);
             if (!data || !data.ok) {
                 info.textContent = '电源控制接口不可用：' + (data && data.error ? data.error : '未知错误');
                 detail.textContent = '现有电池显示与 Go 版 pcat-mgr 不会被修改。';
@@ -105,9 +123,9 @@ return view.extend({
         var page = E('div', { 'class': 'cbi-map' }, [
             E('h2', {}, '光影猫一代 · 电源管理'),
             E('div', { 'class': 'cbi-section' }, [
-                info, detail,
+                batteryInfo, info, detail,
                 E('p', { 'class': 'cbi-value-description' },
-                    '本插件仅连接光影猫一代官方 MCU 控制 Socket。不访问串口，不停止 pcat-mgr，也不包含二代专用的直连电源模式。'),
+                    '仅电池管理器访问 MCU 串口；本页面通过 Socket 读取电量并设置一代电源模式，不干扰 QModem。'),
                 E('p', {}, [ E('label', {}, [ '运行模式： ', mode ]) ]),
                 carBox, timerBox,
                 E('p', {}, [ button, ' ', refresh ])
@@ -115,6 +133,7 @@ return view.extend({
         ]);
         displayMode();
         update(initial);
+        poll.add(function() { return statusCall().then(updateBattery).catch(function() { updateBattery(null); }); }, 15);
         return page;
     },
     handleSaveApply: null,

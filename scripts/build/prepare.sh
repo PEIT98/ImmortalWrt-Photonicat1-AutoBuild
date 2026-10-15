@@ -67,8 +67,25 @@ grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$BATTERY_PACKAGE_DST/Makefile"
 grep -Fq 'pcat-battery' "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
 echo '电池插件已复制至本地 package：保留原版 rpcd 服务及电池显示修改。'
 
-# 安全移植光影猫一代电源管理页面；仅连接已存在的官方 MCU Socket。
-# 保留当前 Go 版 pcat-mgr、电池插件和 QModem，不引入第二套 MCU 守护进程。
+# 唯一 MCU 串口管理器：光影猫一代官方 PMU-only C 后台。
+# 设备默认包也需要切换，否则设备定义还会自动拉入 Go pcat-mgr。
+PMU_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/pcat-manager-v1"
+PMU_DST="$SRC/package/pcat-manager-v1"
+test -f "$PMU_SRC/Makefile" || { echo "::error::缺少本地 pcat-manager-v1 封装" >&2; exit 1; }
+test ! -e "$PMU_DST" || { echo "::error::本地 pcat-manager-v1 路径被占用" >&2; exit 1; }
+python3 "$(dirname "$0")/switch-pcat-manager.py" "$SRC/target/linux/rockchip/image/armv8.mk"
+mkdir -p "$PMU_DST"
+cp -a "$PMU_SRC/." "$PMU_DST/"
+test -x "$PMU_DST/files/pcat-manager.init"
+test -f "$PMU_DST/files/pcat-manager.conf"
+test -f "$PMU_DST/files/modem-manager-noop.c"
+test -f "$PMU_DST/files/patch-main.py"
+sh -n "$PMU_DST/files/pcat-manager.init"
+python3 -m py_compile "$PMU_DST/files/patch-main.py"
+echo '光影猫一代 PMU-only 管理器已添加；Go 版 pcat-mgr 从设备默认包移除。'
+
+# 一代电源管理页面由 PMU Socket 同时提供电池状态和电源模式。
+# 暂停顶部电池指示打包（完整源码保留），QModem 独立控制模组。
 POWER_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-photonicat-power"
 POWER_PACKAGE_DST="$SRC/package/luci-app-photonicat-power"
 test -f "$POWER_PACKAGE_SRC/Makefile" || { echo "::error::缺少 luci-app-photonicat-power 本地源码" >&2; exit 1; }
@@ -83,7 +100,7 @@ python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/luci/menu.d/luci-app-pho
 python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/view/photonicat-power.js"
 grep -Fq 'include $(TOPDIR)/feeds/luci/luci.mk' "$POWER_PACKAGE_DST/Makefile"
-echo '光影猫一代电源管理 LuCI 页面已安装；现有 pcat-mgr 保持不变。'
+echo '光影猫一代电池/电源 LuCI 已安装，后端使用官方 PMU-only 管理器。'
 
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"

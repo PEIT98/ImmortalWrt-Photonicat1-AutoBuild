@@ -1,0 +1,23 @@
+#!/bin/sh /etc/rc.common
+# 唯一 MCU 服务；Go pcat-mgr 禁止并行。仅适用于光影猫一代。
+START=10
+STOP=89
+USE_PROCD=1
+
+start_service() {
+    [ "$(cat /tmp/sysinfo/board_name 2>/dev/null)" = 'ariaboard,photonicat' ] || {
+        logger -t pcat-manager '拒绝在非光影猫一代设备启动'
+        return 1
+    }
+    [ -c /dev/ttyS4 ] || { logger -t pcat-manager '缺少 MCU 串口 /dev/ttyS4'; return 1; }
+    if pidof pcat-mgr >/dev/null 2>&1; then
+        logger -t pcat-manager 'Go 版 pcat-mgr 仍在运行，拒绝串口争用'
+        return 1
+    fi
+    procd_open_instance
+    procd_set_param command /usr/bin/pcat-manager --distro
+    procd_set_param respawn 3600 5 5
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_close_instance
+}
