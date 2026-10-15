@@ -12,3 +12,10 @@
 ### MCU Socket 兼容说明
 
 官方 C 版电源服务采用 NUL 分隔的异步 JSON 协议。通过 shell 管道发送时，必须使用 `socat STDIO,ignoreeof`，避免 stdin EOF 立即向 Socket 发送半关闭而令服务端丢弃待发送的响应。此方式不会打开 `/dev/ttyS4`，保持原 MCU 看门狗和 QModem 不变。
+
+### 页面加载优化
+
+- 页面立即呈现，状态查询后台异步完成，不阻塞 LuCI 导航。
+- 首次状态读取将 `pmu-status`、`charger-on-auto-start-get`、`schedule-power-event-get` 合并在一个 Socket 会话里，仅等待一次空闲超时。
+- 15 秒自动刷新改为轻量级 `battery` 接口，只查电量；模式写入仍保留逐条命令响应校验。
+- 不变更 pcat-manager-v1、MCU 串口或 QModem 配置。

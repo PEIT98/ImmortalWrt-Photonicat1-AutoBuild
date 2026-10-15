@@ -5,6 +5,7 @@
 'require poll';
 
 var statusCall = rpc.declare({ object: 'luci.photonicat_power', method: 'status', expect: {} });
+var batteryCall = rpc.declare({ object: 'luci.photonicat_power', method: 'battery', expect: {} });
 var modeCall = rpc.declare({ object: 'luci.photonicat_power', method: 'set_mode', params: [ 'mode', 'minutes' ], expect: {} });
 var dailyCall = rpc.declare({ object: 'luci.photonicat_power', method: 'set_daily', params: [ 'start', 'stop' ], expect: {} });
 
@@ -14,8 +15,7 @@ function prettyTime(v) {
 }
 
 return view.extend({
-    load: function() { return statusCall().catch(function(e) { return { ok: false, error: String(e) }; }); },
-    render: function(initial) {
+    render: function() {
         var mode = E('select', { 'class': 'cbi-input-select' }, [
             E('option', { value: 'manual' }, '手动模式'),
             E('option', { value: 'car' }, '车载 / UPS 模式'),
@@ -132,8 +132,10 @@ return view.extend({
             ])
         ]);
         displayMode();
-        update(initial);
-        poll.add(function() { return statusCall().then(updateBattery).catch(function() { updateBattery(null); }); }, 15);
+        // Show LuCI page immediately; read modes in the background.
+        statusCall().then(update).catch(function(e) { update({ ok: false, error: String(e) }); });
+        // Battery polling does not fetch car/timer settings each time.
+        poll.add(function() { return batteryCall().then(updateBattery).catch(function() { updateBattery(null); }); }, 15);
         return page;
     },
     handleSaveApply: null,
