@@ -26,16 +26,16 @@ return view.extend({
         var stop = E('input', { type: 'time', value: '23:00' });
         var carBox = E('div', { style: 'margin:12px 0' }, [
             E('label', {}, [ '外部电源断开后延迟（分钟）： ', minutes ]),
-            E('p', { 'class': 'cbi-value-description' }, '接通外部电源自动开机；拔掉外部电源后延时安全关机。0 表示不延迟。')
+            E('p', { 'class': 'cbi-value-description' }, '插电自动开机，拔电后延时关机；0 分钟表示不延迟。')
         ]);
         var timerBox = E('div', { style: 'margin:12px 0' }, [
             E('p', {}, [ '每天开机时间： ', start ]),
             E('p', {}, [ '每天关机时间： ', stop ]),
-            E('p', { 'class': 'cbi-value-description' }, '简单定时模式：每天各执行一次。保存会替换 MCU 原有全部定时计划。')
+            E('p', { 'class': 'cbi-value-description' }, '每天按设定时间开关机；保存会覆盖原来的定时计划。')
         ]);
-        var batteryInfo = E('div', { 'class': 'cbi-section', style: 'margin:8px 0 16px;padding:12px 16px;border-radius:8px' }, '正在读取电池状态……');
-        var info = E('p', {}, '正在读取 MCU 电源状态……');
-        var detail = E('p', { 'class': 'cbi-value-description' });
+        var batteryInfo = E('div', { 'class': 'cbi-section', style: 'margin:8px 0 14px;padding:14px;border-radius:14px' }, '正在读取电量……');
+        var info = E('p', { style: 'font-weight:600;margin:8px 0' }, '正在读取电源模式……');
+        var detail = E('p', { 'class': 'cbi-value-description', style: 'line-height:1.6' });
         var button = E('button', { 'class': 'btn cbi-button cbi-button-apply', disabled: 'disabled' }, '保存电源模式');
 
         function displayMode() {
@@ -60,8 +60,8 @@ return view.extend({
         function update(data) {
             updateBattery(data);
             if (!data || !data.ok) {
-                info.textContent = '电源控制接口不可用：' + (data && data.error ? data.error : '未知错误');
-                detail.textContent = '当前由 pcat-manager-v1 独占管理 MCU；若持续失败，请检查 Socket 通信与后台日志。';
+                info.textContent = '读取电源设置失败：' + (data && data.error ? data.error : '未知错误');
+                detail.textContent = '请检查电源管理服务是否正常。';
                 button.disabled = true;
                 return;
             }
@@ -70,7 +70,7 @@ return view.extend({
                 var parsed = JSON.parse(data.schedule || '{}');
                 schedules = Array.isArray(parsed['event-list']) ? parsed['event-list'] : [];
             } catch (e) {
-                info.textContent = 'MCU 定时计划返回数据无效，已禁止修改';
+                info.textContent = '定时计划读取异常，暂时不能保存';
                 button.disabled = true;
                 return;
             }
@@ -88,10 +88,11 @@ return view.extend({
             var left = Number(data.car_countdown);
             var countdown = onBattery && Number.isFinite(left) && left >= 0
                 ? '；剩余约 ' + Math.ceil(left) + ' 秒' : (onBattery ? '；倒计时已到或不可用' : '');
-            info.textContent = '当前：' + name + '（使用 ' + data.backend + '）' +
+            info.textContent = '当前：' + name +
                 (current === 'car' ? '；供电：' + supply + countdown : '');
-            detail.textContent = '当前 MCU 定时计划：' + schedules.length + ' 条。切换模式将清除其它模式的计划；不会影响网络和 QModem 配置。' +
-                (current === 'car' ? ' 车载模式剩余时间请点击“刷新状态”更新；拔电后应显示“电池供电”。' : '');
+            detail.textContent = '定时计划：' + schedules.length + ' 条。' +
+                (current === 'car' ? ' 拔电后点击“刷新状态”可查看倒计时。' : '') +
+                ' 保存新模式会替换原来的电源计划。';
             button.disabled = false;
             displayMode();
         }
@@ -107,7 +108,7 @@ return view.extend({
                 ui.addNotification(null, E('p', {}, '请填写不同的合法开关机时间'));
                 return;
             }
-            if (!window.confirm('确认修改 MCU 电源策略？原有车载/定时模式设置会被清除，定时模式只保存每天两条计划。'))
+            if (!window.confirm('确认保存电源模式？原有车载或定时计划会被替换。'))
                 return;
             button.disabled = true;
             var operation = selected === 'timer'
@@ -128,11 +129,11 @@ return view.extend({
             statusCall().then(update).catch(function(e) { update({ ok: false, error: String(e) }); });
         });
         var page = E('div', { 'class': 'cbi-map' }, [
-            E('h2', {}, '光影猫一代 · 电源管理'),
+            E('h2', {}, '光影猫 · 电源管理'),
             E('div', { 'class': 'cbi-section' }, [
                 batteryInfo, info, detail,
                 E('p', { 'class': 'cbi-value-description' },
-                    '仅电池管理器访问 MCU 串口；本页面通过 Socket 读取电量并设置一代电源模式，不干扰 QModem。'),
+                    '仅管理自动开关机，不影响网络和 QModem。'),
                 E('p', {}, [ E('label', {}, [ '运行模式： ', mode ]) ]),
                 carBox, timerBox,
                 E('p', {}, [ button, ' ', refresh ])
@@ -140,7 +141,10 @@ return view.extend({
         ]);
         displayMode();
         // Show LuCI page immediately; read modes in the background.
-        statusCall().then(update).catch(function(e) { update({ ok: false, error: String(e) }); });
+        // Let the browser paint the page before starting MCU/RPC requests.
+        window.setTimeout(function() {
+            statusCall().then(update).catch(function(e) { update({ ok: false, error: String(e) }); });
+        }, 0);
         // Battery polling does not fetch car/timer settings each time.
         poll.add(function() { return batteryCall().then(updateBattery).catch(function() { updateBattery(null); }); }, 15);
         return page;
