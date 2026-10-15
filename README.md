@@ -52,7 +52,7 @@
 
 仅在 GitHub Actions 手动启动编译；普通提交不会触发编译。
 
-QModem 顶部菜单显示为“模块”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次仍拉取官方 stable 最新代码，不修改 QModem 源码、拨号逻辑或菜单权限。
+QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次仍拉取官方 stable 最新代码，不修改 QModem 源码、拨号逻辑或菜单权限。
 
 ## 多 WAN 优先级
 

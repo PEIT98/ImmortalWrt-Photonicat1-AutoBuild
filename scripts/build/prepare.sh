@@ -111,7 +111,7 @@ cp -a "$OVERLAY/." "$SRC/files/"
 # 独立 LuCI 菜单覆盖：只改显示名称，不修改每次拉取的 QModem Feed。
 MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
 python3 -m json.tool "$MODEM_MENU" >/dev/null
-grep -Fq '"title": "模块"' "$MODEM_MENU"
+grep -Fq '"title": "移动网络"' "$MODEM_MENU"
 
 # 与 QModem 的动态接口命名解耦：不预设固定模组别名，只同步 mwan3 第三级 WAN。
 QMODEM_MWAN_SYNC="$SRC/files/usr/bin/photonicat-qmodem-mwan3-sync"
