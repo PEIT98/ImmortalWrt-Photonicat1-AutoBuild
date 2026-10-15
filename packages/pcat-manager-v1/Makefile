@@ -39,6 +39,7 @@ define Build/Prepare
 	$(CP) ./files/meson-root.build $(PKG_BUILD_DIR)/meson.build
 	$(CP) ./files/meson-src.build $(PKG_BUILD_DIR)/src/meson.build
 	python3 ./files/patch-main.py $(PKG_BUILD_DIR)/src/main.c
+	python3 ./files/patch-photonicat-ups.py $(PKG_BUILD_DIR)/src/pmu-manager.c
 endef
 
 define Package/pcat-manager-v1/install
