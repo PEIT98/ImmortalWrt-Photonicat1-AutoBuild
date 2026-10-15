@@ -123,6 +123,8 @@ case "$1" in
                 validate_reply "$_car_reply" "charger-on-auto-start-get" || fail "读取车载模式失败"
                 json_get_var car_state state
                 json_get_var car_seconds timeout
+                json_get_var car_countdown countdown
+                case "$car_countdown" in ""|*[!0-9-]*) car_countdown=-1 ;; esac
                 case "$car_state:$car_seconds" in *[!0-9:]*|'') fail "车载模式返回无效数据" ;; esac
                 validate_reply "$_schedule_reply" "schedule-power-event-get" || fail "读取定时计划失败"
                 schedule="$_schedule_reply"
@@ -131,6 +133,7 @@ case "$1" in
                 add_battery_json
                 json_add_int car_state "${car_state:-0}"
                 json_add_int car_seconds "${car_seconds:-0}"
+                json_add_int car_countdown "$car_countdown"
                 json_add_string schedule "$schedule"
                 json_add_string backend "pcat-manager-v1 PMU Socket"
                 json_dump
