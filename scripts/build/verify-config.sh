@@ -4,6 +4,8 @@ set -euo pipefail
 CFG="${1:-.config}"
 need=(
   CONFIG_TARGET_rockchip_armv8_DEVICE_ariaboard_photonicat
+  CONFIG_TARGET_ROOTFS_SQUASHFS
+  CONFIG_PACKAGE_kmod-fs-ext4
   CONFIG_DEVEL
   CONFIG_CCACHE
   CONFIG_PACKAGE_qmodem
@@ -71,6 +73,13 @@ need=(
   CONFIG_PACKAGE_kmod-usb-serial-option
 )
 failed=0
+# 只关闭 ext4 固件镜像，不移除 ext4 磁盘驱动。
+if grep -Fxq '# CONFIG_TARGET_ROOTFS_EXT4FS is not set' "$CFG"; then
+  echo '通过：ext4 固件镜像已关闭，仅保留 squashfs 镜像。'
+else
+  echo '::error::仍启用 ext4 固件镜像，必须关闭 CONFIG_TARGET_ROOTFS_EXT4FS' >&2
+  failed=1
+fi
 for f in CONFIG_DRIVER_11AC_SUPPORT CONFIG_DRIVER_11AX_SUPPORT CONFIG_DRIVER_11BE_SUPPORT; do
   if grep -Fxq "$f=y" "$CFG"; then
     echo "OK: $f=y"

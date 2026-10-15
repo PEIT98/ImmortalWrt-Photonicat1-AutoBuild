@@ -318,11 +318,11 @@ jobs:
           test -d "$out"
           shopt -s nullglob
           # Timestamp after the firmware build succeeds (Asia/Shanghai, YYYYMMDDHH).
-          # Use one timestamp for both ext4 and squashfs sysupgrade images.
+          # Only collect the squashfs sysupgrade image; ext4 filesystem support in the kernel remains enabled.
           build_hour="$(TZ=Asia/Shanghai date +%Y%m%d%H)"
           [[ "$build_hour" =~ ^[0-9]{10}$ ]] || { echo 'Invalid build timestamp' >&2; exit 1; }
           n=0
-          for f in "$out"/*ariaboard_photonicat*.img.gz "$out"/*ariaboard_photonicat*.img "$out"/*ariaboard_photonicat*.bin; do
+          for f in "$out"/*ariaboard_photonicat-squashfs-sysupgrade.img.gz; do
             [ -f "$f" ] || continue
             filename="${f##*/}"
             if [[ "$filename" == *-sysupgrade.img.gz ]]; then
@@ -332,7 +332,7 @@ jobs:
             echo "Firmware Release asset: $filename"
             n=$((n+1))
           done
-          [ "$n" -gt 0 ] || { echo 'Photonicat1 firmware image not found!' >&2; exit 1; }
+          [ "$n" -gt 0 ] || { echo 'Photonicat1 squashfs sysupgrade image not found!' >&2; exit 1; }
           for f in "$out"/*ariaboard_photonicat*.manifest "$out"/config.buildinfo "$out"/feeds.buildinfo "$out"/version.buildinfo "$out"/profiles.json; do
             [ -f "$f" ] && cp "$f" release/
           done
