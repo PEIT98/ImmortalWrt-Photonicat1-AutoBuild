@@ -6,6 +6,7 @@ on:
       run_id:
         description: 'Successful Photonicat1 firmware build run ID'
         required: true
+        default: '38659188050'
         type: string
 permissions:
   actions: read
@@ -15,7 +16,7 @@ jobs:
   publish:
     runs-on: ubuntu-24.04
     env:
-      SOURCE_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.run_id || '38659188050' }}
+      SOURCE_RUN_ID: ${{ inputs.run_id }}
     steps:
       - name: Verify existing successful build
         id: source
