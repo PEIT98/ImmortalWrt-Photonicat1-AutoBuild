@@ -61,7 +61,7 @@ return view.extend({
             updateBattery(data);
             if (!data || !data.ok) {
                 info.textContent = '电源控制接口不可用：' + (data && data.error ? data.error : '未知错误');
-                detail.textContent = '现有电池显示与 Go 版 pcat-mgr 不会被修改。';
+                detail.textContent = '当前由 pcat-manager-v1 独占管理 MCU；若持续失败，请检查 Socket 通信与后台日志。';
                 button.disabled = true;
                 return;
             }

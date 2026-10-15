@@ -21,9 +21,11 @@ require_controller() {
 }
 
 query() {
-    # Socket protocol: one JSON object terminated by a NUL byte.
-    # -T bounds idle time because the official daemon may keep the connection open.
-    MCU_REPLY="$(printf '%s\000' "$1" | socat -T 2 - "UNIX-CONNECT:$SOCK" 2>/dev/null | tr -d '\000')"
+    # Official C daemon sends replies asynchronously. Plain socat '-' sends socket EOF
+    # immediately after printf, causing the daemon to close before flushing the reply.
+    # STDIO,ignoreeof keeps the write half open until the response arrives.
+    # -T bounds idle time because the daemon intentionally keeps clients connected.
+    MCU_REPLY="$(printf '%s\000' "$1" | socat -T 1 STDIO,ignoreeof "UNIX-CONNECT:$SOCK" 2>/dev/null | tr -d '\000')"
     [ -n "$MCU_REPLY" ] || return 1
     json_load "$MCU_REPLY" 2>/dev/null || return 1
     json_get_var _code code
