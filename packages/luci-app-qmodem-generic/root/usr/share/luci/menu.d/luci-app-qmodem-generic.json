@@ -1,0 +1,54 @@
+{
+	"admin/modem/qmodem-generic": {
+		"title": "Modem Manager",
+		"order": 20,
+		"action": {
+			"type": "firstchild"
+		},
+		"depends": {
+			"acl": [ "luci-app-qmodem-generic" ]
+		}
+	},
+	"admin/modem/qmodem-generic/status": {
+		"title": "Overview",
+		"order": 10,
+		"action": {
+			"type": "view",
+			"path": "qmodem-generic/status"
+		}
+	},
+	"admin/modem/qmodem-generic/connection": {
+		"title": "Mobile Data",
+		"order": 20,
+		"action": { "type": "view", "path": "qmodem-generic/connection" }
+	},
+	"admin/modem/qmodem-generic/network": {
+		"title": "Radio and Cells",
+		"order": 30,
+		"action": { "type": "view", "path": "qmodem-generic/network" }
+	},
+	"admin/modem/qmodem-generic/sms": {
+		"title": "Messages",
+		"order": 40,
+		"action": { "type": "view", "path": "qmodem-generic/sms" }
+	},
+	"admin/modem/qmodem-generic/system": {
+		"title": "Module and SIM",
+		"order": 50,
+		"action": { "type": "view", "path": "qmodem-generic/system" }
+	},
+	"admin/modem/qmodem-generic/terminal": {
+		"action": { "type": "view", "path": "qmodem-generic/terminal" }
+	},
+	"admin/modem/qmodem-generic/advanced": {
+		"title": "Advanced",
+		"order": 60,
+		"action": { "type": "view", "path": "qmodem-generic/advanced" }
+	},
+	"admin/modem/qmodem-generic/settings": {
+		"action": { "type": "view", "path": "qmodem-generic/settings" },
+		"depends": {
+			"acl": [ "luci-app-qmodem-generic" ]
+		}
+	}
+}

@@ -115,6 +115,10 @@ jobs:
           test -f package/luci-app-cpufreq/Makefile
           grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' package/luci-app-cpufreq/Makefile
           echo 'CPUFreq 插件将以项目内源码编译，保留 cpufreq 后端与简体中文翻译。'
+          test -f package/luci-app-qmodem-generic/Makefile
+          grep -Fxq 'LUCI_DEPENDS:=+luci-base +qmodem' package/luci-app-qmodem-generic/Makefile
+          test -x package/luci-app-qmodem-generic/root/usr/bin/qmodem-task
+          echo 'QModem Generic 将使用本地源码，与官方 Next 共存。'
           # 移除 LuCI Feed 的同名符号链接，避免双份电池插件注册。
           battery_feed_link=package/feeds/luci/luci-mod-battstatus
           if [ -L "$battery_feed_link" ]; then
@@ -164,6 +168,11 @@ jobs:
           override = json.loads(Path('files/usr/share/luci/menu.d/zz-photonicat-modem-title.json').read_text())
           assert 'admin/modem' in upstream, 'QModem 菜单路径已变更，请检查名称覆盖'
           assert override == {'admin/modem': {'title': '移动网络'}}, '名称覆盖不得更改菜单权限或动作'
+          generic = json.loads(Path('package/luci-app-qmodem-generic/root/usr/share/luci/menu.d/luci-app-qmodem-generic.json').read_text())
+          assert 'admin/modem' not in generic, 'Generic 不得覆盖 QModem Next 的父菜单'
+          assert 'admin/modem/qmodem-generic' in generic, 'Generic 独立菜单缺失'
+          assert not Path('package/luci-app-qmodem-generic/root/etc/init.d/qmodem-mt5700-fix').exists()
+          assert not Path('package/luci-app-qmodem-generic/root/etc/init.d/qmodem-modem-support').exists()
           PY
           test -f package/luci-mod-battstatus/po/zh_Hans/battstatus.po
           grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
@@ -187,7 +196,7 @@ jobs:
           python3 ../scripts/build/select-packages.py .config
           cp .config .config.before-defconfig
           echo '===== defconfig 前核心插件 ====='
-          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
+          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
           echo '===== 核对上游插件是否被注册为目标包 ====='
           for pkg in luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-mod-battstatus; do
@@ -198,7 +207,7 @@ jobs:
             fi
           done
           echo '===== defconfig 后核心插件 ====='
-          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
+          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
           echo '===== defconfig 前已选但后被取消的选项（最多70行）====='
           comm -23 <(grep '^CONFIG_PACKAGE_.*=y$' .config.before-defconfig | sort -u) <(grep '^CONFIG_PACKAGE_.*=y$' .config | sort -u) | head -n 70 || true
           bash ../scripts/build/verify-config.sh .config

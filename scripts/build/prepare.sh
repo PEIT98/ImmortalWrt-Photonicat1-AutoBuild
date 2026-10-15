@@ -104,6 +104,20 @@ test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/view/photonicat-power.j
 grep -Fq 'include $(TOPDIR)/feeds/luci/luci.mk' "$POWER_PACKAGE_DST/Makefile"
 echo '光影猫一代电池/电源 LuCI 已安装，后端使用官方 PMU-only 管理器。'
 
+# QModem Generic 使用项目内固定源码，与官方 stable 的 qmodem/Next 一同编译。
+GENERIC_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-qmodem-generic"
+GENERIC_DST="$SRC/package/luci-app-qmodem-generic"
+test -f "$GENERIC_SRC/Makefile" || { echo "::error::缺少 luci-app-qmodem-generic 本地源码" >&2; exit 1; }
+test ! -e "$GENERIC_DST" || { echo "::error::QModem Generic 目标路径被上游占用，禁止覆盖" >&2; exit 1; }
+mkdir -p "$GENERIC_DST"
+cp -a "$GENERIC_SRC/." "$GENERIC_DST/"
+test -x "$GENERIC_DST/root/usr/bin/qmodem-task" || exit 1
+test -x "$GENERIC_DST/root/usr/sbin/qmodem-mt5700-fix" || exit 1
+test -x "$GENERIC_DST/root/usr/libexec/rpcd/qmodem_cache" || exit 1
+python3 -m json.tool "$GENERIC_DST/root/usr/share/luci/menu.d/luci-app-qmodem-generic.json" >/dev/null
+test -f "$GENERIC_DST/LICENSE" || exit 1
+echo 'QModem Generic 已安装为本地 LuCI 插件；保留官方 QModem Next 和 qmodem 后端。'
+
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
