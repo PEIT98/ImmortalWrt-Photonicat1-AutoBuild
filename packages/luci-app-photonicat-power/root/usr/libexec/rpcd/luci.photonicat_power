@@ -45,22 +45,28 @@ decode_status_batch() {
     _pmu_reply="$(printf '%s\n' "$_status_replies" | sed -n '1p')"
     _car_reply="$(printf '%s\n' "$_status_replies" | sed -n '2p')"
     _schedule_reply="$(printf '%s\n' "$_status_replies" | sed -n '3p')"
-    [ -n "$_pmu_reply" ] && [ -n "$_car_reply" ] && [ -n "$_schedule_reply" ] || return 1
+    [ -n "$_pmu_reply" ] && [ -n "$_car_reply" ] || return 1
     validate_reply "$_pmu_reply" "pmu-status" &&
-        validate_reply "$_car_reply" "charger-on-auto-start-get" &&
-        validate_reply "$_schedule_reply" "schedule-power-event-get"
+        validate_reply "$_car_reply" "charger-on-auto-start-get" || return 1
+    [ "$1" = runtime ] || validate_reply "$_schedule_reply" "schedule-power-event-get"
 }
 
 query_status_batch() {
-    _status_replies="$(printf '%s\000' '{"command":"pmu-status"}' '{"command":"charger-on-auto-start-get"}' '{"command":"schedule-power-event-get"}' |
+    _status_commands='{"command":"pmu-status"}
+{"command":"charger-on-auto-start-get"}'
+    if [ "$1" != runtime ]; then
+        _status_commands="$_status_commands
+{\"command\":\"schedule-power-event-get\"}"
+    fi
+    _status_replies="$(printf '%s\n' "$_status_commands" | tr '\n' '\000' |
         socat -T 0.25 STDIO,ignoreeof "UNIX-CONNECT:$SOCK" 2>/dev/null | tr '\000' '\n')"
-    if decode_status_batch; then
+    if decode_status_batch "$1"; then
         return 0
     fi
     # Retry the whole read-only request; never apply this to mode changes.
-    _status_replies="$(printf '%s\000' '{"command":"pmu-status"}' '{"command":"charger-on-auto-start-get"}' '{"command":"schedule-power-event-get"}' |
+    _status_replies="$(printf '%s\n' "$_status_commands" | tr '\n' '\000' |
         socat -T 1 STDIO,ignoreeof "UNIX-CONNECT:$SOCK" 2>/dev/null | tr '\000' '\n')"
-    decode_status_batch
+    decode_status_batch "$1"
 }
 
 parse_battery() {
@@ -119,7 +125,7 @@ event_for() {
 
 case "$1" in
     list)
-        printf '%s\n' '{"status":{},"battery":{},"set_mode":{"mode":"str","minutes":"int"},"set_daily":{"start":"str","stop":"str"}}'
+        printf '%s\n' '{"status":{},"runtime":{},"battery":{},"set_mode":{"mode":"str","minutes":"int"},"set_daily":{"start":"str","stop":"str"}}'
         ;;
     call)
         require_controller
@@ -134,8 +140,8 @@ case "$1" in
                 add_battery_json
                 json_dump
                 ;;
-            status)
-                query_status_batch || fail "MCU 状态响应不完整"
+            status|runtime)
+                query_status_batch "$2" || fail "MCU 状态响应不完整"
                 validate_reply "$_pmu_reply" "pmu-status" || fail "MCU 电池状态读取失败"
                 parse_battery
                 validate_reply "$_car_reply" "charger-on-auto-start-get" || fail "读取车载模式失败"
@@ -144,15 +150,17 @@ case "$1" in
                 json_get_var car_countdown countdown
                 case "$car_countdown" in ""|*[!0-9-]*) car_countdown=-1 ;; esac
                 case "$car_state:$car_seconds" in *[!0-9:]*|'') fail "车载模式返回无效数据" ;; esac
-                validate_reply "$_schedule_reply" "schedule-power-event-get" || fail "读取定时计划失败"
-                schedule="$_schedule_reply"
+                if [ "$2" = status ]; then
+                    validate_reply "$_schedule_reply" "schedule-power-event-get" || fail "读取定时计划失败"
+                    schedule="$_schedule_reply"
+                fi
                 json_init
                 json_add_boolean ok 1
                 add_battery_json
                 json_add_int car_state "${car_state:-0}"
                 json_add_int car_seconds "${car_seconds:-0}"
                 json_add_int car_countdown "$car_countdown"
-                json_add_string schedule "$schedule"
+                [ "$2" != status ] || json_add_string schedule "$schedule"
                 json_add_string backend "pcat-manager-v1 PMU Socket"
                 json_dump
                 ;;

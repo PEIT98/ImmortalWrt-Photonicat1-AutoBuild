@@ -13,6 +13,10 @@ LUCI_DEPENDS:=+luci-base +luci-app-photonicat-power
 
 PKG_LICENSE:=Apache-2.0
 
+define Package/luci-mod-battstatus/conffiles
+/etc/config/luci_battstatus
+endef
+
 include $(TOPDIR)/feeds/luci/luci.mk
 
 # call BuildPackage - OpenWrt buildroot signature

@@ -152,6 +152,19 @@ jobs:
           test -x package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
           grep -Fq "luci.photonicat_power battery" package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
           python3 -m json.tool package/luci-mod-battstatus/root/usr/share/rpcd/acl.d/luci-mod-battstatus.json >/dev/null
+          test -f package/luci-mod-battstatus/root/etc/config/luci_battstatus
+          grep -Fq '"setSettings"' package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
+          sh -n package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
+          sh -n package/luci-app-photonicat-power/root/usr/libexec/rpcd/luci.photonicat_power
+          python3 -m json.tool package/luci-app-photonicat-power/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json >/dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          upstream = json.loads(Path('feeds/qmodem/luci/luci-app-qmodem-next/root/usr/share/luci/menu.d/luci-app-qmodem-next.json').read_text())
+          override = json.loads(Path('files/usr/share/luci/menu.d/zz-photonicat-modem-title.json').read_text())
+          assert 'admin/modem' in upstream, 'QModem 菜单路径已变更，请检查名称覆盖'
+          assert override == {'admin/modem': {'title': '模块'}}, '名称覆盖不得更改菜单权限或动作'
+          PY
           test -f package/luci-mod-battstatus/po/zh_Hans/battstatus.po
           grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
           test -f package/luci-app-bandix-plus/Makefile

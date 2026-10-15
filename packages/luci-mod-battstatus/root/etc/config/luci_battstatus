@@ -1,0 +1,4 @@
+config settings 'main'
+	option enabled '1'
+	option low_alert '1'
+	option low_threshold '20'

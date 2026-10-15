@@ -3,7 +3,7 @@
 		"description": "Grant access to battery status",
 		"read": {
 			"ubus": {
-				"luci.battstatus": [ "getBatteryStatus" ]
+				"luci.battstatus": [ "getBatteryStatus", "getSettings" ]
 			}
 		}
 	}

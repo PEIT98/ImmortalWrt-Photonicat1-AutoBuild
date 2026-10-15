@@ -108,6 +108,11 @@ echo '光影猫一代电池/电源 LuCI 已安装，后端使用官方 PMU-only 
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
 
+# 独立 LuCI 菜单覆盖：只改显示名称，不修改每次拉取的 QModem Feed。
+MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
+python3 -m json.tool "$MODEM_MENU" >/dev/null
+grep -Fq '"title": "模块"' "$MODEM_MENU"
+
 # 与 QModem 的动态接口命名解耦：不预设固定模组别名，只同步 mwan3 第三级 WAN。
 QMODEM_MWAN_SYNC="$SRC/files/usr/bin/photonicat-qmodem-mwan3-sync"
 QMODEM_MWAN_INIT="$SRC/files/etc/init.d/photonicat-qmodem-mwan3"
