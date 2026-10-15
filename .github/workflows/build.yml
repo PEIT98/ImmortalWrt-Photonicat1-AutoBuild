@@ -1,13 +1,8 @@
 name: Photonicat1 ImmortalWrt QModem Build
 
 on:
-  # One-off user-requested build: ONLY the marker-file push on main starts a build.
-  # Restore manual-only settings immediately after dispatch.
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/photonicat-build-trigger.txt'
+  # Manual-only: build only when the user clicks Actions > Run workflow.
+  # No scheduled builds or push-triggered builds.
   workflow_dispatch:
     inputs:
       publish:
