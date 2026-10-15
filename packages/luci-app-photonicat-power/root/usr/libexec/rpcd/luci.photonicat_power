@@ -74,6 +74,14 @@ send_checked() {
     query "$1" "$2" || fail "MCU 命令 $2 执行失败；请检查后台服务，部分设置可能已生效"
 }
 
+load_request() {
+    # rpcd exec plugins pass ubus call parameters through stdin, NOT argv[3].
+    # Read the full payload before json_load; empty/invalid data must never change MCU settings.
+    request="$(cat)"
+    [ -n "$request" ] || fail "缺少请求参数"
+    json_load "$request" 2>/dev/null || fail "参数 JSON 错误"
+}
+
 valid_time() {
     case "$1" in
         0[0-9]:[0-5][0-9]|1[0-9]:[0-5][0-9]|2[0-3]:[0-5][0-9]) return 0 ;;
@@ -128,7 +136,7 @@ case "$1" in
                 json_dump
                 ;;
             set_mode)
-                json_load "$3" 2>/dev/null || fail "参数 JSON 错误"
+                load_request
                 json_get_var mode mode
                 json_get_var minutes minutes
                 case "$mode" in
@@ -143,14 +151,14 @@ case "$1" in
                         send_checked '{"command":"schedule-power-event-set","event-list":[]}' "schedule-power-event-set"
                         send_checked "{\"command\":\"charger-on-auto-start-set\",\"state\":1,\"timeout\":$seconds}" "charger-on-auto-start-set"
                         ;;
-                    *) fail "未知模式" ;;
+                    *) fail "未知模式（应为 manual 或 car）" ;;
                 esac
                 json_init
                 json_add_boolean ok 1
                 json_dump
                 ;;
             set_daily)
-                json_load "$3" 2>/dev/null || fail "参数 JSON 错误"
+                load_request
                 json_get_var start start
                 json_get_var stop stop
                 valid_time "$start" && valid_time "$stop" || fail "时间格式必须为 HH:MM"
