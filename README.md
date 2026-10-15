@@ -29,6 +29,8 @@
 
 已恢复顶部 [luci-mod-battstatus](packages/luci-mod-battstatus/) 电池显示及简体中文翻译，保留 Aurora 紧凑样式。顶部图标通过电源插件只读 UBUS 获取电量，与系统 → 光影猫电源管理页面共享 [pcat-manager-v1 PMU-only](packages/pcat-manager-v1/) 数据来源；新管理器仍是 `/dev/ttyS4` 唯一访问者，不依赖旧 Go FUSE。
 
+电池页可保存右上角显示开关、低电量提醒及阈值（默认 20%），点击顶部电量可直接进入。新增手机电量卡片及 UPS 自动倒计时；显示设置重启保留，低电量提醒仅在打开路由器后台时生效。
+
 已隔离官方 C 版的旧 5G 模组 GPIO、拨号及路由自动检查，不影响现有 QModem/mwan3 功能。新后台首次启用尚未完成真机测试，请先做好固件备份及恢复准备。
 
 ## 光影猫一代电源管理（实验性）
@@ -49,6 +51,8 @@
 - 编译并行度最多 3 线程且不超过实际 CPU 数；保留源码下载缓存、1.5GB CCache 和失败时单线程诊断机制。
 
 仅在 GitHub Actions 手动启动编译；普通提交不会触发编译。
+
+QModem 顶部菜单显示为“模块”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次仍拉取官方 stable 最新代码，不修改 QModem 源码、拨号逻辑或菜单权限。
 
 ## 多 WAN 优先级
 

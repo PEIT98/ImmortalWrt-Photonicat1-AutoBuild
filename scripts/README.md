@@ -28,6 +28,7 @@
 ## 项目内置的 LuCI 插件
 
 - [电池状态 luci-mod-battstatus](../packages/luci-mod-battstatus/README.md)：整套插件源码内置，含 Aurora 电池显示修改、RPC 及翻译。
+- [电池与电源管理](../packages/luci-app-photonicat-power/README.md)：电量卡片、顶部显示开关、低电量提醒和 UPS 倒计时；显示设置保存到独立 UCI 配置。
 - [CPU 调频管理 luci-app-cpufreq](../packages/luci-app-cpufreq/README.md)：整个插件直接存放在项目内；可修改网页、菜单、权限及简体中文翻译。后台仍采用官方 `cpufreq`，无需另外的修改脚本。
 - 编译时 `build/prepare.sh` 复制本地源码；随后移除 Feeds 中同名符号链接以避免重复注册。
 
@@ -41,3 +42,5 @@
 **配置文件区别：** `photonicat1.config` 只保存需要覆盖的配置；完整 `immortalwrt/.config` 在编译期间生成，并上传至 Actions 的 `photonicat1-build-config` Artifact。无需将旧版完整配置拷入仓库。
 
 **编译触发：** 仅通过 Actions 手动 `Run workflow` 编译。保留所有插件、系统配置、源码缓存及 CCache。
+
+**QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“模块”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留；不改动构建时拉取的 QModem 源码。

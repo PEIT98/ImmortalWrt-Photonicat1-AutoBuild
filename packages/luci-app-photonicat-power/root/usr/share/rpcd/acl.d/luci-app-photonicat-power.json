@@ -5,8 +5,10 @@
       "ubus": {
         "luci.photonicat_power": [
           "status",
+          "runtime",
           "battery"
-        ]
+        ],
+        "luci.battstatus": ["getSettings"]
       }
     },
     "write": {
@@ -14,7 +16,8 @@
         "luci.photonicat_power": [
           "set_mode",
           "set_daily"
-        ]
+        ],
+        "luci.battstatus": ["setSettings"]
       }
     }
   }

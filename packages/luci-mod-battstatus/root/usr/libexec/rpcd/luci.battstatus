@@ -5,13 +5,67 @@
 board=$(cat /tmp/sysinfo/board_name)
 model=$(cat /tmp/sysinfo/model)
 
+read_settings() {
+	indicator_enabled="$(uci -q get luci_battstatus.main.enabled)"
+	low_alert="$(uci -q get luci_battstatus.main.low_alert)"
+	low_threshold="$(uci -q get luci_battstatus.main.low_threshold)"
+	case "$indicator_enabled" in 0|1) ;; *) indicator_enabled=1 ;; esac
+	case "$low_alert" in 0|1) ;; *) low_alert=1 ;; esac
+	case "$low_threshold" in [5-9]|[1-4][0-9]|50) ;; *) low_threshold=20 ;; esac
+}
+
+settings_json() {
+	json_init
+	json_add_boolean ok 1
+	json_add_boolean enabled "$indicator_enabled"
+	json_add_boolean low_alert "$low_alert"
+	json_add_int low_threshold "$low_threshold"
+	json_dump
+}
+
+settings_error() {
+	json_init
+	json_add_boolean ok 0
+	json_add_string error "$1"
+	json_dump
+	exit 0
+}
+
 case "$1" in
 	list)
-		printf '{ "getBatteryStatus": {} }'
+		printf '%s\n' '{"getBatteryStatus":{},"getSettings":{},"setSettings":{"enabled":"int","low_alert":"int","low_threshold":"int"}}'
 	;;
 	call)
 		case "$2" in
+			getSettings)
+				read_settings
+				settings_json
+			;;
+			setSettings)
+				request="$(cat)"
+				json_load "$request" 2>/dev/null || settings_error "设置格式错误"
+				json_get_var indicator_enabled enabled
+				json_get_var low_alert low_alert
+				json_get_var low_threshold low_threshold
+				case "$indicator_enabled:$low_alert" in [01]:[01]) ;; *) settings_error "开关值必须为 0 或 1" ;; esac
+				case "$low_threshold" in [5-9]|[1-4][0-9]|50) ;; *) settings_error "提醒电量必须为 5～50 的整数" ;; esac
+				# Only commit this plugin's own config, without applying other LuCI changes.
+				uci -q batch <<EOF || settings_error "显示设置保存失败"
+set luci_battstatus.main=settings
+set luci_battstatus.main.enabled='$indicator_enabled'
+set luci_battstatus.main.low_alert='$low_alert'
+set luci_battstatus.main.low_threshold='$low_threshold'
+commit luci_battstatus
+EOF
+				settings_json
+			;;
 			getBatteryStatus)
+				read_settings
+				if [ "$indicator_enabled:$low_alert" = "0:0" ]; then
+					# Both UI features are off; avoid querying the MCU from the preload.
+					printf '{}\n'
+					exit 0
+				fi
 				# On Photonicat v1, reuse the PMU controller's read-only battery RPC.
 				# Parse BEFORE json_init, since json_load resets the jshn output state.
 				pcat_valid=0
@@ -32,9 +86,13 @@ case "$1" in
 				fi
 				json_init
 				json_add_object "$model"
+				json_add_boolean indicator_enabled "$indicator_enabled"
+				json_add_boolean low_alert "$low_alert"
+				json_add_int low_threshold "$low_threshold"
 
 				case "$board" in
 					ariaboard,photonicat)
+						json_add_boolean power_page 1
 						if [ "$pcat_valid" = 1 ]; then
 							json_add_boolean valid 1
 							# 0 = external power present; 1 = running from battery.
