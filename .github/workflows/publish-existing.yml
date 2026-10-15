@@ -7,13 +7,6 @@ on:
         description: 'Successful Photonicat1 firmware build run ID'
         required: true
         type: string
-  # Temporary one-off recovery trigger; remove after the requested publication starts.
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/photonicat-publish-trigger.txt'
-
 permissions:
   actions: read
   contents: write
