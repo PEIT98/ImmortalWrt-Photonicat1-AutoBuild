@@ -10,7 +10,7 @@ need=(
   CONFIG_CCACHE
   CONFIG_PACKAGE_qmodem
   CONFIG_PACKAGE_luci-app-qmodem-next
-  CONFIG_PACKAGE_sms-forwarder-next
+  CONFIG_PACKAGE_qmodem_INCLUDE_generic-qmi-wwan
   CONFIG_PACKAGE_luci-app-mwan3
   CONFIG_PACKAGE_mwan3
   CONFIG_PACKAGE_luci-app-openclash
@@ -111,6 +111,8 @@ for key in "${need[@]}"; do
   fi
 done
 absent=(
+  CONFIG_PACKAGE_sms-forwarder-next
+  CONFIG_PACKAGE_qmodem_INCLUDE_vendor-qmi-wwan
   CONFIG_PACKAGE_luci-app-modemband
   CONFIG_PACKAGE_luci-app-sms-tool-js
   CONFIG_PACKAGE_luci-app-qmodem
@@ -131,7 +133,7 @@ for key in "${absent[@]}"; do
     failed=1
   fi
 done
-# stable 版将 QMI 驱动选择定义在传统 LuCI 包中；这里直接核验通用内核驱动。
+# 魔改 QModem 一体化后端沿用通用 QMI 内核驱动，避免额外厂商 kmod 冲突。
 if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1

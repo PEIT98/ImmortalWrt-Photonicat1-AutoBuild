@@ -10,12 +10,12 @@ test -f "$SRC/Makefile"
 cp -f "$REF/.config" "$SRC/.config"
 cp -f "$REF/feeds.conf.default" "$SRC/feeds.conf.default"
 
-# QModem 官方 feed，每次从 stable 分支获取源码。
-# 不论参考配置之前指定了哪个分支，都统一固定到 stable。
+# QModem 使用 LianXia233 魔改版 main 分支；保留其一体化后端与 Next 前端。
+# 仅替换 qmodem 源，不影响其他 feeds 和光影猫本地插件。
 if grep -Eq '^src-git qmodem ' "$SRC/feeds.conf.default"; then
-  sed -i -E 's#^src-git qmodem .*#src-git qmodem https://github.com/FUjr/QModem.git;stable#' "$SRC/feeds.conf.default"
+  sed -i -E 's#^src-git qmodem .*#src-git qmodem https://github.com/LianXia233/QModem.git;main#' "$SRC/feeds.conf.default"
 else
-  printf '\nsrc-git qmodem https://github.com/FUjr/QModem.git;stable\n' >> "$SRC/feeds.conf.default"
+  printf '\nsrc-git qmodem https://github.com/LianXia233/QModem.git;main\n' >> "$SRC/feeds.conf.default"
 fi
 
 
@@ -172,6 +172,6 @@ echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.
 
 # 参考西瓜皮的 Wi-Fi band_order 兼容调整：保留固件上游源码，最小替换频段顺序。
 bash "$(dirname "$0")/../patches/wifi-band-order.sh" "$SRC"
-echo '准备完成：已加载光影猫硬件配置、QModem stable 与 OpenClash 源（插件选择在 feeds 安装后进行）'
+echo '准备完成：已加载光影猫硬件配置、LianXia233/QModem main 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'
 echo '首次使用：QModem 扫描拨号即可，无需固定别名；mwan3 自动识别实际 IPv4 接口，Wi-Fi STA 绑定 wwan'

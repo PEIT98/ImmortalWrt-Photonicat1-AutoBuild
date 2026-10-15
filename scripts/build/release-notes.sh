@@ -9,7 +9,7 @@ test -f "$dir/build-sources.txt"
   echo '> 尚需光影猫一代真机验证，刷机前备份并准备恢复方案。'
   echo
   echo '- ImmortalWrt：openwrt-25.12（编译时最新）'
-  echo '- QModem：stable 分支，Next 界面（含短信）、mwan3、OpenClash、CPU 调频、电池状态'
+  echo '- QModem：LianXia233 main 魔改版（Next 界面、内置短信转发、Rust AT 后端）、mwan3、OpenClash、CPU 调频、电池状态'
   echo '- 网页终端、Aurora 官方主题、多品牌 PCIe Wi-Fi 驱动、iStore、Docker/Compose 与 Dockerman' 
   echo '- 新增固件版本与 Docker 存储状态卡片、Bandix Plus 多接口流量统计（首次默认关闭）' 
   echo '- Docker 存储仅检测提示，不会自动挂载、迁移、格式化或修改防火墙' 
