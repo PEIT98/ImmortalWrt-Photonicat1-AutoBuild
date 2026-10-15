@@ -5,6 +5,8 @@
 - MCU 串口 `/dev/ttyS4` 仅由 `pcat-manager-v1` 打开；本插件仅通过 `/tmp/pcat-manager.sock` 发送官方 JSON+NUL 控制消息。
 - 协议指令：`pmu-status`、`charger-on-auto-start-get/set`、`schedule-power-event-get/set`。
 - 车载延时页面输入分钟，协议使用秒；定时模式每天开机/关机各一条，保存需确认替换 MCU 原有计划。
+- 车载页面新增只读供电状态及剩余秒数（点击“刷新状态”更新）；拔电后应显示“电池供电”。手动开机后拔掉实际外部电源可触发延迟关机，但需要更新后的 pcat-manager-v1 包；MCU 若仍判定外部供电，倒计时将不断重置。
+- 延时关机会真实执行系统 `poweroff`，首次建议先备份配置并在外部电源与恢复手段可用的情况下测试。
 - 不访问任何串口，不触碰 QModem/mwan3，不包含二代直连电源模式。
 - MCU 没有提供有效电压数据时，禁止保存电源策略。
 - 顶部 `luci-mod-battstatus` 已恢复打包，使用本插件只读 `battery` RPC；保留 Aurora 电池显示，不恢复旧 Go MCU/FUSE 管理器。需要真机验证。
