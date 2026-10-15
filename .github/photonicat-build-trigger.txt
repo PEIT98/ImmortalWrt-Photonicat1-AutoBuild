@@ -12,3 +12,5 @@ Only explicit changes to this marker trigger one-off push builds; ordinary pushe
 2026-10-13: Build firmware with Status > MultiWAN menu removed; preserve Network > MultiWAN, mwan3 failover and all existing plugins.
 2026-10-14 06:25 Asia/Shanghai: compile Photonicat1 QModem default USB 6-1 alias wwan_5g (firmware first-boot UCI defaults).
 2026-10-14: User-requested one-off build of latest main including dynamic QModem/mwan3 interface detection fixes (6_1/6_2, IPv4 filtering, hotplug stabilization). Publish successful firmware release. Restore manual-only workflow after dispatch.
+
+2026-10-15 08:18 Asia/Shanghai: User explicitly requested one complete fresh build after adding the Photonicat v1 LuCI power controller. One-off marker push; restore manual-only workflow without any further marker change.
