@@ -52,7 +52,7 @@
 
 仅在 GitHub Actions 手动启动编译；普通提交不会触发编译。
 
-QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次仍拉取官方 stable 最新代码，不修改 QModem 源码、拨号逻辑或菜单权限。
+QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次仍拉取官方 stable 最新代码；构建时仅修正 FM350 空 APN 清空模组原有 PDP 配置的问题，保留其他模组的拨号逻辑与菜单权限。
 
 ## 多 WAN 优先级
 

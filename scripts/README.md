@@ -18,6 +18,7 @@
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 使用上游 Wi-Fi 脚本并调整频段显示顺序 |
+| [fm350-preserve-apn.py](patches/fm350-preserve-apn.py) | FM350 空 APN 时保留模组现有 PDP 配置；上游逻辑变化则停止编译 |
 
 ## 电池指示插件（直接集成）
 
@@ -43,4 +44,4 @@
 
 **编译触发：** 仅通过 Actions 手动 `Run workflow` 编译。保留所有插件、系统配置、源码缓存及 CCache。
 
-**QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“模块”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留；不改动构建时拉取的 QModem 源码。
+**QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“移动网络”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留；FM350 拨号补丁由上方独立脚本执行。

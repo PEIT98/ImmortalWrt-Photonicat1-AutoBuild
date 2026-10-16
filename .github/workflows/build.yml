@@ -127,6 +127,12 @@ jobs:
           grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' package/luci-mod-battstatus/Makefile
           echo '项目内置 luci-mod-battstatus 将提供电池 RPC、翻译和 Aurora 修复。'
 
+      - name: 修复 FM350 空 APN 清空运营商配置
+        run: |
+          python3 scripts/patches/fm350-preserve-apn.py "$GITHUB_WORKSPACE/immortalwrt"
+          sh -n immortalwrt/feeds/qmodem/application/qmodem/files/usr/share/qmodem/modem_dial.sh
+          grep -Fq 'cgdcont_command="AT+CGDCONT?"' immortalwrt/feeds/qmodem/application/qmodem/files/usr/share/qmodem/modem_dial.sh
+
       - name: 修复 iStore 软件包名称
         run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 
