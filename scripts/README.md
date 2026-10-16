@@ -18,7 +18,7 @@
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 使用上游 Wi-Fi 脚本并调整频段显示顺序 |
-| [fm350-preserve-apn.py](patches/fm350-preserve-apn.py) | FM350 空 APN 时保留模组现有 PDP 配置；上游逻辑变化则停止编译 |
+| [fm350-preserve-apn.py](patches/fm350-preserve-apn.py) | FM350 空 APN 时保留模组现有专用 APN；CID 空时依据当前 SIM 的 IMSI 运营商号填入默认 APN，换卡时更新旧通用 APN；未知卡不猜测，上游逻辑变化则停止编译 |
 
 ## 电池指示插件（直接集成）
 
