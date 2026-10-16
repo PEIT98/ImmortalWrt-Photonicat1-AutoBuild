@@ -10,7 +10,7 @@
 
 | 分类 | 内置功能 |
 | --- | --- |
-| 5G / 网络 | QModem Next（含短信）、QModem Generic WebUI、mwan3、OpenClash |
+| 5G / 网络 | QModem Next（含短信）、mwan3、OpenClash |
 | 系统界面 | Aurora 主题、右上角电池状态、光影猫一代电池/电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
 | 管理工具 | DiskMan、Bandix Plus、定时重启、UPnP |
@@ -54,10 +54,6 @@
 
 QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次仍拉取官方 stable 最新代码，不修改 QModem 源码、拨号逻辑或菜单权限。
 
-QModem Generic 是 [LianXia233/luci-app-qmodem-generic](https://github.com/LianXia233/luci-app-qmodem-generic) 的本地移植版（基于 `a5a2b41fd617e5577b72bb9f6b1f6141d84aed4d`），位于“移动网络 → Modem Manager”。它共用官方 `qmodem` 后端，与 QModem Next 并列；修正了任务参数、AT 端口、流量定时清零的调用格式。开机不修改 QModem 支持库或 MT5700 配置；如确实需要 RG520N-CN 扩展型号，可在 Generic 高级页手动同步支持库。
-
-MT5700M-CN 已在官方 stable 支持库中。若确认需要拨号前切换 SIM 卡槽，先通过 `uci show qmodem` 核对配置节与当前槽位，再显式运行 `qmodem-mt5700-fix --slot 0 <配置节>`（或 `--slot 1`）。脚本只接受 MT5700 系列配置节，重复运行不会重复添加，发现相反槽位命令会停止；修改后在合适时机重新拨号。实际 MT5700 硬件与槽位仍需真机验证。
-
 ## 多 WAN 优先级
 
 **主备优先级（从高到低）：第一，有线 WAN（`wan`）；第二，Wi-Fi 中继（`wwan`）；第三，QModem 5G/LTE（动态接口）。**
@@ -88,6 +84,5 @@ mwan3 status
 - **2026-10-12**：Aurora 主题、ttyd 网页终端。
 - **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、Bandix Plus、DiskMan、定时重启、UPnP。
 - **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
-- **2026-10-15**：QModem Generic WebUI（与官方 QModem Next 并存）。
 
 其余插件和驱动以 [独立选包配置](photonicat1.config) 为准。

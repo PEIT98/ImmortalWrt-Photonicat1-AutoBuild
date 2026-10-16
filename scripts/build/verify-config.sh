@@ -10,7 +10,6 @@ need=(
   CONFIG_CCACHE
   CONFIG_PACKAGE_qmodem
   CONFIG_PACKAGE_luci-app-qmodem-next
-  CONFIG_PACKAGE_luci-app-qmodem-generic
   CONFIG_PACKAGE_sms-forwarder-next
   CONFIG_PACKAGE_luci-app-mwan3
   CONFIG_PACKAGE_mwan3
