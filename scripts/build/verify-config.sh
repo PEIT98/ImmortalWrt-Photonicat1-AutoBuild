@@ -120,6 +120,11 @@ done
 absent=(
   CONFIG_PACKAGE_pcat-mgr
   CONFIG_DEFAULT_pcat-mgr
+  CONFIG_PACKAGE_comgt
+  CONFIG_PACKAGE_chat
+  CONFIG_PACKAGE_kmod-fuse
+  CONFIG_PACKAGE_libfuse
+  CONFIG_PACKAGE_fuse-utils
   CONFIG_PACKAGE_luci-app-modemband
   CONFIG_PACKAGE_luci-app-sms-tool-js
   CONFIG_PACKAGE_luci-app-qmodem
@@ -135,8 +140,8 @@ absent=(
   CONFIG_PACKAGE_zerotier
 )
 for key in "${absent[@]}"; do
-  if grep -Fxq "$key=y" "$CFG"; then
-    echo "::error::仍安装不需要或与 Next 冲突的软件包 $key" >&2
+  if grep -Eq "^${key}=(y|m)$" "$CFG"; then
+    echo "::error::仍选中不需要或与现有功能冲突的软件包 $key" >&2
     failed=1
   fi
 done

@@ -54,6 +54,8 @@
 
 QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次构建拉取官方 stable 最新代码。
 
+QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`sms-forwarder-next` 是 Next 必需的短信转发后台，继续保留。
+
 ## 多 WAN 优先级
 
 **主备优先级（从高到低）：第一，有线 WAN（`wan`）；第二，Wi-Fi 中继（`wwan`）；第三，QModem 5G/LTE（动态接口）。**
