@@ -52,7 +52,7 @@
 
 仅在 GitHub Actions 手动启动编译；普通提交不会触发编译。
 
-QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次仍拉取官方 stable 最新代码。FM350 的 QModem APN 留空时，拨号脚本保留模组已有的专用 APN；CID 为空时从当前 SIM 运营商号选择默认 APN（联通 `3gnet`、移动 `cmnet`、电信 `ctnet`、广电 `cbnet`）。换卡时只更正旧的通用 APN，手填 APN 始终优先；未知卡不写入猜测值。其他模组的拨号逻辑与菜单权限保持原样。
+QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次构建拉取官方 stable 最新代码。
 
 ## 多 WAN 优先级
 
