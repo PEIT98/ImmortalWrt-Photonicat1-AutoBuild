@@ -4,13 +4,13 @@
 
 - 固件源码：[ImmortalWrt](https://github.com/immortalwrt/immortalwrt) `openwrt-25.12`
 - 设备参考：[光影猫一代](https://github.com/a757814283/ImmortalWrt_Photonicat1)
-- 5G 模组管理：[官方 FUjr/QModem](https://github.com/FUjr/QModem) `stable`（QModem Next + 独立短信转发）
+- 5G 模组管理：[官方 FUjr/QModem](https://github.com/FUjr/QModem) `main`（Next + 短信后台），另加 [QModem Generic](https://github.com/LianXia233/luci-app-qmodem-generic) `main`
 
 ## 主要功能
 
 | 分类 | 内置功能 |
 | --- | --- |
-| 5G / 网络 | QModem Next（含短信）、mwan3、OpenClash |
+| 5G / 网络 | QModem Next（含短信）、QModem Generic、mwan3、OpenClash |
 | 系统界面 | Aurora 主题、右上角电池状态、光影猫一代电池/电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
 | 管理工具 | DiskMan、Bandix Plus、定时重启、UPnP |
@@ -52,9 +52,13 @@
 
 仅在 GitHub Actions 手动启动编译；普通提交不会触发编译。
 
-QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称；每次构建拉取官方 stable 最新代码。
+QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称。参考 [H5000M 编译仓库](https://github.com/LianXia233/H5000M-CI-Qmodem)，每次构建通过 Feeds 直接拉取官方 QModem `main` 和 Generic `main`，保持两边插件源码原样。
 
-QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`sms-forwarder-next` 是 Next 必需的短信转发后台，继续保留。
+QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`qmodem-smsd` 和 `sms-forwarder-next` 是新版 Next 的短信依赖。
+
+Generic 位于 **移动网络 → 模组管理**，与官方 **QModem** 页面并列，共用同一套模组配置和拨号后台。先用官方页面完成扫描与拨号，避免同时从两个页面修改模组。Generic 原版自带缓存、流量采集、MT5700 SIM 初始化和支持库同步服务，也会随上游一并启用。
+
+**试用限制：** 本次核对的 Generic `a5a2b41` 控制任务未统一传递 QModem `73d1839` 要求的模组配置节，AT、异步短信和流量定时清零参数也有差异；拨号、短信及其他修改操作先用官方 Next 页面。Generic 本地后台测试的服务停止与锁清理项目未全部通过，尚需真机验证。固件和 Release 会记录两个上游的实际提交号，便于排查和回退。
 
 ## 多 WAN 优先级
 
@@ -86,5 +90,6 @@ mwan3 status
 - **2026-10-12**：Aurora 主题、ttyd 网页终端。
 - **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、Bandix Plus、DiskMan、定时重启、UPnP。
 - **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
+- **2026-10-17**：QModem Generic（直接引用上游 `main`，与官方 QModem Next 共存）。
 
 其余插件和驱动以 [独立选包配置](photonicat1.config) 为准。

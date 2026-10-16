@@ -88,18 +88,39 @@ jobs:
           grep -Fq 'ATH10K ATH10K_PCI ATH10K_SDIO' immortalwrt/package/kernel/mac80211/ath.mk
           grep -Fq 'ath10k/ath10k_sdio.ko' immortalwrt/package/kernel/mac80211/ath.mk
 
-      - name: Update official FUjr QModem stable feed
+      - name: 更新官方 QModem 与 Generic 上游软件源
         working-directory: immortalwrt
         run: |
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           ./scripts/feeds install -a -f -p qmodem
-          # 官方 stable：qmodem 核心、Next 界面与 SMS 转发为独立软件包。
+          ./scripts/feeds install -a -f -p qmodem_generic
+          # 两个源直接引用上游 main；检查新版 Next 和 Generic 的实际依赖。
           test -f feeds/qmodem/application/qmodem/Makefile
           test -f feeds/qmodem/luci/luci-app-qmodem-next/Makefile
+          test -f feeds/qmodem/application/qmodem_smsd/Makefile
           test -f feeds/qmodem/application/sms_forwarder_next/Makefile
-          grep -Fq 'LUCI_DEPENDS:=+qmodem +luci-base +sms-forwarder-next' feeds/qmodem/luci/luci-app-qmodem-next/Makefile
-          ! test -e feeds/qmodem/application/qmodem/build-rust.sh
+          test -f feeds/qmodem_generic/luci-app-qmodem-generic/Makefile
+          test -L package/feeds/qmodem_generic/luci-app-qmodem-generic
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          next_make = Path('feeds/qmodem/luci/luci-app-qmodem-next/Makefile').read_text()
+          generic_make = Path('feeds/qmodem_generic/luci-app-qmodem-generic/Makefile').read_text()
+          def dependencies(text):
+              line = re.search(r'^LUCI_DEPENDS\s*:?=([^\n]+)', text, re.M)
+              assert line, '上游 LUCI_DEPENDS 定义变化，请检查插件依赖'
+              return set(re.findall(r'\+([\w+.-]+)', line.group(1)))
+          assert {'qmodem', 'qmodem-smsd', 'sms-forwarder-next', 'luci-base'} <= dependencies(next_make)
+          assert {'qmodem', 'luci-base'} <= dependencies(generic_make)
+          version = re.search(r'^QMODEM_VERSION\s*:?=\s*(\S+)', Path('feeds/qmodem/version.mk').read_text(), re.M)
+          assert version and re.fullmatch(r'[0-9]+(?:\.[0-9]+)*(?:_(?:alpha|beta|pre|rc)[0-9]*)?', version.group(1)), 'QModem 版本格式不适用于 APK，请检查上游 version.mk'
+          PY
+          # Feeds 保留上游执行权限，确保 Generic 后台任务和缓存服务能被 rpcd/procd 调用。
+          generic_root=feeds/qmodem_generic/luci-app-qmodem-generic/root
+          test -x "$generic_root/usr/bin/qmodem-task"
+          test -x "$generic_root/usr/sbin/qmodem-worker"
+          test -x "$generic_root/usr/libexec/rpcd/qmodem_cache"
           ./scripts/feeds install -a -f -p openclash
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
@@ -161,9 +182,18 @@ jobs:
           import json
           from pathlib import Path
           upstream = json.loads(Path('feeds/qmodem/luci/luci-app-qmodem-next/root/usr/share/luci/menu.d/luci-app-qmodem-next.json').read_text())
+          generic_root = Path('feeds/qmodem_generic/luci-app-qmodem-generic/root')
+          generic = json.loads((generic_root / 'usr/share/luci/menu.d/luci-app-qmodem-generic.json').read_text())
           override = json.loads(Path('files/usr/share/luci/menu.d/zz-photonicat-modem-title.json').read_text())
           assert 'admin/modem' in upstream, 'QModem 菜单路径已变更，请检查名称覆盖'
           assert override == {'admin/modem': {'title': '移动网络'}}, '名称覆盖不得更改菜单权限或动作'
+          assert 'admin/modem/qmodem' in upstream and 'admin/modem/qmodem-generic' in generic
+          assert set(upstream) & set(generic) == {'admin/modem'}, '两套界面的子菜单发生冲突'
+          assert upstream['admin/modem']['action'] == generic['admin/modem']['action'], '父菜单动作不一致'
+          generic_files = {p.relative_to(generic_root) for p in generic_root.rglob('*') if p.is_file()}
+          for root in (Path('feeds/qmodem/application/qmodem/files'), Path('feeds/qmodem/luci/luci-app-qmodem-next/root')):
+              shared = generic_files & {p.relative_to(root) for p in root.rglob('*') if p.is_file()}
+              assert not shared, f'上游插件安装文件重名：{sorted(map(str, shared))}'
           PY
           test -f package/luci-mod-battstatus/po/zh_Hans/battstatus.po
           grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
@@ -187,10 +217,10 @@ jobs:
           python3 ../scripts/build/select-packages.py .config
           cp .config .config.before-defconfig
           echo '===== defconfig 前核心插件 ====='
-          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
+          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
           echo '===== 核对上游插件是否被注册为目标包 ====='
-          for pkg in luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-mod-battstatus; do
+          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-mod-battstatus; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
               echo "registered: $pkg"
             else
@@ -198,7 +228,7 @@ jobs:
             fi
           done
           echo '===== defconfig 后核心插件 ====='
-          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
+          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
           echo '===== defconfig 前已选但后被取消的选项（最多70行）====='
           comm -23 <(grep '^CONFIG_PACKAGE_.*=y$' .config.before-defconfig | sort -u) <(grep '^CONFIG_PACKAGE_.*=y$' .config | sort -u) | head -n 70 || true
           bash ../scripts/build/verify-config.sh .config
@@ -231,6 +261,7 @@ jobs:
             echo "Builder commit: $GITHUB_SHA"
             echo "ImmortalWrt: $(git -C immortalwrt rev-parse HEAD)"
             echo "QModem: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
+            echo "QModem Generic: $(git -C immortalwrt/feeds/qmodem_generic rev-parse HEAD)"
             echo "Aurora theme: $(git -C immortalwrt/package/luci-theme-aurora rev-parse HEAD)"
             echo "Reference: $(git -C photonicat-reference rev-parse HEAD)"
           } > immortalwrt/files/etc/photonicat1-build-info
@@ -358,8 +389,10 @@ jobs:
             echo 'Device: Ariaboard Photonicat1 (RK3568)'
             echo "ImmortalWrt source: $(git -C immortalwrt rev-parse HEAD)"
             echo "Reference config: $(git -C photonicat-reference rev-parse HEAD)"
-            echo "QModem feed: FUjr/QModem stable"
+            echo "QModem feed: FUjr/QModem main"
             echo "QModem feed: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
+            echo "QModem Generic feed: LianXia233/luci-app-qmodem-generic main"
+            echo "QModem Generic commit: $(git -C immortalwrt/feeds/qmodem_generic rev-parse HEAD)"
             echo "Aurora theme: $(git -C immortalwrt/package/luci-theme-aurora rev-parse HEAD)"
             echo "Workflow repo commit: $GITHUB_SHA"
             echo "Built at (Asia/Shanghai): $(date '+%Y-%m-%d %H:%M:%S %Z')"

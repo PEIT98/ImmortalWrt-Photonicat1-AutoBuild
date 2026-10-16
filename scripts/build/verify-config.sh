@@ -10,7 +10,12 @@ need=(
   CONFIG_CCACHE
   CONFIG_PACKAGE_qmodem
   CONFIG_PACKAGE_luci-app-qmodem-next
+  CONFIG_PACKAGE_luci-app-qmodem-generic
+  CONFIG_PACKAGE_qmodem-smsd
   CONFIG_PACKAGE_sms-forwarder-next
+  CONFIG_PACKAGE_qmodem_INCLUDE_generic-qmi-wwan
+  CONFIG_PACKAGE_qmodem_INCLUDE_SEAL
+  CONFIG_PACKAGE_qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
   CONFIG_PACKAGE_luci-app-mwan3
   CONFIG_PACKAGE_mwan3
   CONFIG_PACKAGE_luci-app-openclash
@@ -136,6 +141,12 @@ absent=(
   CONFIG_PACKAGE_luci-app-zerotier
   CONFIG_PACKAGE_luci-app-online-upgrade
   CONFIG_PACKAGE_kmod-ath10k-sdio
+  CONFIG_PACKAGE_qmodem_INCLUDE_vendor-qmi-wwan
+  CONFIG_PACKAGE_qmodem_INCLUDE_nss-qmi-wwan
+  CONFIG_PACKAGE_kmod-qmi_wwan_q
+  CONFIG_PACKAGE_kmod-qmi_wwan_f
+  CONFIG_PACKAGE_kmod-qmi_wwan_s
+  CONFIG_PACKAGE_qmodem-sipd
   CONFIG_PACKAGE_smartdns
   CONFIG_PACKAGE_zerotier
 )
@@ -145,9 +156,9 @@ for key in "${absent[@]}"; do
     failed=1
   fi
 done
-# 官方 stable QModem 会依赖部分 USB 驱动；这里核对全部常用 USB 数据协议和 AT 串口驱动。
+# 官方 main QModem 与 Generic 共用后端；核对常用 USB 数据协议和 AT 串口驱动。
 if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代目标、QModem、OpenClash、Aurora、iStore、Docker/Dockerman、DiskMan、USB/PCIe/网络诊断、QModem USB 数据协议与串口、定时重启、UPnP、QCA9377 SDIO 固件及 Wi-Fi 驱动选择检查通过。'
+echo '光影猫一代目标、QModem Next/Generic、短信后台、通用 QMI、OpenClash、Aurora、iStore、Docker/Dockerman、DiskMan、USB/PCIe/网络诊断、QModem USB 数据协议与串口、定时重启、UPnP、QCA9377 SDIO 固件及 Wi-Fi 驱动选择检查通过。'
