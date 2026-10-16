@@ -21,6 +21,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
+    outputs:
+      release_tag: ${{ steps.firmware_identity.outputs.release_tag }}
     env:
       TZ: Asia/Shanghai
       # photonicat-cache-v2: bounded OpenWrt compiler object cache.
@@ -66,7 +68,7 @@ jobs:
             ack antlr3 asciidoc autoconf automake autopoint binutils bison \
             build-essential bzip2 ccache clang cmake cpio curl device-tree-compiler \
             flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man \
-            intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev \
+            intltool jq libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev \
             libmpc-dev libmpfr-dev libncurses-dev libreadline-dev libssl-dev libtool \
             lrzsz mkisofs msmtp ninja-build patch pkgconf python3 python3-pyelftools \
             python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig \
@@ -151,6 +153,19 @@ jobs:
       - name: 修复 iStore 软件包名称
         run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 
+      - name: 核对光影猫在线升级
+        working-directory: immortalwrt
+        run: |
+          test -f package/luci-app-online-upgrade/Makefile
+          sh -n package/luci-app-online-upgrade/root/usr/bin/online-upgrade.sh
+          sh -n package/luci-app-online-upgrade/root/etc/uci-defaults/99-online-upgrade
+          test -x package/luci-app-online-upgrade/root/usr/bin/online-upgrade.sh
+          cmp -s ../scripts/online-upgrade/online-upgrade.sh package/luci-app-online-upgrade/root/usr/bin/online-upgrade.sh
+          grep -Fq 'photonicat-online-upgrade-adapted' package/luci-app-online-upgrade/root/www/luci-static/resources/view/system/online-upgrade.js
+          ! grep -Fq '$(1)/www/cgi-bin/online-upgrade-restore' package/luci-app-online-upgrade/Makefile
+          test ! -e package/luci-app-online-upgrade/root/www/cgi-bin/online-upgrade-restore
+          python3 ../scripts/tests/test_online_upgrade.py
+
       - name: Check Photonicat1 status and Docker storage diagnostics
         working-directory: immortalwrt
         shell: bash
@@ -220,7 +235,7 @@ jobs:
           grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
           echo '===== 核对上游插件是否被注册为目标包 ====='
-          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-mod-battstatus; do
+          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-mod-battstatus; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
               echo "registered: $pkg"
             else
@@ -250,6 +265,22 @@ jobs:
           include-hidden-files: true
           retention-days: 14
 
+      - name: 生成在线升级版本标识
+        id: firmware_identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="photonicat1-$(date +%Y%m%d-%H%M%S)-${GITHUB_RUN_NUMBER}"
+          [[ "$tag" =~ ^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$ ]]
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+          mkdir -p immortalwrt/files/etc
+          cat > immortalwrt/files/etc/online-upgrade-device <<EOF
+          # 本次固件的只读版本身份，发布任务使用同一个标签。
+          DEVICE_BOARD='ariaboard,photonicat'
+          BUILD_TAG='$tag'
+          BUILD_COMMIT='$GITHUB_SHA'
+          EOF
+
       - name: Write build provenance inside firmware
         shell: bash
         run: |
@@ -262,6 +293,8 @@ jobs:
             echo "ImmortalWrt: $(git -C immortalwrt rev-parse HEAD)"
             echo "QModem: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
             echo "QModem Generic: $(git -C immortalwrt/feeds/qmodem_generic rev-parse HEAD)"
+            echo "Online upgrade: $(git -C immortalwrt/package/luci-app-online-upgrade rev-parse HEAD)"
+            echo "Release tag: ${{ steps.firmware_identity.outputs.release_tag }}"
             echo "Aurora theme: $(git -C immortalwrt/package/luci-theme-aurora rev-parse HEAD)"
             echo "Reference: $(git -C photonicat-reference rev-parse HEAD)"
           } > immortalwrt/files/etc/photonicat1-build-info
@@ -393,6 +426,9 @@ jobs:
             echo "QModem feed: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
             echo "QModem Generic feed: LianXia233/luci-app-qmodem-generic main"
             echo "QModem Generic commit: $(git -C immortalwrt/feeds/qmodem_generic rev-parse HEAD)"
+            echo "Online upgrade source: gooyjq/luci-app-online-upgrade main"
+            echo "Online upgrade commit: $(git -C immortalwrt/package/luci-app-online-upgrade rev-parse HEAD)"
+            echo "Release tag: ${{ steps.firmware_identity.outputs.release_tag }}"
             echo "Aurora theme: $(git -C immortalwrt/package/luci-theme-aurora rev-parse HEAD)"
             echo "Workflow repo commit: $GITHUB_SHA"
             echo "Built at (Asia/Shanghai): $(date '+%Y-%m-%d %H:%M:%S %Z')"
@@ -436,9 +472,12 @@ jobs:
       - name: Prepare tag
         id: tag
         shell: bash
+        env:
+          PHOTONICAT_RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
         run: |
           set -euo pipefail
-          echo "name=photonicat1-$(date +%Y%m%d-%H%M%S)-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          [[ "$PHOTONICAT_RELEASE_TAG" =~ ^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$ ]]
+          echo "name=$PHOTONICAT_RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

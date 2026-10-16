@@ -10,6 +10,7 @@
 | [select-packages.py](build/select-packages.py) | 在安装 Feeds 后读取独立配置，选择插件和驱动 |
 | [verify-config.sh](build/verify-config.sh) | 检查目标设备、插件、驱动和依赖；缺少必要配置则停止 |
 | [release-notes.sh](build/release-notes.sh) | 生成 GitHub Release 中文说明和编译来源信息 |
+| [prepare-online-upgrade.py](build/prepare-online-upgrade.py) | 将上游在线升级包适配到光影猫，修正发布匹配、进度和备份恢复入口 |
 
 ## patches：兼容补丁
 
@@ -46,3 +47,5 @@
 **QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“移动网络”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留。
 
 **QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [luci-app-qmodem-generic](https://github.com/LianXia233/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装；不将插件源码复制到项目内。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
+
+**在线升级：** 每次构建将 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade) `main` 拉取到 `package/luci-app-online-upgrade`，使用 [online-upgrade](online-upgrade/) 中的光影猫后端和默认配置。Actions 将同一个 Release 标签写进固件身份和发布任务，检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。上游布局变化会明确报错，避免静默漏改。

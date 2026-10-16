@@ -25,6 +25,15 @@ else
   printf '\nsrc-git qmodem_generic https://github.com/LianXia233/luci-app-qmodem-generic.git;main\n' >> "$SRC/feeds.conf.default"
 fi
 
+# 在线升级上游为单包仓库，顶层即 Makefile；与参考仓库一样直接作为本地包引用。
+# 不将顶层 Makefile 仓库直接注册为 Feed，避免 feeds 扫描器丢包。
+ONLINE_DST="$SRC/package/luci-app-online-upgrade"
+if [ ! -e "$ONLINE_DST" ]; then
+  git clone --depth=1 --branch main https://github.com/gooyjq/luci-app-online-upgrade.git "$ONLINE_DST"
+fi
+test -f "$ONLINE_DST/Makefile"
+python3 "$(dirname "$0")/prepare-online-upgrade.py" "$ONLINE_DST"
+
 
 # OpenClash 官方维护的 Mihomo/Clash LuCI 软件源。
 if grep -Eq '^src-git openclash ' "$SRC/feeds.conf.default"; then

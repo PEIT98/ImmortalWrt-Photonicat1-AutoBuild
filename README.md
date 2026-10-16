@@ -13,7 +13,7 @@
 | 5G / 网络 | QModem Next（含短信）、QModem Generic、mwan3、OpenClash |
 | 系统界面 | Aurora 主题、右上角电池状态、光影猫一代电池/电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
-| 管理工具 | DiskMan、Bandix Plus、定时重启、UPnP |
+| 管理工具 | 在线升级、DiskMan、Bandix Plus、定时重启、UPnP |
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
 | 驱动支持 | USB QMI / MBIM / ECM / NCM / RNDIS、AT 串口、PCIe / SDIO 无线网卡 |
 
@@ -73,6 +73,17 @@ uci -q get mwan3.qmodem_priority3.interface
 mwan3 status
 ```
 
+## 在线升级
+
+入口：**系统 → 在线升级**。直接引用 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade) `main`，按光影猫一代适配发布识别与升级流程。
+
+- 默认从本仓库查找最新正式固件，只选择光影猫一代 squashfs 升级镜像。
+- 与参考仓库使用相同下载加速地址，失败或文件校验不通过时回退 GitHub 原地址；加速地址留空即可直连。
+- 下载后检查文件大小、压缩格式、SHA256 和系统机型兼容性；默认保留配置并在升级前备份。
+- 页面进度来自实际任务状态。备份恢复使用 LuCI 自带页面，只在手动点击确认后执行固件升级。
+
+需要重新编译并刷入包含此插件的固件，后续才可从页面在线更新。当前版本以固件内置标识为准，保留配置不会沿用旧的版本标识。
+
 ## 编译与下载
 
 1. 打开 [GitHub Actions](https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/actions/workflows/build.yml)。
@@ -91,5 +102,6 @@ mwan3 status
 - **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、Bandix Plus、DiskMan、定时重启、UPnP。
 - **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
 - **2026-10-17**：QModem Generic（直接引用上游 `main`，与官方 QModem Next 共存）。
+- **2026-10-17**：在线升级（引用上游 `main`，适配本仓库光影猫固件）。
 
 其余插件和驱动以 [独立选包配置](photonicat1.config) 为准。
