@@ -1,0 +1,13 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# 在 SQM 和 QModem/mwan3 更新后，重新解析真实接口；默认关闭时不执行任务。
+case "$ACTION" in ifup|ifupdate|ifdown) ;; *) exit 0 ;; esac
+[ "$(uci -q get cake-autorate.main.enabled)" = 1 ] || exit 0
+target="$(uci -q get cake-autorate.main.interface)"
+if [ "$target" = auto ] || [ -z "$target" ]; then
+	target="$(uci -q get mwan3.qmodem_priority3.interface)"
+fi
+previous="$(cat /var/run/photonicat-cake-autorate/interface 2>/dev/null)"
+if [ "$INTERFACE" = "$target" ] || [ "$INTERFACE" = "$previous" ] || [ -n "$(uci -q get "network.$INTERFACE.modem_config")" ]; then
+	/etc/init.d/cake-autorate restart
+fi

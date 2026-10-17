@@ -10,10 +10,10 @@
 
 | 分类 | 内置功能 |
 | --- | --- |
-| 5G / 网络 | QModem Next（含短信）、QModem Generic、mwan3、OpenClash |
-| 系统界面 | Aurora 主题、右上角电池状态、光影猫一代电池/电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
+| 5G / 网络 | QModem Next（含短信）、QModem Generic、mwan3、OpenClash、Travelmate 无线中继、SQM/CAKE 与 cake-autorate |
+| 系统界面 | Aurora 主题及设置、右上角电池状态、光影猫一代电池/电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
-| 管理工具 | 在线升级、DiskMan、Bandix Plus、定时重启、UPnP |
+| 管理工具 | 文件管理、历史统计、在线升级、DiskMan、Bandix Plus、定时重启、UPnP |
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
 | 驱动支持 | USB QMI / MBIM / ECM / NCM / RNDIS、AT 串口、PCIe / SDIO 无线网卡 |
 
@@ -84,6 +84,14 @@ mwan3 status
 
 需要重新编译并刷入包含此插件的固件，后续才可从页面在线更新。当前版本以固件内置标识为准，保留配置不会沿用旧的版本标识。
 
+## 新增管理工具
+
+- **系统 → 文件管理器**：官方 `luci-app-filemanager`，在浏览器中管理文件。
+- **Aurora 设置**：使用 [主题作者的配置插件](https://github.com/eamonxg/luci-app-aurora-config)，支持配色、布局、背景、字体与快捷按钮。
+- **统计**：官方 `luci-app-statistics`，首次使用 60 秒采样，开启温度与当前出口 Ping，数据放在 `/tmp/rrd`，重启后清空；升级时保留用户修改过的统计配置。
+- **服务 → Travelmate**：官方无线热点管理，预关联现有 `wwan`，首次保持关闭。扫描并添加自己的热点后再启用；有线 → Wi-Fi → 5G 的 mwan3 优先级保持原配置。
+- **cake-autorate + 网络 → SQM QoS**：稳定版 3.2.1，首次关闭。先按实测速率设置 SQM 的 CAKE 队列和六项带宽，再启动自动调整；跟随实际 QModem 接口，详见 [配置步骤](packages/cake-autorate/README.md)。
+
 ## 编译与下载
 
 1. 打开 [GitHub Actions](https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/actions/workflows/build.yml)。
@@ -103,5 +111,6 @@ mwan3 status
 - **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
 - **2026-10-17**：QModem Generic（直接引用上游 `main`，与官方 QModem Next 共存）。
 - **2026-10-17**：在线升级（完整本地插件，适配本仓库光影猫固件）。
+- **2026-10-17**：文件管理、Aurora 设置、历史统计、Travelmate 无线中继、SQM/CAKE 与 cake-autorate。
 
 其余插件和驱动以 [独立选包配置](photonicat1.config) 为准。

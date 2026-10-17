@@ -12,6 +12,8 @@ test -f "$dir/build-sources.txt"
   echo '- QModem：官方 FUjr/QModem main（Next 界面、短信后台）+ LianXia233/qmodem-generic main（上游原版），mwan3、OpenClash、CPU 调频、电池状态'
   echo '- 网页终端、Aurora 官方主题、多品牌 PCIe Wi-Fi 驱动、iStore、Docker/Compose 与 Dockerman' 
   echo '- 系统 → 在线升级：默认检查本仓库光影猫固件，下载后校验文件和机型，仅手动确认后升级'
+  echo '- 新增文件管理、Aurora 设置、历史统计、Travelmate 无线中继（默认关闭）'
+  echo '- 内置 SQM/CAKE 与 cake-autorate 稳定版，默认关闭；先填写实测速率并配置队列，再手动开启'
   echo '- 新增固件版本与 Docker 存储状态卡片、Bandix Plus 多接口流量统计（首次默认关闭）' 
   echo '- Docker 存储仅检测提示，不会自动挂载、迁移、格式化或修改防火墙' 
   echo '- 优先级：WAN > Wi-Fi 中继 > 5G/LTE'

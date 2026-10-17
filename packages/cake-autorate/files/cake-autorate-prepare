@@ -1,0 +1,98 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# 只核对并生成上游配置；不创建队列，不修改网络、防火墙或 SQM。
+set -eu
+get() { uci -q get "$1" 2>/dev/null || true; }
+fail() { echo "cake-autorate：$*" >&2; exit 1; }
+identifier() {
+	case "$1" in ''|*[!a-zA-Z0-9_.-]*|-*) return 1 ;; esac
+}
+case "${1:-check}" in check|config) ;; *) fail '用法：cake-autorate-prepare [check|config]' ;; esac
+iface="$(get cake-autorate.main.interface)"
+if [ -z "$iface" ] || [ "$iface" = auto ]; then
+	iface="$(get mwan3.qmodem_priority3.interface)"
+	[ -n "$iface" ] || fail '尚未发现 QModem 拨号接口，请先完成拨号。'
+	modem="$(get "network.$iface.modem_config")"
+	[ -n "$modem" ] && [ "$(get "qmodem.$modem")" = modem-device ] || fail '自动选择项不是有效的 QModem 接口。'
+fi
+identifier "$iface" || fail '网络接口名称无效。'
+[ "$(get "network.$iface")" = interface ] || fail '网络接口不存在。'
+[ "$(get "mwan3.$iface.family")" = ipv4 ] || fail '所选接口尚未纳入 mwan3 的 IPv4 管理。'
+status="$(ubus -S call "network.interface.$iface" status)" || fail '无法读取接口状态。'
+[ "$(printf '%s' "$status" | jsonfilter -e '@.up')" = true ] || fail '所选接口未连接。'
+upload="$(printf '%s' "$status" | jsonfilter -e '@.l3_device')"
+identifier "$upload" && [ "${#upload}" -le 15 ] || fail '未找到有效的实际网络设备。'
+
+for option in flow_offloading flow_offloading_hw; do
+	[ "$(get "firewall.@defaults[0].$option")" != 1 ] || fail '请先关闭防火墙的软件/硬件流量分载，再启用 SQM。'
+done
+
+# 必须由用户在 SQM 中明确启用一个对应的 CAKE 配置。
+matches=0
+for section in $(uci -q show sqm | sed -n 's/^sqm\.\([^.=]*\)=queue$/\1/p'); do
+	[ "$(get "sqm.$section.enabled")" = 1 ] || continue
+	[ "$(get "sqm.$section.interface")" = "$upload" ] || continue
+	[ "$(get "sqm.$section.qdisc")" = cake ] || fail '对应 SQM 队列未使用 CAKE。'
+	matches=$((matches + 1))
+done
+[ "$matches" -eq 1 ] || fail '请先在 SQM 中为实际 5G 设备启用唯一的 CAKE 配置。'
+root_cake() {
+	tc qdisc show dev "$1" | awk '$1 == "qdisc" && $2 == "cake" && $4 == "root" {found=1} END {exit !found}'
+}
+root_cake "$upload" || fail '上传 CAKE 队列尚未建立。'
+
+# 读取真实 ingress 重定向，不猜测 ifb4xxx 名称，兼容较长设备名。
+filters="$(tc -j filter show dev "$upload" parent ffff:)" || fail '无法读取下载重定向。'
+downloads="$(printf '%s' "$filters" | jsonfilter -e '@[*].options.actions[*].to_dev' | sort -u)"
+[ "$(printf '%s\n' "$downloads" | awk 'NF {n++} END {print n+0}')" -eq 1 ] || fail '未找到唯一的下载 IFB 重定向。'
+download="$downloads"
+identifier "$download" && [ "${#download}" -le 15 ] || fail '下载 IFB 设备名称无效。'
+[ "$download" != "$upload" ] || fail '上传与下载设备不能相同。'
+root_cake "$download" || fail '下载 CAKE 队列尚未建立。'
+
+number() {
+	case "$1" in ''|0*|*[!0-9]*) return 1 ;; esac
+	[ "${#1}" -le 9 ] && [ "$1" -gt 0 ]
+}
+min_dl="$(get cake-autorate.main.min_download)"
+base_dl="$(get cake-autorate.main.base_download)"
+max_dl="$(get cake-autorate.main.max_download)"
+min_ul="$(get cake-autorate.main.min_upload)"
+base_ul="$(get cake-autorate.main.base_upload)"
+max_ul="$(get cake-autorate.main.max_upload)"
+for rate in "$min_dl" "$base_dl" "$max_dl" "$min_ul" "$base_ul" "$max_ul"; do
+	number "$rate" || fail '请先填写六个实测速率，单位 Kbit/s，必须为正整数。'
+done
+[ "$min_dl" -le "$base_dl" ] && [ "$base_dl" -le "$max_dl" ] &&
+	[ "$min_ul" -le "$base_ul" ] && [ "$base_ul" -le "$max_ul" ] || fail '速率须满足：最低 <= 基准 <= 最高。'
+
+reflectors="$(get cake-autorate.main.reflector)"
+count=0
+for host in $reflectors; do
+	printf '%s\n' "$host" | awk -F. 'NF != 4 {exit 1} {for (i=1;i<=4;i++) if ($i !~ /^[0-9]+$/ || $i>255) exit 1}' || fail '探测地址必须为 IPv4 地址。'
+	count=$((count + 1))
+done
+[ "$count" -ge 2 ] && [ "$count" -le 6 ] || fail '请配置 2 至 6 个探测地址。'
+
+if [ "${1:-check}" = check ]; then
+	printf '接口：%s\n上传设备：%s\n下载设备：%s\n下载速率：%s / %s / %s Kbit/s\n上传速率：%s / %s / %s Kbit/s\n探测经 mwan3 固定到所选接口。\n' "$iface" "$upload" "$download" "$min_dl" "$base_dl" "$max_dl" "$min_ul" "$base_ul" "$max_ul"
+	exit 0
+fi
+
+directory="${CAKE_AUTORATE_CONFIG_DIR:-/var/run/photonicat-cake-autorate}"
+mkdir -p "$directory"
+umask 077
+temporary="$(mktemp "$directory/config.XXXXXX")"
+trap '[ ! -e "$temporary" ] || rm -- "$temporary"' EXIT
+{
+	printf 'dl_if="%s"\nul_if="%s"\n' "$download" "$upload"
+	printf 'min_dl_shaper_rate_kbps=%s\nbase_dl_shaper_rate_kbps=%s\nmax_dl_shaper_rate_kbps=%s\n' "$min_dl" "$base_dl" "$max_dl"
+	printf 'min_ul_shaper_rate_kbps=%s\nbase_ul_shaper_rate_kbps=%s\nmax_ul_shaper_rate_kbps=%s\n' "$min_ul" "$base_ul" "$max_ul"
+	printf 'pinger_binary=fping\nping_prefix_string="mwan3 use %s exec"\nping_extra_args="-4 -I %s"\n' "$iface" "$upload"
+	printf 'reflectors=('
+	for host in $reflectors; do printf '"%s" ' "$host"; done
+	printf ')\nno_pingers=%s\nreflector_ping_interval_s=1.0\nrandomize_reflectors=0\nlog_to_file=0\ndebug=0\n' "$count"
+} > "$temporary"
+mv "$temporary" "$directory/config.primary.sh"
+printf '%s\n' "$iface" > "$directory/interface"
+printf '%s\n' "$directory/config.primary.sh"

@@ -160,6 +160,32 @@ if [ ! -f "$THEME_DIR/Makefile" ]; then
 fi
 [ -f "$THEME_DIR/Makefile" ] || { echo 'Aurora Makefile 不存在' >&2; exit 1; }
 
+# Aurora 配套设置面板沿用主题作者的完整源码，直接作为单个本地包构建。
+AURORA_CONFIG_DIR="$SRC/package/luci-app-aurora-config"
+if [ ! -e "$AURORA_CONFIG_DIR" ]; then
+  git clone --depth=1 --branch master https://github.com/eamonxg/luci-app-aurora-config.git "$AURORA_CONFIG_DIR"
+fi
+test -f "$AURORA_CONFIG_DIR/Makefile"
+test -x "$AURORA_CONFIG_DIR/root/usr/libexec/rpcd/luci.aurora"
+test -f "$AURORA_CONFIG_DIR/po/zh_Hans/aurora-config.po"
+# 上游预生成的现代 JS 不适合旧 jsmin；保留上游关闭二次压缩的设置。
+grep -Fxq 'LUCI_MINIFY_JS:=0' "$AURORA_CONFIG_DIR/Makefile"
+
+# cake-autorate 使用固定稳定版源码和 SHA256，本地封装提供默认关闭的服务。
+CAKE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/cake-autorate"
+CAKE_DST="$SRC/package/cake-autorate"
+test -f "$CAKE_SRC/Makefile" || { echo '::error::缺少 cake-autorate 本地封装' >&2; exit 1; }
+test ! -e "$CAKE_DST" || { echo '::error::cake-autorate 目标路径已存在，禁止覆盖' >&2; exit 1; }
+mkdir -p "$CAKE_DST"
+cp -a "$CAKE_SRC/." "$CAKE_DST/"
+test -x "$CAKE_DST/files/cake-autorate.init"
+test -x "$CAKE_DST/files/cake-autorate-prepare"
+test -x "$CAKE_DST/files/98-cake-autorate"
+sh -n "$CAKE_DST/files/cake-autorate.init" "$CAKE_DST/files/cake-autorate-prepare" "$CAKE_DST/files/98-cake-autorate"
+test -x "$SRC/files/etc/uci-defaults/92-photonicat-network-tools"
+sh -n "$SRC/files/etc/uci-defaults/92-photonicat-network-tools"
+echo '文件管理、统计和 Travelmate 使用官方包；Aurora 设置及 cake-autorate 已准备。'
+
 # 固件版本/存储卡片只使用 rootfs 覆盖文件；不能修改 Aurora 主题。
 INFO_RPC="$SRC/files/usr/libexec/rpcd/luci.photonicat1"
 DISK_CHECK="$SRC/files/usr/bin/photonicat-docker-storage-check"
