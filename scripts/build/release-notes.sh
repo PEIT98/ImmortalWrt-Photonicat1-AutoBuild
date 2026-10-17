@@ -11,7 +11,7 @@ test -f "$dir/build-sources.txt"
   echo '> 尚需光影猫一代真机验证，刷机前备份并准备恢复方案。'
   echo
   echo '- ImmortalWrt：openwrt-25.12（编译时最新）'
-  echo '- QModem：官方 FUjr/QModem main（Next 界面、短信后台）+ LianXia233/qmodem-generic main（上游原版），mwan3、OpenClash、CPU 调频、电池状态'
+  echo '- QModem：官方 FUjr/QModem main（Next 界面、短信后台）+ PEIT98/luci-app-qmodem-generic main（自有复刻），mwan3、OpenClash、CPU 调频、电池状态'
   echo '- 网页终端、Aurora 官方主题、多品牌 PCIe Wi-Fi 驱动、iStore、Docker/Compose 与 Dockerman' 
   echo '- 系统 → 在线升级：默认检查本仓库光影猫固件，下载后校验文件和机型，仅手动确认后升级'
   echo '- 新增文件管理、Aurora 设置、历史统计、Travelmate 无线中继（默认关闭）'

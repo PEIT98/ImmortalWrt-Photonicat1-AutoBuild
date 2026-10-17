@@ -90,14 +90,14 @@ jobs:
           grep -Fq 'ATH10K ATH10K_PCI ATH10K_SDIO' immortalwrt/package/kernel/mac80211/ath.mk
           grep -Fq 'ath10k/ath10k_sdio.ko' immortalwrt/package/kernel/mac80211/ath.mk
 
-      - name: 更新官方 QModem 与 Generic 上游软件源
+      - name: 更新官方 QModem 与自有 Generic 软件源
         working-directory: immortalwrt
         run: |
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           ./scripts/feeds install -a -f -p qmodem
           ./scripts/feeds install -a -f -p qmodem_generic
-          # 两个源直接引用上游 main；检查新版 Next 和 Generic 的实际依赖。
+          # 官方 QModem 与 PEIT98 Generic 均拉取 main；检查 Next 和 Generic 的实际依赖。
           test -f feeds/qmodem/application/qmodem/Makefile
           test -f feeds/qmodem/luci/luci-app-qmodem-next/Makefile
           test -f feeds/qmodem/application/qmodem_smsd/Makefile
@@ -442,7 +442,7 @@ jobs:
             echo "Reference config: $(git -C photonicat-reference rev-parse HEAD)"
             echo "QModem feed: FUjr/QModem main"
             echo "QModem feed: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
-            echo "QModem Generic feed: LianXia233/luci-app-qmodem-generic main"
+            echo "QModem Generic feed: PEIT98/luci-app-qmodem-generic main"
             echo "QModem Generic commit: $(git -C immortalwrt/feeds/qmodem_generic rev-parse HEAD)"
             echo "Online upgrade source: packages/luci-app-online-upgrade"
             echo "Online upgrade commit: $GITHUB_SHA"

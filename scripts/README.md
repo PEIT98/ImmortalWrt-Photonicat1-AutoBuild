@@ -46,7 +46,7 @@
 
 **QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“移动网络”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留。
 
-**QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [luci-app-qmodem-generic](https://github.com/LianXia233/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装；不将插件源码复制到项目内。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
+**QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [PEIT98/luci-app-qmodem-generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装。Generic 原样复刻自 LianXia233，后续 WebUI 修复直接在自有仓库维护。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
 
 **在线升级：** `build/prepare.sh` 将项目内完整 [luci-app-online-upgrade](../packages/luci-app-online-upgrade/) 复制到 `package/luci-app-online-upgrade`，光影猫适配直接在插件源码中维护。Actions 核对整套源码复制一致，并将同一个 Release 标签写进固件身份和发布任务；检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。固件及 Release 的来源信息记录本项目提交号。
 

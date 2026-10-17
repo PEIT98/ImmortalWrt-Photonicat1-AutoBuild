@@ -4,7 +4,7 @@
 
 - 固件源码：[ImmortalWrt](https://github.com/immortalwrt/immortalwrt) `openwrt-25.12`
 - 设备参考：[光影猫一代](https://github.com/a757814283/ImmortalWrt_Photonicat1)
-- 5G 模组管理：[官方 FUjr/QModem](https://github.com/FUjr/QModem) `main`（Next + 短信后台），另加 [QModem Generic](https://github.com/LianXia233/luci-app-qmodem-generic) `main`
+- 5G 模组管理：[官方 FUjr/QModem](https://github.com/FUjr/QModem) `main`（Next + 短信后台），另加 [PEIT98/QModem Generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main`（复刻自 [LianXia233](https://github.com/LianXia233/luci-app-qmodem-generic)）
 
 ## 主要功能
 
@@ -52,7 +52,7 @@
 
 仅在 GitHub Actions 手动启动编译；普通提交不会触发编译。
 
-QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称。参考 [H5000M 编译仓库](https://github.com/LianXia233/H5000M-CI-Qmodem)，每次构建通过 Feeds 直接拉取官方 QModem `main` 和 Generic `main`，保持两边插件源码原样。
+QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称。每次构建通过 Feeds 拉取官方 QModem `main` 和 [PEIT98/Generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main`。Generic 已原样复刻，后续 WebUI 修复在自有仓库维护。
 
 QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`qmodem-smsd` 和 `sms-forwarder-next` 是新版 Next 的短信依赖。
 
@@ -111,7 +111,7 @@ mwan3 status
 - **2026-10-12**：Aurora 主题、ttyd 网页终端。
 - **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、Bandix Plus、DiskMan、定时重启、UPnP。
 - **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
-- **2026-10-17**：QModem Generic（直接引用上游 `main`，与官方 QModem Next 共存）。
+- **2026-10-17**：QModem Generic（引用 PEIT98 自有复刻仓库 `main`，与官方 QModem Next 共存）。
 - **2026-10-17**：在线升级（完整本地插件，适配本仓库光影猫固件）。
 - **2026-10-17**：文件管理、Aurora 设置、历史统计、Travelmate 无线中继、SQM/CAKE 与 cake-autorate。
 

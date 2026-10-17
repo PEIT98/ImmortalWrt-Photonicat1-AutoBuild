@@ -10,19 +10,19 @@ test -f "$SRC/Makefile"
 cp -f "$REF/.config" "$SRC/.config"
 cp -f "$REF/feeds.conf.default" "$SRC/feeds.conf.default"
 
-# 与 H5000M 参考仓库一致：官方 QModem main + Generic main，构建时直接拉取。
-# 保留官方 Next 界面，不复制旧 Generic 本地源码，不修改两边的插件源码。
+# 官方 QModem main + PEIT98 自有 Generic main，构建时直接拉取。
+# 保留官方 Next 界面；Generic 后续修复在自有复刻仓库维护。
 if grep -Eq '^src-git qmodem ' "$SRC/feeds.conf.default"; then
   sed -i -E 's#^src-git qmodem .*#src-git qmodem https://github.com/FUjr/QModem.git;main#' "$SRC/feeds.conf.default"
 else
   printf '\nsrc-git qmodem https://github.com/FUjr/QModem.git;main\n' >> "$SRC/feeds.conf.default"
 fi
 
-# Generic 仓库含嵌套软件包，交给 Feeds 递归扫描并安装，避免漏包或同名重复注册。
+# Generic 从 PEIT98 复刻仓库拉取，交给 Feeds 递归扫描嵌套软件包。
 if grep -Eq '^src-git qmodem_generic ' "$SRC/feeds.conf.default"; then
-  sed -i -E 's#^src-git qmodem_generic .*#src-git qmodem_generic https://github.com/LianXia233/luci-app-qmodem-generic.git;main#' "$SRC/feeds.conf.default"
+  sed -i -E 's#^src-git qmodem_generic .*#src-git qmodem_generic https://github.com/PEIT98/luci-app-qmodem-generic.git;main#' "$SRC/feeds.conf.default"
 else
-  printf '\nsrc-git qmodem_generic https://github.com/LianXia233/luci-app-qmodem-generic.git;main\n' >> "$SRC/feeds.conf.default"
+  printf '\nsrc-git qmodem_generic https://github.com/PEIT98/luci-app-qmodem-generic.git;main\n' >> "$SRC/feeds.conf.default"
 fi
 
 # 在线升级完整源码已放入项目插件目录，构建时直接复制，适配内容随项目维护。
