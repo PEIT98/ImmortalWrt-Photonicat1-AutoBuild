@@ -96,7 +96,9 @@ mwan3 status
 
 1. 打开 [GitHub Actions](https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/actions/workflows/build.yml)。
 2. 选择 **Run workflow**，分支选 `main`，点击运行。
-3. 编译完成后，从 [Releases](https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases) 下载固件；`publish=true` 时自动发布。
+3. 编译完成后，从 [Releases](https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases) 下载固件；`publish=true` 时自动上传为 **预发布（Pre-release）**。
+
+测试确认正常后，在对应 Release 的编辑页面取消“预发布”标记，保存为正式版本。在线升级只识别正式版本，预发布固件可手动下载测试。
 
 **仅手动编译**，普通代码提交不会启动 Actions。构建使用源码下载缓存和 CCache；Release 附带 SHA256 校验、软件包清单和源码版本信息。sysupgrade 镜像文件名包含北京时间 `YYYYMMDDHH`。
 

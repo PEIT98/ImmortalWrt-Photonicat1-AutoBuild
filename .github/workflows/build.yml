@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: '编译成功后自动发布 Release'
+        description: '编译成功后上传为预发布（测试版）'
         type: boolean
         default: true
         required: true
@@ -499,11 +499,14 @@ jobs:
           [[ "$PHOTONICAT_RELEASE_TAG" =~ ^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$ ]]
           echo "name=$PHOTONICAT_RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Publish GitHub Release
+      - name: Publish GitHub Pre-release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.name }}
           name: 光影猫一代 ImmortalWrt + QModem ${{ steps.tag.outputs.name }}
+          prerelease: true
+          draft: false
+          make_latest: "false"
           body_path: release/release-notes.md
           files: release/*
           fail_on_unmatched_files: true

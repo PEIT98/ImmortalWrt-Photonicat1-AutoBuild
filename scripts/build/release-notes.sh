@@ -6,6 +6,8 @@ test -f "$dir/build-sources.txt"
 {
   echo '# 光影猫一代 ImmortalWrt + QModem 自动编译'
   echo
+  echo '> 发布流程：构建后先预发布，测试确认后再手动转为正式版本。'
+  echo
   echo '> 尚需光影猫一代真机验证，刷机前备份并准备恢复方案。'
   echo
   echo '- ImmortalWrt：openwrt-25.12（编译时最新）'
