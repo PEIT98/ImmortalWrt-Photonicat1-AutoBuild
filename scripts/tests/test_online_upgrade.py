@@ -13,7 +13,7 @@ import tempfile
 import time
 import unittest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "online-upgrade/online-upgrade.sh"
+SCRIPT = Path(__file__).resolve().parents[2] / "packages/luci-app-online-upgrade/root/usr/bin/online-upgrade.sh"
 REPO = "PEIT98/ImmortalWrt-Photonicat1-AutoBuild"
 TAG = "photonicat1-20261017-080000-35"
 OLD_TAG = "photonicat1-20261016-222022-34"

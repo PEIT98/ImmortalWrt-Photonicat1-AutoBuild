@@ -25,14 +25,17 @@ else
   printf '\nsrc-git qmodem_generic https://github.com/LianXia233/luci-app-qmodem-generic.git;main\n' >> "$SRC/feeds.conf.default"
 fi
 
-# 在线升级上游为单包仓库，顶层即 Makefile；与参考仓库一样直接作为本地包引用。
-# 不将顶层 Makefile 仓库直接注册为 Feed，避免 feeds 扫描器丢包。
+# 在线升级完整源码已放入项目插件目录，构建时直接复制，适配内容随项目维护。
+ONLINE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-online-upgrade"
 ONLINE_DST="$SRC/package/luci-app-online-upgrade"
-if [ ! -e "$ONLINE_DST" ]; then
-  git clone --depth=1 --branch main https://github.com/gooyjq/luci-app-online-upgrade.git "$ONLINE_DST"
-fi
-test -f "$ONLINE_DST/Makefile"
-python3 "$(dirname "$0")/prepare-online-upgrade.py" "$ONLINE_DST"
+test -f "$ONLINE_SRC/Makefile" || { echo "::error::缺少项目内置 luci-app-online-upgrade" >&2; exit 1; }
+test ! -e "$ONLINE_DST" || { echo "::error::在线升级目标路径已存在，禁止覆盖" >&2; exit 1; }
+mkdir -p "$ONLINE_DST"
+cp -a "$ONLINE_SRC/." "$ONLINE_DST/"
+test -x "$ONLINE_DST/root/usr/bin/online-upgrade.sh"
+test -f "$ONLINE_DST/root/www/luci-static/resources/view/system/online-upgrade.js"
+test -f "$ONLINE_DST/root/usr/share/rpcd/acl.d/luci-app-online-upgrade.json"
+echo '在线升级：完整本地插件已复制，使用项目内置的光影猫适配源码。'
 
 
 # OpenClash 官方维护的 Mihomo/Clash LuCI 软件源。

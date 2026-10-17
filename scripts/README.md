@@ -10,7 +10,6 @@
 | [select-packages.py](build/select-packages.py) | 在安装 Feeds 后读取独立配置，选择插件和驱动 |
 | [verify-config.sh](build/verify-config.sh) | 检查目标设备、插件、驱动和依赖；缺少必要配置则停止 |
 | [release-notes.sh](build/release-notes.sh) | 生成 GitHub Release 中文说明和编译来源信息 |
-| [prepare-online-upgrade.py](build/prepare-online-upgrade.py) | 将上游在线升级包适配到光影猫，修正发布匹配、进度和备份恢复入口 |
 
 ## patches：兼容补丁
 
@@ -31,6 +30,7 @@
 - [电池状态 luci-mod-battstatus](../packages/luci-mod-battstatus/README.md)：整套插件源码内置，含 Aurora 电池显示修改、RPC 及翻译。
 - [电池与电源管理](../packages/luci-app-photonicat-power/README.md)：电量卡片、顶部显示开关、低电量提醒和 UPS 倒计时；显示设置保存到独立 UCI 配置。
 - [CPU 调频管理 luci-app-cpufreq](../packages/luci-app-cpufreq/README.md)：整个插件直接存放在项目内；可修改网页、菜单、权限及简体中文翻译。后台仍采用官方 `cpufreq`，无需另外的修改脚本。
+- [在线升级 luci-app-online-upgrade](../packages/luci-app-online-upgrade/README.md)：整套网页、后端、配置、菜单、权限及上游翻译存放在插件目录内，已包含光影猫固件识别和升级校验。
 - 编译时 `build/prepare.sh` 复制本地源码；随后移除 Feeds 中同名符号链接以避免重复注册。
 
 ## 配置来源与构建顺序
@@ -48,4 +48,4 @@
 
 **QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [luci-app-qmodem-generic](https://github.com/LianXia233/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装；不将插件源码复制到项目内。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
 
-**在线升级：** 每次构建将 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade) `main` 拉取到 `package/luci-app-online-upgrade`，使用 [online-upgrade](online-upgrade/) 中的光影猫后端和默认配置。Actions 将同一个 Release 标签写进固件身份和发布任务，检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。上游布局变化会明确报错，避免静默漏改。
+**在线升级：** `build/prepare.sh` 将项目内完整 [luci-app-online-upgrade](../packages/luci-app-online-upgrade/) 复制到 `package/luci-app-online-upgrade`，光影猫适配直接在插件源码中维护。Actions 核对整套源码复制一致，并将同一个 Release 标签写进固件身份和发布任务；检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。固件及 Release 的来源信息记录本项目提交号。

@@ -75,7 +75,7 @@ mwan3 status
 
 ## 在线升级
 
-入口：**系统 → 在线升级**。直接引用 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade) `main`，按光影猫一代适配发布识别与升级流程。
+入口：**系统 → 在线升级**。完整 [luci-app-online-upgrade](packages/luci-app-online-upgrade/) 插件存放在项目内，包含网页、升级后端、默认配置、菜单、权限及上游翻译。基于 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade) 适配光影猫一代，构建时直接复制本地插件，后续修改在插件目录内完成。
 
 - 默认从本仓库查找最新正式固件，只选择光影猫一代 squashfs 升级镜像。
 - 与参考仓库使用相同下载加速地址，失败或文件校验不通过时回退 GitHub 原地址；加速地址留空即可直连。
@@ -102,6 +102,6 @@ mwan3 status
 - **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、Bandix Plus、DiskMan、定时重启、UPnP。
 - **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
 - **2026-10-17**：QModem Generic（直接引用上游 `main`，与官方 QModem Next 共存）。
-- **2026-10-17**：在线升级（引用上游 `main`，适配本仓库光影猫固件）。
+- **2026-10-17**：在线升级（完整本地插件，适配本仓库光影猫固件）。
 
 其余插件和驱动以 [独立选包配置](photonicat1.config) 为准。
