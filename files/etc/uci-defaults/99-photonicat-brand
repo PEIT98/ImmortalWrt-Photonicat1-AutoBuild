@@ -9,4 +9,9 @@ case "$hostname" in
 		uci commit system
 		;;
 esac
+
+# 使用系统自带 passwd 生成密码哈希；保留配置升级时不覆盖已设置的 root 密码。
+if awk -F: '$1 == "root" && $2 == "" { empty = 1 } END { exit !empty }' /etc/shadow; then
+	printf '%s\n%s\n' 'photonicat' 'photonicat' | passwd root >/dev/null
+fi
 exit 0

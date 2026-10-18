@@ -25,11 +25,12 @@
 | --- | --- |
 | 主机名及界面品牌 | `Photonicat-Wrt` |
 | 后台地址 | `http://172.16.0.1`（LAN：`172.16.0.1/24`） |
+| 后台／SSH 账号及密码 | `root`／`photonicat` |
 | 2.4 GHz Wi-Fi | `Photonicat-2.4G` |
 | 5 GHz Wi-Fi | `Photonicat-5G` |
 | Wi-Fi 密码／加密 | `photonicat`／WPA2-PSK |
 
-Wi-Fi 按检测到的实际频段生成，不固定网卡编号。保留配置升级时，已有 LAN 地址、无线设置和自定义主机名继续保留；原默认主机名 `ImmortalWrt`／`OpenWrt` 会迁移为 `Photonicat-Wrt`。固件信息及页脚使用新品牌，登录页、左侧名称和浏览器标题跟随主机名；软件源和设备兼容标识保持原配置。
+Wi-Fi 按检测到的实际频段生成，不固定网卡编号。保留配置升级时，已有 LAN 地址、无线设置、root 密码和自定义主机名继续保留；原默认主机名 `ImmortalWrt`／`OpenWrt` 会迁移为 `Photonicat-Wrt`。固件信息及页脚使用新品牌，登录页、左侧名称和浏览器标题跟随主机名；软件源和设备兼容标识保持原配置。root 默认密码只在账号尚未设置密码时初始化，由系统 `passwd` 生成并保存哈希。
 
 ## CPU 调频插件
 

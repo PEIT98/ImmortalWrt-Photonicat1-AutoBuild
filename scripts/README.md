@@ -44,7 +44,7 @@
 
 **编译触发：** 仅通过 Actions 手动 `Run workflow` 编译。保留所有插件、系统配置、源码缓存及 CCache。
 
-**品牌和网络默认值：** `photonicat1.config` 使用上游版本选项设置 `Photonicat-Wrt`，Aurora 无需改源码；[主机名首启配置](../files/etc/uci-defaults/99-photonicat-brand) 只迁移原默认名称。LAN 默认为 `172.16.0.1/24`，新生成的 2.4G／5G AP 使用 `Photonicat-2.4G`／`Photonicat-5G`，密码 `photonicat`。保留配置升级时不覆盖已有网络、无线和自定义主机名。
+**品牌和网络默认值：** `photonicat1.config` 使用上游版本选项设置 `Photonicat-Wrt`，Aurora 无需改源码；[首启配置](../files/etc/uci-defaults/99-photonicat-brand) 迁移原默认主机名，并仅在 root 密码为空时使用系统 `passwd` 初始化为 `photonicat`。LAN 默认为 `172.16.0.1/24`，新生成的 2.4G／5G AP 使用 `Photonicat-2.4G`／`Photonicat-5G`，密码 `photonicat`。保留配置升级时不覆盖已有网络、无线、root 密码和自定义主机名。
 
 **QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“移动网络”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留。
 
