@@ -1,0 +1,22 @@
+#!/bin/sh
+# Refresh the core after sysupgrade restores /etc/openclash from a prior image.
+core=/etc/openclash/core/clash_meta
+bundled=/usr/libexec/photonicat/openclash/clash_meta
+
+[ -x "$bundled" ] && [ -f /etc/config/openclash ] || exit 1
+
+# The bundled stable Meta core must not replace a user-selected Smart/Oix/dev core.
+[ "$(uci -q get openclash.config.smart_enable)" = 1 ] && exit 0
+[ -n "$(uci -q get openclash.config.oix_token)" ] && exit 0
+branch="$(uci -q get openclash.config.release_branch)"
+[ -n "$branch" ] && [ "$branch" != master ] && exit 0
+[ "$(uci -q get openclash.config.small_flash_memory)" = 1 ] && exit 0
+
+mkdir -p /etc/openclash/core || exit 1
+tmp="${core}.photonicat-new"
+rm -f "$tmp" || exit 1
+ln -s "$bundled" "$tmp" || exit 1
+mv -f "$tmp" "$core" || { rm -f "$tmp"; exit 1; }
+[ -x "$core" ] || exit 1
+logger -t photonicat-openclash 'bundled Meta core ready'
+exit 0

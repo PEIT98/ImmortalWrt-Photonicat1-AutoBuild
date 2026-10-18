@@ -297,6 +297,13 @@ jobs:
           BUILD_COMMIT='$GITHUB_SHA'
           EOF
 
+      - name: 获取并验证最新 OpenClash Meta 内核
+        shell: bash
+        run: |
+          bash scripts/build/bundle-openclash-core.sh immortalwrt/files
+          sh -n immortalwrt/files/etc/uci-defaults/zz-photonicat-openclash-core
+          test -x immortalwrt/files/usr/libexec/photonicat/openclash/clash_meta
+
       - name: Write build provenance inside firmware
         shell: bash
         run: |
@@ -309,6 +316,7 @@ jobs:
             echo "ImmortalWrt: $(git -C immortalwrt rev-parse HEAD)"
             echo "QModem: $(git -C immortalwrt/feeds/qmodem rev-parse HEAD)"
             echo "QModem Generic: $(git -C immortalwrt/feeds/qmodem_generic rev-parse HEAD)"
+            cat immortalwrt/files/usr/libexec/photonicat/openclash/build-info
             echo "Online upgrade: packages/luci-app-online-upgrade (builder $GITHUB_SHA)"
             echo "Release tag: ${{ steps.firmware_identity.outputs.release_tag }}"
             echo "Aurora theme: $(git -C immortalwrt/package/luci-theme-aurora rev-parse HEAD)"
