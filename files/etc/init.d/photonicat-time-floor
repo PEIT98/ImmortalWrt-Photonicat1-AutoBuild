@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# Keep an RTC-less system's clock at least as recent as this firmware build.
+START=01
+
+boot() {
+	local floor now
+	floor=$(cat /etc/photonicat1-time-floor 2>/dev/null) || return 0
+	case "$floor" in
+		''|*[!0-9]*) return 0 ;;
+	esac
+	now=$(date -u +%s) || return 0
+	[ "$now" -lt "$floor" ] || return 0
+	date -u -s "@$floor" >/dev/null || return 1
+	logger -t photonicat-time-floor "initialized system clock to firmware floor $floor (UTC)"
+}
+
+start() {
+	boot
+}

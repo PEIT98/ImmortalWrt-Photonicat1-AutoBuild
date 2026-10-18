@@ -133,6 +133,15 @@ test -f "$BRAND_DEFAULT"
 chmod 755 "$BRAND_DEFAULT"
 sh -n "$BRAND_DEFAULT"
 
+# sysfixtime (START=00) 之后、网络与 QModem 服务之前校正过旧的系统时钟。
+TIME_INIT="$SRC/files/etc/init.d/photonicat-time-floor"
+TIME_LINK="$SRC/files/etc/rc.d/S01photonicat-time-floor"
+test -f "$TIME_INIT"
+test -L "$TIME_LINK"
+test "$(readlink "$TIME_LINK")" = ../init.d/photonicat-time-floor
+chmod 755 "$TIME_INIT"
+sh -n "$TIME_INIT"
+
 # 独立 LuCI 菜单覆盖：只改显示名称，不修改每次拉取的 QModem Feed。
 MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
 python3 -m json.tool "$MODEM_MENU" >/dev/null

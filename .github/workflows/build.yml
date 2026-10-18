@@ -363,6 +363,12 @@ jobs:
         working-directory: immortalwrt
         shell: bash
         run: |
+          set -euo pipefail
+          # 镜像打包前写入时钟下限：编译开始时刻（UTC）加两小时。
+          # 开机脚本仅在设备时钟早于该值时设置，不覆盖已校准的时间。
+          time_floor=$(($(date -u +%s) + 7200))
+          printf '%s\n' "$time_floor" > files/etc/photonicat1-time-floor
+          echo "Firmware initial clock floor (UTC): $(date -u -d "@$time_floor" '+%Y-%m-%d %H:%M:%S')"
           echo '===== 开始编译前的磁盘与内存 ====='
           df -h .
           free -h
