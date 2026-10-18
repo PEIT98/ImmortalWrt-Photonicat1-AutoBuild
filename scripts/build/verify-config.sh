@@ -8,6 +8,8 @@ need=(
   CONFIG_PACKAGE_kmod-fs-ext4
   CONFIG_DEVEL
   CONFIG_CCACHE
+  CONFIG_IMAGEOPT
+  CONFIG_VERSIONOPT
   CONFIG_PACKAGE_qmodem
   CONFIG_PACKAGE_luci-app-qmodem-next
   CONFIG_PACKAGE_luci-app-qmodem-generic
@@ -111,6 +113,13 @@ need=(
   CONFIG_PACKAGE_kmod-usb-serial-qualcomm
 )
 failed=0
+# 品牌选项必须经过 defconfig 保留；不修改版本号、下载软件源或设备识别。
+for setting in 'CONFIG_VERSION_DIST="Photonicat-Wrt"' 'CONFIG_VERSION_MANUFACTURER="Photonicat"' 'CONFIG_VERSION_HOME_URL="https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild"'; do
+  if ! grep -Fxq "$setting" "$CFG"; then
+    echo "::error::固件品牌配置未生效：$setting" >&2
+    failed=1
+  fi
+done
 # 只关闭 ext4 固件镜像，不移除 ext4 磁盘驱动。
 if grep -Fxq '# CONFIG_TARGET_ROOTFS_EXT4FS is not set' "$CFG"; then
   echo '通过：ext4 固件镜像已关闭，仅保留 squashfs 镜像。'

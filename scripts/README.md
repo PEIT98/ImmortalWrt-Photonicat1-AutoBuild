@@ -17,7 +17,7 @@
 | --- | --- |
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
-| [wifi-band-order.sh](patches/wifi-band-order.sh) | 使用上游 Wi-Fi 脚本并调整频段显示顺序 |
+| [wifi-band-order.sh](patches/wifi-band-order.sh) | 使用本次上游检测脚本，调整频段顺序并生成 Photonicat 分频 SSID、WPA2 密码 |
 
 ## 电池指示插件（直接集成）
 
@@ -43,6 +43,8 @@
 **配置文件区别：** `photonicat1.config` 只保存需要覆盖的配置；完整 `immortalwrt/.config` 在编译期间生成，并上传至 Actions 的 `photonicat1-build-config` Artifact。无需将旧版完整配置拷入仓库。
 
 **编译触发：** 仅通过 Actions 手动 `Run workflow` 编译。保留所有插件、系统配置、源码缓存及 CCache。
+
+**品牌和网络默认值：** `photonicat1.config` 使用上游版本选项设置 `Photonicat-Wrt`，Aurora 无需改源码；[主机名首启配置](../files/etc/uci-defaults/99-photonicat-brand) 只迁移原默认名称。LAN 默认为 `172.16.0.1/24`，新生成的 2.4G／5G AP 使用 `Photonicat-2.4G`／`Photonicat-5G`，密码 `photonicat`。保留配置升级时不覆盖已有网络、无线和自定义主机名。
 
 **QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“移动网络”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留。
 

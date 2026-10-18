@@ -127,6 +127,12 @@ echo '光影猫一代电池/电源 LuCI 已安装，后端使用官方 PMU-only 
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
 
+# Aurora 使用系统主机名显示品牌；默认配置在首启生成后应用。
+BRAND_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-brand"
+test -f "$BRAND_DEFAULT"
+chmod 755 "$BRAND_DEFAULT"
+sh -n "$BRAND_DEFAULT"
+
 # 独立 LuCI 菜单覆盖：只改显示名称，不修改每次拉取的 QModem Feed。
 MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
 python3 -m json.tool "$MODEM_MENU" >/dev/null
@@ -239,7 +245,7 @@ cmp -s "$TD_PATCH_SRC" "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁复制
 grep -Fq 'TDTECH_VENDOR_ID' "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁内容不完整" >&2; exit 1; }
 echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.12。'
 
-# 参考西瓜皮的 Wi-Fi band_order 兼容调整：保留固件上游源码，最小替换频段顺序。
+# 使用本次上游检测源码设置频段顺序、Photonicat SSID 和 WPA2 密码。
 bash "$(dirname "$0")/../patches/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫配置、官方 QModem main、Generic main 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'

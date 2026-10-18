@@ -109,7 +109,8 @@ curl --fail --silent --show-error --location --proto '=https' --proto-redir '=ht
     -H 'User-Agent: Photonicat1-Online-Upgrade' -o "$WORK/releases.json" "$API" || fail '无法获取 GitHub 发布信息，请稍后重试'
 
 # 只允许 rockchip/armv8 光影猫 squashfs sysupgrade 压缩镜像，绝不回退到 x86 或其它机型。
-FW_PATTERN='^immortalwrt(-[0-9][0-9A-Za-z._-]*)?-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_[0-9]{10}\.img\.gz$'
+# 同时兼容历史 ImmortalWrt 文件名和新品牌文件名，保留机型与文件类型限制。
+FW_PATTERN='^(photonicat-wrt|immortalwrt)(-[0-9][0-9A-Za-z._-]*)?-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_[0-9]{10}\.img\.gz$'
 jq -e --arg tags "$TAG_PATTERN" --arg fw "$FW_PATTERN" '
     (if type == "array" then . else [.] end)
     | map(select(.draft == false and .prerelease == false)

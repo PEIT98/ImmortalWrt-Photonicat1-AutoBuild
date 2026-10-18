@@ -4,13 +4,14 @@ set -euo pipefail
 dir="${1:-release}"
 test -f "$dir/build-sources.txt"
 {
-  echo '# 光影猫一代 ImmortalWrt + QModem 自动编译'
+  echo '# 光影猫一代 Photonicat-Wrt + QModem 自动编译'
   echo
   echo '> 发布流程：构建后先预发布，测试确认后再手动转为正式版本。'
   echo
   echo '> 尚需光影猫一代真机验证，刷机前备份并准备恢复方案。'
   echo
   echo '- ImmortalWrt：openwrt-25.12（编译时最新）'
+  echo '- 品牌：Photonicat-Wrt；默认后台 http://172.16.0.1；Wi-Fi 为 Photonicat-2.4G / Photonicat-5G，密码 photonicat（保留配置升级不覆盖已有网络设置）'
   echo '- QModem：官方 FUjr/QModem main（Next 界面、短信后台）+ PEIT98/luci-app-qmodem-generic main（自有复刻），mwan3、OpenClash、CPU 调频、电池状态'
   echo '- 网页终端、Aurora 官方主题、多品牌 PCIe Wi-Fi 驱动、iStore、Docker/Compose 与 Dockerman' 
   echo '- 系统 → 在线升级：默认检查本仓库光影猫固件，下载后校验文件和机型，仅手动确认后升级'

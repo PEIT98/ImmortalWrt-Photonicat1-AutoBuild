@@ -1,0 +1,12 @@
+#!/bin/sh
+# Aurora 的登录页、左侧名称和浏览器标题均使用系统主机名。
+# 升级时只迁移原发行版默认名称，保留用户自定义主机名。
+set -eu
+hostname="$(uci -q get 'system.@system[0].hostname' || true)"
+case "$hostname" in
+	''|OpenWrt|ImmortalWrt)
+		uci set 'system.@system[0].hostname=Photonicat-Wrt'
+		uci commit system
+		;;
+esac
+exit 0

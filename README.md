@@ -1,4 +1,4 @@
-# 光影猫一代 ImmortalWrt 自动编译
+# 光影猫一代 Photonicat-Wrt 自动编译
 
 基于 **ImmortalWrt 25.12**，适用于 **Ariaboard Photonicat 一代（RK3568）**。
 
@@ -20,6 +20,16 @@
 无线驱动包括 Realtek RTL8922AE / RTL8852BE / RTL8852CE、MediaTek MT7921 / MT7925 / MT7916、Qualcomm ath10k / ath11k / ath12k。板载 QCA9377 系列使用 SDIO 驱动，是否可用取决于板子实际硬件和固件支持。内置 [TD-TECH 3466 USB 串口补丁](999-add-TD-TECH-option-id.patch)。
 
 **默认设置：** Bandix Plus 流量功能不开启；Docker 存储检测仅显示信息，不执行挂载、迁移或格式化。固件仅生成 **squashfs sysupgrade** 镜像，不生成 ext4 镜像；`kmod-fs-ext4` 仍保留，支持 ext4 硬盘或 U 盘。
+
+| 首次刷入／恢复出厂设置 | 默认值 |
+| --- | --- |
+| 主机名及界面品牌 | `Photonicat-Wrt` |
+| 后台地址 | `http://172.16.0.1`（LAN：`172.16.0.1/24`） |
+| 2.4 GHz Wi-Fi | `Photonicat-2.4G` |
+| 5 GHz Wi-Fi | `Photonicat-5G` |
+| Wi-Fi 密码／加密 | `photonicat`／WPA2-PSK |
+
+Wi-Fi 按检测到的实际频段生成，不固定网卡编号。保留配置升级时，已有 LAN 地址、无线设置和自定义主机名继续保留；原默认主机名 `ImmortalWrt`／`OpenWrt` 会迁移为 `Photonicat-Wrt`。固件信息及页脚使用新品牌，登录页、左侧名称和浏览器标题跟随主机名；软件源和设备兼容标识保持原配置。
 
 ## CPU 调频插件
 

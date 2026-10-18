@@ -283,7 +283,7 @@ return view.extend({
 				E('div', {style: 'font-size:14px;margin-bottom:12px;'}, [
 					E('div', {style: 'padding:4px 0;'}, [
 						E('span', {style: 'color:#666;display:inline-block;width:80px;'}, '当前版本'),
-						E('span', {style: 'font-weight:600;'}, 'ImmortalWrt '),
+						E('span', {style: 'font-weight:600;'}, 'Photonicat-Wrt '),
 						E('span', {id: 'cur-ver', style: 'font-weight:600;'}, '加载中...'),
 						E('span', {id: 'cur-rev', style: 'color:#888;margin-left:4px;font-size:12px;'}, '')
 					]),

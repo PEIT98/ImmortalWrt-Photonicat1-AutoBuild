@@ -503,7 +503,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.name }}
-          name: 光影猫一代 ImmortalWrt + QModem ${{ steps.tag.outputs.name }}
+          name: 光影猫一代 Photonicat-Wrt + QModem ${{ steps.tag.outputs.name }}
           prerelease: true
           draft: false
           make_latest: "false"

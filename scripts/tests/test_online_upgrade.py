@@ -120,6 +120,18 @@ class OnlineUpgradeTests(unittest.TestCase):
         self.assertNotIn("-F", sum(calls, []))
         self.assertTrue(list((self.root / "root").glob("pre-upgrade-backup-*.tar.gz")))
 
+    def test_photonicat_brand_and_versioned_filenames_are_supported(self):
+        for prefix in ("photonicat-wrt", "photonicat-wrt-25.12-snapshot", "immortalwrt-25.12-snapshot"):
+            with self.subTest(prefix=prefix):
+                name = FILENAME.replace("immortalwrt", prefix, 1)
+                asset = self.state["releases"][0]["assets"][0]
+                asset["name"] = name
+                asset["browser_download_url"] = f"https://github.com/{REPO}/releases/download/{TAG}/{name}"
+                self.state["checksum"] = self.state["checksum"].split()[0] + "  ./" + name + "\n"
+                result = self.run_update("check")
+                self.assertIn(name, result.stdout)
+                self.assertEqual(self.commands(), [])
+
     def test_wrong_board_never_downloads(self):
         (self.root / "tmp/sysinfo/board_name").write_text("ariaboard,photonicat2\n")
         self.run_update(success=False)
