@@ -32,6 +32,13 @@ const document = {
 	head: node('head'),
 	querySelector() { return isAurora ? {} : null; },
 	querySelectorAll() { return [nativeIndicator]; },
+	createElementNS(namespaceURI, tag) {
+		return {
+			tag, namespaceURI, attrs: {}, children: [],
+			setAttribute(key, value) { this.attrs[key] = value; },
+			appendChild(child) { this.children.push(child); }
+		};
+	},
 	getElementById(id) { return nodes[id]; },
 	addEventListener() {}
 };
@@ -63,6 +70,13 @@ async function run() {
 	assert.deepEqual(calls, [5, 15]);
 	let strip = nodes['photonicat-status'];
 	assert.equal(strip.children.length, 7, 'dual PHY appears as two separate Wi-Fi icons');
+	for (const status of strip.children) {
+		const picture = status.children[0];
+		assert.equal(picture.namespaceURI, 'http://www.w3.org/2000/svg', 'icon is a real SVG element');
+		assert.ok(picture.children.length > 0, 'icon has drawable SVG shapes');
+		assert.ok(picture.children.every(child => child.namespaceURI === picture.namespaceURI),
+			'all SVG paths use the SVG namespace');
+	}
 	assert.match(strip.children[0].attrs.title, /RM520N · 5G · -91 dBm/);
 	assert.equal(strip.children[1].attrs['data-state'], 'on');
 	assert.equal(strip.children[2].attrs['data-state'], 'off');
@@ -70,20 +84,23 @@ async function run() {
 	assert.match(strip.children[4].attrs.title, /phy1.*未开启/);
 	assert.match(strip.children[5].attrs.title, /车载/);
 	assert.match(strip.children[6].attrs.title, /81%/);
+	assert.equal(strip.children[6].children.length, 1, 'battery has no separate percentage label');
+	assert.equal(strip.children[6].children[0].children.find(child => child.tag === 'text').textContent,
+		'81', 'percentage is drawn inside the battery SVG');
 
 	header = { cellular: { name: 'RM520N', generation: '', bars: 0 },
 		ethernet: header.ethernet, wifi: [], mode: 'timer' };
 	await app.updateHeader();
 	strip = nodes['photonicat-status'];
-	assert.equal(strip.children.length, 6, 'no loaded radio uses one explanatory placeholder');
+	assert.equal(strip.children.length, 5, 'no Wi-Fi icons without a loaded PHY');
 	assert.match(strip.children[0].attrs.title, /无服务/);
 	assert.equal(strip.children[0].attrs['data-state'], 'off');
-	assert.match(strip.children[3].attrs.title, /未检测到已加载/);
-	assert.match(strip.children[4].attrs.title, /定时/);
+	assert.match(strip.children[3].attrs.title, /定时/);
+	assert.equal(strip.children[3].children[0].namespaceURI, 'http://www.w3.org/2000/svg');
 
 	battery = { Photonicat: { ...battery.Photonicat, indicator_enabled: false } };
 	await app.updateIndicator();
-	assert.equal(strip.children.length, 5, 'existing battery display switch is respected');
+	assert.equal(strip.children.length, 4, 'existing battery display switch is respected');
 	isAurora = false;
 	battery = { Photonicat: { ...battery.Photonicat, indicator_enabled: true, percentage: 19 } };
 	await app.updateIndicator();

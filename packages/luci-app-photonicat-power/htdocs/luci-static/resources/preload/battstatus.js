@@ -22,41 +22,56 @@ function checkLowBattery(dev, info) {
 	}
 }
 
-function svg(shapes) {
-	return E('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-		'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-		'aria-hidden': 'true' }, shapes);
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function shape(tag, attrs, content) {
+	const element = document.createElementNS(SVG_NS, tag);
+	for (const key in attrs)
+		element.setAttribute(key, String(attrs[key]));
+	if (content != null)
+		element.textContent = String(content);
+	return element;
+}
+
+function svg(shapes, viewBox) {
+	const element = shape('svg', { viewBox: viewBox || '0 0 24 24', fill: 'none',
+		stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round',
+		'stroke-linejoin': 'round', 'aria-hidden': 'true' });
+	for (const child of shapes) element.appendChild(child);
+	return element;
 }
 
 function icon(kind, level) {
 	switch (kind) {
 	case 'signal':
-		return E('svg', { viewBox: '0 0 24 24', fill: 'currentColor', 'aria-hidden': 'true' },
-			[ [2, 16, 4], [7, 12, 8], [12, 8, 12], [17, 4, 16] ].map(function(bar, index) {
-				return E('rect', { x: bar[0], y: bar[1], width: 3, height: bar[2], rx: 1,
-					opacity: index < level ? 1 : .22 });
-			}));
+		return svg([ [2, 16, 4], [7, 12, 8], [12, 8, 12], [17, 4, 16] ].map(function(bar, index) {
+			return shape('rect', { x: bar[0], y: bar[1], width: 3, height: bar[2], rx: 1,
+				fill: 'currentColor', stroke: 'none', opacity: index < level ? 1 : .22 });
+		}));
 	case 'ethernet':
-		return svg([ E('rect', { x: 2, y: 4, width: 20, height: 16, rx: 2 }),
-			E('path', { d: 'M7 4v6h10V4M7 15h10M9 20v-5m3 5v-5m3 5v-5' }) ]);
+		return svg([ shape('rect', { x: 2, y: 4, width: 20, height: 16, rx: 2 }),
+			shape('path', { d: 'M7 4v6h10V4M7 15h10M9 20v-5m3 5v-5m3 5v-5' }) ]);
 	case 'wifi':
-		return svg([ E('path', { d: 'M2 9a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0' }),
-			E('circle', { cx: 12, cy: 19, r: 1, fill: 'currentColor', stroke: 'none' }) ]);
+		return svg([ shape('path', { d: 'M2 9a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0' }),
+			shape('circle', { cx: 12, cy: 19, r: 1, fill: 'currentColor', stroke: 'none' }) ]);
 	case 'car':
-		return svg([ E('path', { d: 'M5 16H3v-5l2-2h14l2 2v5h-2M5 16h14M6 9l2-4h8l2 4' }),
-			E('circle', { cx: 7, cy: 17, r: 2 }), E('circle', { cx: 17, cy: 17, r: 2 }) ]);
+		return svg([ shape('path', { d: 'M5 16H3v-5l2-2h14l2 2v5h-2M5 16h14M6 9l2-4h8l2 4' }),
+			shape('circle', { cx: 7, cy: 17, r: 2 }), shape('circle', { cx: 17, cy: 17, r: 2 }) ]);
 	case 'timer':
-		return svg([ E('circle', { cx: 12, cy: 13, r: 8 }), E('path', { d: 'M12 8v5l3 2M9 2h6' }) ]);
+		return svg([ shape('circle', { cx: 12, cy: 13, r: 8 }), shape('path', { d: 'M12 8v5l3 2M9 2h6' }) ]);
 	case 'manual':
-		return svg([ E('path', { d: 'M7 13V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v5-3a1.5 1.5 0 0 1 3 0v7a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7l-3-4.5a1.6 1.6 0 0 1 2.6-1.8L7 13Z' }) ]);
+		return svg([ shape('path', { d: 'M7 13V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v5-3a1.5 1.5 0 0 1 3 0v7a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7l-3-4.5a1.6 1.6 0 0 1 2.6-1.8L7 13Z' }) ]);
 	case 'unknown':
-		return svg([ E('circle', { cx: 12, cy: 12, r: 9 }),
-			E('path', { d: 'M9.5 9a2.5 2.5 0 1 1 4 2l-1.5 1.2V14M12 17h.01' }) ]);
+		return svg([ shape('circle', { cx: 12, cy: 12, r: 9 }),
+			shape('path', { d: 'M9.5 9a2.5 2.5 0 1 1 4 2l-1.5 1.2V14M12 17h.01' }) ]);
 	case 'battery':
-		return svg([ E('rect', { x: 2, y: 6, width: 18, height: 12, rx: 2 }),
-			E('path', { d: 'M22 10v4' }),
-			E('rect', { x: 4, y: 8, width: Math.max(0, Math.min(14, Math.round(level * 14 / 100))),
-				height: 8, rx: 1, fill: 'currentColor', stroke: 'none' }) ]);
+		return svg([ shape('rect', { x: 1, y: 2, width: 33, height: 16, rx: 3 }),
+			shape('path', { d: 'M36 7v6' }),
+			shape('rect', { x: 3, y: 4, width: Math.max(0, Math.min(29, Math.round((Number.isFinite(level) ? level : 0) * 29 / 100))),
+				height: 12, rx: 1, fill: 'currentColor', stroke: 'none', opacity: .16 }),
+			shape('text', { x: 17.5, y: 13.8, 'text-anchor': 'middle',
+				'font-size': 10, 'font-weight': 700, fill: 'currentColor', stroke: 'none' },
+				Number.isFinite(level) ? Math.round(level) : '—') ], '0 0 39 20');
 	}
 }
 
@@ -126,24 +141,20 @@ function showHeader(data, battery) {
 		cells.push(item('ethernet', null, title, port.linked == null ? 'unknown' : (port.linked ? 'on' : 'off')));
 	});
 	const wifi = data && data.wifi || [];
-	if (!wifi.length) {
-		cells.push(item('wifi', null, data ? '未检测到已加载的 Wi-Fi 射频' : '正在读取 Wi-Fi 射频', 'off'));
-	} else {
-		wifi.forEach(function(radio) {
-			const title = radio.phy + (radio.driver ? ' · ' + radio.driver : '') +
-				' · 驱动已加载 · ' + (radio.enabled ? '已开启' : '未开启');
-			cells.push(item('wifi', null, title, radio.enabled ? 'on' : 'off'));
-		});
-	}
+	wifi.forEach(function(radio) {
+		const title = radio.phy + (radio.driver ? ' · ' + radio.driver : '') +
+			' · 驱动已加载 · ' + (radio.enabled ? '已开启' : '未开启');
+		cells.push(item('wifi', null, title, radio.enabled ? 'on' : 'off'));
+	});
 	const mode = data && data.mode || '';
 	const modeName = { manual: '手动', car: '车载', timer: '定时' }[mode] || '未读取';
 	cells.push(item(mode || 'unknown', null, '电池模式 · ' + modeName, mode ? 'on' : 'unknown', modeName, true));
 	if (battery && battery.indicator_enabled !== false) {
-		const percentage = battery.valid ? Number(battery.percentage) : 0;
+		const percentage = battery.valid ? Number(battery.percentage) : null;
 		const title = battery.valid
 			? (battery.charging ? '外部供电' : '电池供电') + ' · ' + percentage + '%'
 			: (battery.message || '电量暂不可用');
-		cells.push(item('battery', battery.valid ? percentage + '%' : '—', title,
+		cells.push(item('battery', null, title,
 			battery.valid ? (percentage <= 20 ? 'low' : 'on') : 'unknown', null,
 			!!battery.power_page, percentage));
 	}

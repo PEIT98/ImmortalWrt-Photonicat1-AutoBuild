@@ -26,15 +26,15 @@
   min-width: 23px;
   height: 28px;
   gap: 3px;
-  color: var(--text, currentColor);
+  color: var(--text, #263f58);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
   text-decoration: none;
   transition: opacity .2s ease;
 }
-#photonicat-status .pcat-item[data-state="off"] { opacity: .38; }
-#photonicat-status .pcat-item[data-state="unknown"] { opacity: .58; }
+#photonicat-status .pcat-item[data-state="off"] { color: var(--text-muted, #a2adba); opacity: .75; }
+#photonicat-status .pcat-item[data-state="unknown"] { color: var(--text-muted, #a2adba); opacity: .8; }
 #photonicat-status .pcat-item[data-state="low"] { color: #dc2626; }
 #photonicat-status .pcat-item svg {
   display: block;
@@ -42,6 +42,7 @@
   height: 20px;
   flex: none;
 }
+#photonicat-status .pcat-battery svg { width: 42px; height: 22px; }
 #photonicat-status .pcat-name {
   max-width: 85px;
   overflow: hidden;
@@ -90,7 +91,11 @@
 
 @media (max-width: 370px) {
   #photonicat-status { gap: 7px; }
-  #photonicat-status .pcat-name { max-width: 48px; }
+  #photonicat-status .pcat-signal .pcat-name,
+  #photonicat-status .pcat-car .pcat-name,
+  #photonicat-status .pcat-manual .pcat-name,
+  #photonicat-status .pcat-timer .pcat-name { display: none; }
   #photonicat-status .pcat-item { font-size: 11px; }
   #photonicat-status .pcat-item svg { width: 18px; height: 18px; }
+  #photonicat-status .pcat-battery svg { width: 39px; height: 20px; }
 }
