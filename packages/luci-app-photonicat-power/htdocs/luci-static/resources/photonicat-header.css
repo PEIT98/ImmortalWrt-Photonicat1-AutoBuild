@@ -1,0 +1,96 @@
+/* Aurora header extension installed by the single Photonicat management package. */
+#indicators:has(#photonicat-status) {
+  gap: 12px;
+  margin-right: 12px;
+  min-width: 0;
+}
+
+#photonicat-status {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  gap: 10px;
+  min-width: 0;
+  max-width: min(66vw, 800px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+#photonicat-status::-webkit-scrollbar { display: none; }
+
+#photonicat-status .pcat-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 23px;
+  height: 28px;
+  gap: 3px;
+  color: var(--text, currentColor);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: opacity .2s ease;
+}
+#photonicat-status .pcat-item[data-state="off"] { opacity: .38; }
+#photonicat-status .pcat-item[data-state="unknown"] { opacity: .58; }
+#photonicat-status .pcat-item[data-state="low"] { color: #dc2626; }
+#photonicat-status .pcat-item svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+#photonicat-status .pcat-name {
+  max-width: 85px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#photonicat-status .pcat-battery { margin-left: 2px; }
+#photonicat-status a.pcat-item:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (max-width: 740px) {
+  header .header-content:has(#photonicat-status) {
+    height: auto !important;
+    min-height: 56px;
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 3px;
+  }
+  header .header-content:has(#photonicat-status) > .cmdk-trigger {
+    order: 1;
+    margin-left: auto;
+  }
+  header #indicators:has(#photonicat-status) {
+    order: 5;
+    width: 100%;
+    max-width: 100%;
+    flex: 1 0 100%;
+    margin: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+  header #indicators:has(#photonicat-status)::-webkit-scrollbar { display: none; }
+  #photonicat-status {
+    flex: 0 1 auto;
+    max-width: 100%;
+    gap: 9px;
+    padding: 1px 0 3px;
+  }
+  #photonicat-status .pcat-name { max-width: 64px; }
+}
+
+@media (max-width: 370px) {
+  #photonicat-status { gap: 7px; }
+  #photonicat-status .pcat-name { max-width: 48px; }
+  #photonicat-status .pcat-item { font-size: 11px; }
+  #photonicat-status .pcat-item svg { width: 18px; height: 18px; }
+}

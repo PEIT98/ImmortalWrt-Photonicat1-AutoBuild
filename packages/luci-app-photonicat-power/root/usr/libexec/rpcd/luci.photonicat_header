@@ -1,0 +1,139 @@
+#!/bin/sh
+# Read-only status for the Aurora header. The two Ethernet ports belong to
+# Photonicat v1; radios are discovered from the kernel, never assumed to be two.
+. /usr/share/libubox/jshn.sh
+. /lib/functions.sh
+
+case "$1:$2" in
+    list:*) printf '%s\n' '{"status":{}}'; exit 0 ;;
+    call:status) ;;
+    *) exit 1 ;;
+esac
+
+modem_sections=
+collect_modem() {
+    config_get enabled "$1" enabled 1
+    [ "$enabled" = 0 ] || modem_sections="$modem_sections $1"
+}
+
+modem_name='移动网络'
+generation=''
+rsrp=''
+bars=0
+if [ -f /etc/config/qmodem ] && ubus -S list qmodem >/dev/null 2>&1; then
+    config_load qmodem
+    config_foreach collect_modem modem-device
+    for section in $modem_sections; do
+        config_get modem_name "$section" name "$section"
+        # QModem caches cell_info for 10 seconds. Bound a slow or absent AT port.
+        cell="$(timeout 5 ubus -S call qmodem cell_info "{\"config_section\":\"$section\"}" 2>/dev/null)" || cell=''
+        [ -n "$cell" ] && json_load "$cell" 2>/dev/null || continue
+        json_select modem_info 2>/dev/null || continue
+        json_get_keys entries
+        lte_rsrp='' nr_rsrp=''
+        for entry in $entries; do
+            json_select "$entry" 2>/dev/null || continue
+            json_get_var key key
+            json_get_var value value
+            json_get_var extra extra_info
+            case "$key" in
+                network_mode|'Network Mode') generation="$value" ;;
+                NR5G-SA|NR5G-NSA) generation="$key" ;;
+                RSRP)
+                    case "$extra" in *NR*|*5G*) nr_rsrp="$value" ;; *) lte_rsrp="$value" ;; esac
+                    ;;
+            esac
+            json_select ..
+        done
+        json_select ..
+        case "$generation" in
+            *EN-DC*|*NR*|*5G*) generation=5G; rsrp="${nr_rsrp:-$lte_rsrp}" ;;
+            *LTE*|*4G*) generation=4G; rsrp="$lte_rsrp" ;;
+            *) generation=''; rsrp='' ;;
+        esac
+        [ -n "$generation" ] && break
+    done
+fi
+
+# Unknown/missing readings get zero bars rather than a made-up signal.
+case "$rsrp" in
+    -[0-9]*|-1[0-9]*)
+        case "${rsrp#-}" in *[!0-9]*|'') rsrp='' ;; esac
+        if [ -n "$rsrp" ] && [ "$rsrp" -ge -140 ] && [ "$rsrp" -le -40 ]; then
+            if [ "$rsrp" -ge -85 ]; then bars=4
+            elif [ "$rsrp" -ge -95 ]; then bars=3
+            elif [ "$rsrp" -ge -105 ]; then bars=2
+            else bars=1; fi
+        else rsrp=''; fi
+        ;;
+    *) rsrp='' ;;
+esac
+
+# The PMU status method already contains both auto-start and schedule state.
+mode=''
+power="$(ubus -S call luci.photonicat_power status 2>/dev/null)" || power=''
+if [ -n "$power" ] && json_load "$power" 2>/dev/null; then
+    json_get_var ok ok
+    json_get_var car_state car_state
+    json_get_var schedule schedule
+    if [ "$ok" = 1 ] || [ "$ok" = true ]; then
+        if [ "$car_state" = 1 ]; then
+            mode=car
+        elif [ -n "$schedule" ] && json_load "$schedule" 2>/dev/null && json_select event-list 2>/dev/null; then
+            mode=manual
+            json_get_keys events
+            for event in $events; do
+                json_select "$event" 2>/dev/null || continue
+                json_get_var enabled enabled
+                json_get_var action action
+                json_select ..
+                if [ "$enabled" != 0 ] && { [ "$action" = 0 ] || [ "$action" = 1 ]; }; then
+                    mode=timer
+                    break
+                fi
+            done
+        fi
+    fi
+fi
+
+json_init
+json_add_object cellular
+json_add_string name "$modem_name"
+json_add_string generation "$generation"
+json_add_int bars "$bars"
+json_add_string rsrp "$rsrp"
+json_close_object
+
+json_add_array ethernet
+for port in eth0 eth1; do
+    json_add_object
+    json_add_string name "$port"
+    case "$port" in eth0) json_add_string label WAN ;; eth1) json_add_string label LAN ;; esac
+    carrier="$(cat "/sys/class/net/$port/carrier" 2>/dev/null)"
+    [ "$carrier" = 1 ] || carrier=0
+    json_add_boolean linked "$carrier"
+    json_close_object
+done
+json_close_array
+
+# A PHY is proof the kernel registered the radio. iw dev shows whether an
+# interface is currently instantiated; disabled radios remain visible, dimmed.
+interfaces="$(iw dev 2>/dev/null | awk '/^phy#[0-9]+/ { phy=substr($1,5) } /^[[:space:]]*Interface / { print "phy" phy, $2 }')"
+json_add_array wifi
+for device in /sys/class/ieee80211/phy*; do
+    [ -d "$device" ] || continue
+    phy="${device##*/}"
+    driver=''
+    driver_path="$(readlink -f "$device/device/driver" 2>/dev/null)"
+    [ -z "$driver_path" ] || driver="${driver_path##*/}"
+    active=0
+    printf '%s\n' "$interfaces" | grep -q "^$phy " && active=1
+    json_add_object
+    json_add_string phy "$phy"
+    json_add_string driver "$driver"
+    json_add_boolean enabled "$active"
+    json_close_object
+done
+json_close_array
+json_add_string mode "$mode"
+json_dump

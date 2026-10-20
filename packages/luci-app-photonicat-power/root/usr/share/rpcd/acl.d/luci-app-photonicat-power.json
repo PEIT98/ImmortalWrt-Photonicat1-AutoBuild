@@ -8,7 +8,8 @@
           "runtime",
           "battery"
         ],
-        "luci.battstatus": ["getBatteryStatus", "getSettings"]
+        "luci.battstatus": ["getBatteryStatus", "getSettings"],
+        "luci.photonicat_header": ["status"]
       }
     },
     "write": {

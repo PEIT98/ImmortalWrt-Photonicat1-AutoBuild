@@ -4,14 +4,9 @@
 'require poll';
 'require baseclass';
 
-const callBatteryStatus = rpc.declare({
-	object: 'luci.battstatus',
-	method: 'getBatteryStatus',
-	expect: { '': {} }
-});
-
-const devices = {};
-const warned = {};
+const callBatteryStatus = rpc.declare({ object: 'luci.battstatus', method: 'getBatteryStatus', expect: { '': {} } });
+const callHeaderStatus = rpc.declare({ object: 'luci.photonicat_header', method: 'status', expect: { '': {} } });
+const devices = {}, warned = {};
 
 function checkLowBattery(dev, info) {
 	const key = 'photonicat-low-battery-' + dev;
@@ -27,137 +22,196 @@ function checkLowBattery(dev, info) {
 	}
 }
 
+function svg(shapes) {
+	return E('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+		'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+		'aria-hidden': 'true' }, shapes);
+}
+
+function icon(kind, level) {
+	switch (kind) {
+	case 'signal':
+		return E('svg', { viewBox: '0 0 24 24', fill: 'currentColor', 'aria-hidden': 'true' },
+			[ [2, 16, 4], [7, 12, 8], [12, 8, 12], [17, 4, 16] ].map(function(bar, index) {
+				return E('rect', { x: bar[0], y: bar[1], width: 3, height: bar[2], rx: 1,
+					opacity: index < level ? 1 : .22 });
+			}));
+	case 'ethernet':
+		return svg([ E('rect', { x: 2, y: 4, width: 20, height: 16, rx: 2 }),
+			E('path', { d: 'M7 4v6h10V4M7 15h10M9 20v-5m3 5v-5m3 5v-5' }) ]);
+	case 'wifi':
+		return svg([ E('path', { d: 'M2 9a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0' }),
+			E('circle', { cx: 12, cy: 19, r: 1, fill: 'currentColor', stroke: 'none' }) ]);
+	case 'car':
+		return svg([ E('path', { d: 'M5 16H3v-5l2-2h14l2 2v5h-2M5 16h14M6 9l2-4h8l2 4' }),
+			E('circle', { cx: 7, cy: 17, r: 2 }), E('circle', { cx: 17, cy: 17, r: 2 }) ]);
+	case 'timer':
+		return svg([ E('circle', { cx: 12, cy: 13, r: 8 }), E('path', { d: 'M12 8v5l3 2M9 2h6' }) ]);
+	case 'manual':
+		return svg([ E('path', { d: 'M7 13V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v5-3a1.5 1.5 0 0 1 3 0v7a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7l-3-4.5a1.6 1.6 0 0 1 2.6-1.8L7 13Z' }) ]);
+	case 'unknown':
+		return svg([ E('circle', { cx: 12, cy: 12, r: 9 }),
+			E('path', { d: 'M9.5 9a2.5 2.5 0 1 1 4 2l-1.5 1.2V14M12 17h.01' }) ]);
+	case 'battery':
+		return svg([ E('rect', { x: 2, y: 6, width: 18, height: 12, rx: 2 }),
+			E('path', { d: 'M22 10v4' }),
+			E('rect', { x: 4, y: 8, width: Math.max(0, Math.min(14, Math.round(level * 14 / 100))),
+				height: 8, rx: 1, fill: 'currentColor', stroke: 'none' }) ]);
+	}
+}
+
+function item(kind, label, title, state, textLabel, link, level) {
+	const attrs = { 'class': 'pcat-item pcat-' + kind, 'data-state': state,
+		title: title, 'aria-label': title };
+	if (link) attrs.href = L.url('admin/system/photonicat-power');
+	else attrs.role = 'img';
+	const children = [icon(kind, level)];
+	if (label) children.push(E('span', { 'class': 'pcat-label' }, label));
+	if (textLabel) children.push(E('span', { 'class': 'pcat-name' }, textLabel));
+	return E(link ? 'a' : 'span', attrs, children);
+}
+
+function aurora() {
+	return !!document.querySelector('link[href*="/luci-static/aurora/main.css"]');
+}
+
+function decorateNativeBattery(info) {
+	for (const el of document.querySelectorAll('#indicators > span[data-indicator]')) {
+		if (el.getAttribute('data-indicator') !== info.name) continue;
+		el.title = info.status;
+		if (info.power_page && !el.hasAttribute('data-power-link')) {
+			el.setAttribute('data-power-link', '1');
+			el.setAttribute('role', 'link');
+			el.setAttribute('tabindex', '0');
+			el.setAttribute('aria-label', '打开光影猫管理');
+			el.style.cursor = 'pointer';
+			el.addEventListener('click', function() { window.location.href = L.url('admin/system/photonicat-power'); });
+			el.addEventListener('keydown', function(event) {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault();
+					el.click();
+				}
+			});
+		}
+		if (info.valid && info.percentage <= 20) el.style.color = 'Red';
+		else if (info.valid && info.percentage <= 30) el.style.color = 'GoldenRod';
+		else el.style.removeProperty('color');
+		break;
+	}
+}
+
+function showHeader(data, battery) {
+	if (!aurora()) return;
+	const indicators = document.getElementById('indicators');
+	if (!indicators) return;
+	if (!document.getElementById('photonicat-header-style'))
+		document.head.appendChild(E('link', { id: 'photonicat-header-style', rel: 'stylesheet',
+			href: L.resource('photonicat-header.css') }));
+	let strip = document.getElementById('photonicat-status');
+	if (!strip) {
+		strip = E('div', { id: 'photonicat-status', role: 'group', 'aria-label': '光影猫设备状态' });
+		indicators.prepend(strip);
+	}
+	const cells = [], cellular = data && data.cellular || {};
+	const name = cellular.name || '移动网络', generation = cellular.generation || '';
+	const bars = Math.max(0, Math.min(4, Number(cellular.bars) || 0));
+	const cellTitle = name + ' · ' + (generation ? generation + (bars ? ' · ' + cellular.rsrp + ' dBm' : ' · 无服务') : '无服务');
+	cells.push(item('signal', generation || '无服务', cellTitle, bars ? 'on' : 'off', name, false, bars));
+	const ethernet = data && data.ethernet || [
+		{ name: 'eth0', label: 'WAN' }, { name: 'eth1', label: 'LAN' }
+	];
+	ethernet.forEach(function(port) {
+		const title = (port.label || port.name) + ' (' + port.name + ') · ' +
+			(port.linked == null ? '状态未知' : (port.linked ? '已连接' : '未连接'));
+		cells.push(item('ethernet', null, title, port.linked == null ? 'unknown' : (port.linked ? 'on' : 'off')));
+	});
+	const wifi = data && data.wifi || [];
+	if (!wifi.length) {
+		cells.push(item('wifi', null, data ? '未检测到已加载的 Wi-Fi 射频' : '正在读取 Wi-Fi 射频', 'off'));
+	} else {
+		wifi.forEach(function(radio) {
+			const title = radio.phy + (radio.driver ? ' · ' + radio.driver : '') +
+				' · 驱动已加载 · ' + (radio.enabled ? '已开启' : '未开启');
+			cells.push(item('wifi', null, title, radio.enabled ? 'on' : 'off'));
+		});
+	}
+	const mode = data && data.mode || '';
+	const modeName = { manual: '手动', car: '车载', timer: '定时' }[mode] || '未读取';
+	cells.push(item(mode || 'unknown', null, '电池模式 · ' + modeName, mode ? 'on' : 'unknown', modeName, true));
+	if (battery && battery.indicator_enabled !== false) {
+		const percentage = battery.valid ? Number(battery.percentage) : 0;
+		const title = battery.valid
+			? (battery.charging ? '外部供电' : '电池供电') + ' · ' + percentage + '%'
+			: (battery.message || '电量暂不可用');
+		cells.push(item('battery', battery.valid ? percentage + '%' : '—', title,
+			battery.valid ? (percentage <= 20 ? 'low' : 'on') : 'unknown', null,
+			!!battery.power_page, percentage));
+	}
+	strip.replaceChildren.apply(strip, cells);
+}
+
 return baseclass.extend({
 	__init__() {
 		this.revision = 0;
+		this.headerRevision = 0;
+		this.headerData = null;
+		this.batteryData = null;
+		showHeader(null, null);
 		this.updateIndicator();
+		this.updateHeader();
 		poll.add(L.bind(this.updateIndicator, this), 5);
+		poll.add(L.bind(this.updateHeader, this), 15);
 		document.addEventListener('photonicat-battery-settings-changed', L.bind(this.updateIndicator, this));
 	},
-
+	updateHeader() {
+		const revision = ++this.headerRevision;
+		return callHeaderStatus().then(L.bind(function(data) {
+			if (revision !== this.headerRevision) return;
+			this.headerData = data;
+			showHeader(data, this.batteryData);
+		}, this)).catch(L.bind(function() {
+			if (revision !== this.headerRevision) return;
+			this.headerData = null;
+			showHeader(null, this.batteryData);
+		}, this));
+	},
 	updateIndicator() {
 		const revision = ++this.revision;
 		return callBatteryStatus().then(L.bind(function(devs) {
-			if (revision !== this.revision)
-				return;
-			for (let dev in devs) {
-				let info = devs[dev];
+			if (revision !== this.revision) return;
+			this.batteryData = null;
+			for (const dev in devs) {
+				const info = devs[dev];
 				checkLowBattery(dev, info);
 				info.name = 'battery-' + dev.replace(/\s/g, '-');
 				devices[dev] = info;
-				if (info.indicator_enabled === false) {
+				if (info.power_page) this.batteryData = info;
+				if (info.indicator_enabled === false || aurora()) {
 					ui.hideIndicator(info.name);
 					continue;
 				}
-				if (info.valid) {
-					info.status = (info.power_page ? (info.charging ? '外部供电' : '电池供电') :
-						(info.charging ? _('Charging') : _('Not Charging'))) + ': ' + info.percentage + '%';
-					info.state = "active";
-					if (info.percentage <= 20)
-						info.color = "Red";
-					else if (info.percentage <= 30)
-						info.color = "GoldenRod";
-				} else {
-					info.status = info.message;
-					info.state = "inactive";
-				}
-
-				const auroraTheme = document.querySelector('link[href*="/luci-static/aurora/main.css"]') != null;
-				const batteryLabel = auroraTheme && info.valid
-					? (info.charging ? '⚡ ' : '🔋 ') + info.percentage + '%'
-					: info.status;
-				ui.showIndicator(info.name, batteryLabel, null, info.state);
-				// Photonicat1 battery-only patch; no Aurora file changes.
-				// Keep ui.showIndicator()'s text node intact for 5-second updates.
-				let el = null;
-				for (const node of document.querySelectorAll('#indicators > span[data-indicator]')) {
-					if (node.getAttribute('data-indicator') == info.name) {
-						el = node;
-						break;
-					}
-				}
-				if (el) {
-					el.title = info.status;
-					if (info.power_page && !el.hasAttribute('data-power-link')) {
-						el.setAttribute('data-power-link', '1');
-						el.setAttribute('role', 'link');
-						el.setAttribute('tabindex', '0');
-						el.setAttribute('aria-label', '打开电池与电源管理');
-						el.style.cursor = 'pointer';
-						el.addEventListener('click', function() { window.location.href = L.url('admin/system/photonicat-power'); });
-						el.addEventListener('keydown', function(event) {
-							if (event.key === 'Enter' || event.key === ' ') {
-								event.preventDefault();
-								el.click();
-							}
-						});
-					}
-					if (auroraTheme) {
-						// The battery plugin hides Aurora's generic empty icon at runtime.
-						// Nothing in the Aurora theme package is edited.
-						if (!document.getElementById('photonicat-battery-only-style')) {
-							const sheet = document.createElement('style');
-							sheet.id = 'photonicat-battery-only-style';
-							sheet.textContent = '#indicators span[data-indicator^="battery-"]::before { display:none !important; content:none !important; }';
-							document.head.appendChild(sheet);
-						}
-						const styles = {
-							display: 'inline-flex',
-							'align-items': 'center',
-							'justify-content': 'center',
-							width: 'auto',
-							'min-width': 'max-content',
-							'max-width': 'none',
-							height: '28px',
-							'min-height': '28px',
-							padding: '0 10px',
-							margin: '0 4px',
-							'vertical-align': 'middle',
-							'font-size': '12px',
-							'line-height': '28px',
-							'font-weight': '500',
-							background: 'rgba(37,99,235,.10)',
-							border: '1px solid rgba(37,99,235,.20)',
-							'border-radius': '6px',
-							'text-indent': '0',
-							'white-space': 'nowrap',
-							overflow: 'visible',
-							visibility: 'visible',
-							opacity: '1',
-							'box-sizing': 'border-box',
-							'clip-path': 'none',
-							transform: 'none'
-						};
-						for (const key in styles)
-							el.style.setProperty(key, styles[key], 'important');
-						if (info.color)
-							el.style.setProperty('color', info.color, 'important');
-						else
-							el.style.removeProperty('color');
-					} else {
-						// Preserve native appearance under Bootstrap/other themes.
-						if (info.color)
-							el.style.setProperty('color', info.color);
-						else
-							el.style.removeProperty('color');
-					}
-				}
-
+				info.status = info.valid
+					? (info.charging ? _('Charging') : _('Not Charging')) + ': ' + info.percentage + '%'
+					: info.message;
+				info.state = info.valid ? 'active' : 'inactive';
+				ui.showIndicator(info.name, info.status, null, info.state);
+				decorateNativeBattery(info);
 			}
-
-			for (let dev in devices) {
-				if (!devs.hasOwnProperty(dev)) {
+			for (const dev in devices) {
+				if (!Object.prototype.hasOwnProperty.call(devs, dev)) {
 					ui.hideIndicator(devices[dev].name);
 					delete devices[dev];
 				}
 			}
-		}, this)).catch(function() {
-			if (revision === this.revision) {
-				for (const dev in devices) {
-					ui.hideIndicator(devices[dev].name);
-					delete devices[dev];
-				}
+			showHeader(this.headerData, this.batteryData);
+		}, this)).catch(L.bind(function() {
+			if (revision !== this.revision) return;
+			this.batteryData = null;
+			for (const dev in devices) {
+				ui.hideIndicator(devices[dev].name);
+				delete devices[dev];
 			}
-		}.bind(this));
+			showHeader(this.headerData, null);
+		}, this));
 	}
 });

@@ -1,6 +1,6 @@
 {
   "admin/system/photonicat-power": {
-    "title": "光影猫电源管理",
+    "title": "光影猫管理",
     "order": 87,
     "action": {
       "type": "view",

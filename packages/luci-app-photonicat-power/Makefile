@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-photonicat-power
 PKG_VERSION:=1.0.16
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/photonicat/rockchip_rk3568_pcat_manager.git
 PKG_SOURCE_DATE:=2025-08-18
@@ -21,13 +21,13 @@ define Package/luci-app-photonicat-power
   SECTION:=luci
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
-  TITLE:=Photonicat1 battery and power management
-  DEPENDS:=@TARGET_rockchip_armv8 +luci-base +socat +glib2 +libjson-c
+  TITLE:=Photonicat1 management and header status
+  DEPENDS:=@TARGET_rockchip_armv8 +luci-base +socat +iw +glib2 +libjson-c
   CONFLICTS:=pcat-mgr pcat-manager pcat-manager-v1 luci-mod-battstatus luci-i18n-battstatus-zh-cn
 endef
 
 define Package/luci-app-photonicat-power/description
-  Photonicat1 PMU daemon, power settings page and LuCI battery indicator in one package.
+  Photonicat1 PMU daemon, management page and LuCI hardware status in one package.
 endef
 
 define Package/luci-app-photonicat-power/conffiles
@@ -53,6 +53,7 @@ define Package/luci-app-photonicat-power/install
 	$(INSTALL_DIR) $(1)/www $(1)/usr/libexec/rpcd $(1)/usr/share/luci/menu.d $(1)/usr/share/rpcd/acl.d $(1)/etc/config
 	$(CP) ./htdocs/. $(1)/www/
 	$(INSTALL_BIN) ./root/usr/libexec/rpcd/luci.photonicat_power $(1)/usr/libexec/rpcd/
+	$(INSTALL_BIN) ./root/usr/libexec/rpcd/luci.photonicat_header $(1)/usr/libexec/rpcd/
 	$(INSTALL_BIN) ./root/usr/libexec/rpcd/luci.battstatus $(1)/usr/libexec/rpcd/
 	$(INSTALL_DATA) ./root/usr/share/luci/menu.d/luci-app-photonicat-power.json $(1)/usr/share/luci/menu.d/
 	$(INSTALL_DATA) ./root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json $(1)/usr/share/rpcd/acl.d/

@@ -91,15 +91,17 @@ grep -Fq 'patch-photonicat-ups.py' "$POWER_PACKAGE_DST/Makefile"
 POWER_RPC="$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_power"
 test -x "$POWER_RPC" || exit 1
 test -x "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus" || exit 1
-sh -n "$POWER_RPC" "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
+test -x "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_header" || exit 1
+sh -n "$POWER_RPC" "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus" "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_header"
 python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/luci/menu.d/luci-app-photonicat-power.json" >/dev/null
 python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/view/photonicat-power.js"
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/preload/battstatus.js"
+test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/photonicat-header.css"
 test -f "$POWER_PACKAGE_DST/root/etc/config/luci_battstatus"
 test -f "$POWER_PACKAGE_DST/po/zh_Hans/battstatus.po"
 grep -Fq 'luci.photonicat_power battery' "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
-echo '光影猫一代电池与电源已合并为单一软件包，保留 Aurora 显示与 PMU-only 后台。'
+echo '光影猫管理：单一软件包提供 Aurora 设备状态、电池与电源页面及 PMU-only 后台。'
 
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
