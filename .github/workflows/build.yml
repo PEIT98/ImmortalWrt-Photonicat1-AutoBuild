@@ -146,9 +146,12 @@ jobs:
             echo "::error::官方电池插件不是符号链接，停止以保护 Feeds 文件"
             exit 1
           fi
-          test -f package/luci-mod-battstatus/Makefile
-          grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' package/luci-mod-battstatus/Makefile
-          echo '项目内置 luci-mod-battstatus 将提供电池 RPC、翻译和 Aurora 修复。'
+          test ! -e package/luci-mod-battstatus
+          test ! -e package/pcat-manager-v1
+          test -f package/luci-app-photonicat-power/Makefile
+          grep -Fxq 'include $(INCLUDE_DIR)/meson.mk' package/luci-app-photonicat-power/Makefile
+          grep -Fxq 'PKG_BUILD_DEPENDS:=luci-base/host' package/luci-app-photonicat-power/Makefile
+          echo '单一光影猫电源包将提供 MCU 服务、页面、电池状态和中文翻译。'
 
       - name: 修复 iStore 软件包名称
         run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
@@ -193,22 +196,31 @@ jobs:
           test -x files/usr/libexec/rpcd/luci.photonicat1
           test -x files/usr/bin/photonicat-docker-storage-check
           test -f files/www/luci-static/resources/view/status/include/99_photonicat1_info.js
-          # 检查完整本地电池插件，避免与官方 Feeds 产生重复软件包。
-          test -f package/luci-mod-battstatus/Makefile
+          # 一个软件包安装 MCU 后台、电源页面、顶部电量与中文翻译。
+          power_pkg=package/luci-app-photonicat-power
+          diff -r ../packages/luci-app-photonicat-power "$power_pkg"
+          test ! -e package/luci-mod-battstatus
+          test ! -e package/pcat-manager-v1
           test ! -e package/feeds/luci/luci-mod-battstatus && test ! -L package/feeds/luci/luci-mod-battstatus
-          batt_js="package/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js"
+          batt_js="$power_pkg/htdocs/luci-static/resources/preload/battstatus.js"
           test -s "$batt_js"
           grep -Fq "object: 'luci.battstatus'" "$batt_js"
           grep -Fq "photonicat-battery-only-style" "$batt_js"
           grep -Fq "poll.add(L.bind(this.updateIndicator, this), 5)" "$batt_js"
-          test -x package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
-          grep -Fq "luci.photonicat_power battery" package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
-          python3 -m json.tool package/luci-mod-battstatus/root/usr/share/rpcd/acl.d/luci-mod-battstatus.json >/dev/null
-          test -f package/luci-mod-battstatus/root/etc/config/luci_battstatus
-          grep -Fq '"setSettings"' package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
-          sh -n package/luci-mod-battstatus/root/usr/libexec/rpcd/luci.battstatus
-          sh -n package/luci-app-photonicat-power/root/usr/libexec/rpcd/luci.photonicat_power
-          python3 -m json.tool package/luci-app-photonicat-power/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json >/dev/null
+          test -x "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"
+          grep -Fq "luci.photonicat_power battery" "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"
+          test -f "$power_pkg/root/etc/config/luci_battstatus"
+          grep -Fq '"setSettings"' "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"
+          sh -n "$power_pkg/root/usr/libexec/rpcd/luci.battstatus" "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_power"
+          sh -n "$power_pkg/files/pcat-manager.init" "$power_pkg/files/98-photonicat-battery-language"
+          python3 -m json.tool "$power_pkg/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          acl = json.loads(Path('package/luci-app-photonicat-power/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json').read_text())['luci-app-photonicat-power']
+          assert {'getBatteryStatus', 'getSettings'} <= set(acl['read']['ubus']['luci.battstatus'])
+          assert {'setSettings'} <= set(acl['write']['ubus']['luci.battstatus'])
+          PY
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -226,7 +238,9 @@ jobs:
               shared = generic_files & {p.relative_to(root) for p in root.rglob('*') if p.is_file()}
               assert not shared, f'上游插件安装文件重名：{sorted(map(str, shared))}'
           PY
-          test -f package/luci-mod-battstatus/po/zh_Hans/battstatus.po
+          test -f "$power_pkg/po/zh_Hans/battstatus.po"
+          grep -Fq 'po2lmo ./po/zh_Hans/battstatus.po' "$power_pkg/Makefile"
+          grep -Fq 'pcat-manager' "$power_pkg/Makefile"
           grep -Fq "option enable_traffic '0'" package/photonicat-bandix-plus/files/bandix_plus.config
           test -f package/luci-app-bandix-plus/Makefile
           test -f package/luci-app-cpufreq/Makefile
@@ -248,10 +262,10 @@ jobs:
           python3 ../scripts/build/select-packages.py .config
           cp .config .config.before-defconfig
           echo '===== defconfig 前核心插件 ====='
-          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
+          grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-app-photonicat-power|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
           echo '===== 核对上游插件是否被注册为目标包 ====='
-          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-mod-battstatus luci-app-filemanager luci-app-aurora-config luci-app-statistics luci-app-travelmate cake-autorate luci-app-sqm; do
+          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-app-photonicat-power luci-app-filemanager luci-app-aurora-config luci-app-statistics luci-app-travelmate cake-autorate luci-app-sqm; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
               echo "registered: $pkg"
             else
@@ -259,7 +273,7 @@ jobs:
             fi
           done
           echo '===== defconfig 后核心插件 ====='
-          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-mod-battstatus|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
+          grep -E '^(# )?CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-app-photonicat-power|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)(=| is not set)' .config || true
           echo '===== defconfig 前已选但后被取消的选项（最多70行）====='
           comm -23 <(grep '^CONFIG_PACKAGE_.*=y$' .config.before-defconfig | sort -u) <(grep '^CONFIG_PACKAGE_.*=y$' .config | sort -u) | head -n 70 || true
           bash ../scripts/build/verify-config.sh .config

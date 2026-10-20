@@ -1,6 +1,6 @@
 #!/bin/sh
 # Photonicat v1: only use the official Unix control socket.
-# Never open /dev/ttyS4; only pcat-manager-v1 holds the MCU serial port.
+# Never open /dev/ttyS4; only the bundled pcat-manager holds the MCU serial port.
 . /usr/share/libubox/jshn.sh
 
 SOCK=/tmp/pcat-manager.sock
@@ -161,7 +161,7 @@ case "$1" in
                 json_add_int car_seconds "${car_seconds:-0}"
                 json_add_int car_countdown "$car_countdown"
                 [ "$2" != status ] || json_add_string schedule "$schedule"
-                json_add_string backend "pcat-manager-v1 PMU Socket"
+                json_add_string backend "Photonicat PMU Socket"
                 json_dump
                 ;;
             set_mode)
