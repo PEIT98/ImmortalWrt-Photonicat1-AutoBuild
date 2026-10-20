@@ -77,10 +77,10 @@ if [ -n "$power" ] && json_load "$power" 2>/dev/null; then
     json_get_var car_state car_state
     json_get_var schedule schedule
     if [ "$ok" = 1 ] || [ "$ok" = true ]; then
+        mode=manual
         if [ "$car_state" = 1 ]; then
             mode=car
         elif [ -n "$schedule" ] && json_load "$schedule" 2>/dev/null && json_select event-list 2>/dev/null; then
-            mode=manual
             json_get_keys events
             for event in $events; do
                 json_select "$event" 2>/dev/null || continue
@@ -116,8 +116,8 @@ for port in eth0 eth1; do
 done
 json_close_array
 
-# A PHY is proof the kernel registered the radio. iw dev shows whether an
-# interface is currently instantiated; disabled radios remain visible, dimmed.
+# A PHY is proof the kernel registered the radio. An instantiated interface
+# must also be administratively up before its icon appears enabled.
 interfaces="$(iw dev 2>/dev/null | awk '/^phy#[0-9]+/ { phy=substr($1,5) } /^[[:space:]]*Interface / { print "phy" phy, $2 }')"
 json_add_array wifi
 for device in /sys/class/ieee80211/phy*; do
@@ -127,7 +127,10 @@ for device in /sys/class/ieee80211/phy*; do
     driver_path="$(readlink -f "$device/device/driver" 2>/dev/null)"
     [ -z "$driver_path" ] || driver="${driver_path##*/}"
     active=0
-    printf '%s\n' "$interfaces" | grep -q "^$phy " && active=1
+    for netdev in $(printf '%s\n' "$interfaces" | awk -v target="$phy" '$1 == target { print $2 }'); do
+        flags="$(cat "/sys/class/net/$netdev/flags" 2>/dev/null)"
+        case "$flags" in 0x*) [ $((flags & 1)) -eq 1 ] && active=1 ;; esac
+    done
     json_add_object
     json_add_string phy "$phy"
     json_add_string driver "$driver"
