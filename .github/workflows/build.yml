@@ -196,7 +196,7 @@ jobs:
           test -x files/usr/libexec/rpcd/luci.photonicat1
           test -x files/usr/bin/photonicat-docker-storage-check
           test -f files/www/luci-static/resources/view/status/include/99_photonicat1_info.js
-          # 一个软件包安装 MCU 后台、电源页面、顶部电量与中文翻译。
+          # 一个软件包安装 MCU 后台、管理页面、顶部设备状态与中文翻译。
           power_pkg=package/luci-app-photonicat-power
           diff -r ../packages/luci-app-photonicat-power "$power_pkg"
           test ! -e package/luci-mod-battstatus
@@ -205,13 +205,17 @@ jobs:
           batt_js="$power_pkg/htdocs/luci-static/resources/preload/battstatus.js"
           test -s "$batt_js"
           grep -Fq "object: 'luci.battstatus'" "$batt_js"
-          grep -Fq "photonicat-battery-only-style" "$batt_js"
+          grep -Fq "photonicat-header-style" "$batt_js"
+          grep -Fq "object: 'luci.photonicat_header'" "$batt_js"
           grep -Fq "poll.add(L.bind(this.updateIndicator, this), 5)" "$batt_js"
+          node ../scripts/tests/test_photonicat_header.js
+          test -s "$power_pkg/htdocs/luci-static/resources/photonicat-header.css"
+          test -x "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_header"
           test -x "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"
           grep -Fq "luci.photonicat_power battery" "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"
           test -f "$power_pkg/root/etc/config/luci_battstatus"
           grep -Fq '"setSettings"' "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"
-          sh -n "$power_pkg/root/usr/libexec/rpcd/luci.battstatus" "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_power"
+          sh -n "$power_pkg/root/usr/libexec/rpcd/luci.battstatus" "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_power" "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_header"
           sh -n "$power_pkg/files/pcat-manager.init" "$power_pkg/files/98-photonicat-battery-language"
           python3 -m json.tool "$power_pkg/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
           python3 - <<'PY'
@@ -219,6 +223,7 @@ jobs:
           from pathlib import Path
           acl = json.loads(Path('package/luci-app-photonicat-power/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json').read_text())['luci-app-photonicat-power']
           assert {'getBatteryStatus', 'getSettings'} <= set(acl['read']['ubus']['luci.battstatus'])
+          assert {'status'} <= set(acl['read']['ubus']['luci.photonicat_header'])
           assert {'setSettings'} <= set(acl['write']['ubus']['luci.battstatus'])
           PY
           python3 - <<'PY'

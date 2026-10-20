@@ -11,7 +11,7 @@
 | 分类 | 内置功能 |
 | --- | --- |
 | 5G / 网络 | QModem Next（含短信）、QModem Generic、mwan3、OpenClash、Travelmate 无线中继、SQM/CAKE 与 cake-autorate |
-| 系统界面 | Aurora 主题及设置、右上角电池状态、光影猫一代电池/电源管理（实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
+| 系统界面 | Aurora 主题及设置、右上角模组/网口/无线/电池状态、光影猫一代管理（电源控制实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
 | 管理工具 | 文件管理、历史统计、在线升级、DiskMan、Bandix Plus、定时重启、UPnP |
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
@@ -40,17 +40,17 @@ Wi-Fi 按检测到的实际频段生成，不固定网卡编号。保留配置�
 
 已将完整 [luci-app-cpufreq](packages/luci-app-cpufreq/) 放入项目，包含网页设置、LuCI 菜单、RPC 权限与中文翻译。构建时优先使用本地源码，避免 Feeds 同名插件冲突；实际 CPU 调频服务依然使用官方 `cpufreq` 包。以后可直接编辑项目中的插件源码，不必新增修复脚本。
 
-## 电池管理器与电量显示
+## 光影猫管理与顶部状态
 
-现在只需一个软件包：[luci-app-photonicat-power](packages/luci-app-photonicat-power/)。其中同时包含顶部电量显示、系统 → 光影猫电源管理页面、简体中文翻译和 PMU-only MCU 后台。保留 Aurora 紧凑样式；后台是 `/dev/ttyS4` 的唯一访问者，不依赖旧 Go FUSE。
+现在只需一个软件包：[luci-app-photonicat-power](packages/luci-app-photonicat-power/)。其中同时包含 Aurora 顶部设备状态、系统 → 光影猫管理页面、简体中文翻译和 PMU-only MCU 后台。顶部依次显示 QModem 4G/5G 与模组名称及信号、WAN/LAN 两个网口、已加载的各个 Wi-Fi 射频、电池模式和电量；手机使用第二行可横向滚动。无线按内核 PHY 动态显示，双射频卡会出现两个图标。后台是 `/dev/ttyS4` 的唯一访问者，不依赖旧 Go FUSE。
 
 电池页可保存右上角显示开关、低电量提醒及阈值（默认 20%），点击顶部电量可直接进入。新增手机电量卡片及 UPS 自动倒计时；显示设置重启保留，低电量提醒仅在打开路由器后台时生效。
 
 已隔离官方 C 版的旧 5G 模组 GPIO、拨号及路由自动检查，不影响现有 QModem/mwan3 功能。新后台首次启用尚未完成真机测试，请先做好固件备份及恢复准备。
 
-## 光影猫一代电源管理（实验性）
+## 光影猫一代管理（电源控制实验性）
 
-系统 → 光影猫电源管理支持手动、车载/UPS 延时关机、每日定时开关机。插件中的页面按官方 [pcat-manager v1 协议](https://github.com/photonicat/rockchip_rk3568_pcat_manager/tree/v1) 使用控制 Socket，不直接操作 MCU 串口。内置官方 v1 C 版 PMU-only 后台替代原 Go 版 pcat-mgr，通过 `/tmp/pcat-manager.sock` 获取电量及电源模式；需要重新编译刷机验证。具体限制见插件 README。
+系统 → 光影猫管理支持手动、车载/UPS 延时关机、每日定时开关机。插件中的页面按官方 [pcat-manager v1 协议](https://github.com/photonicat/rockchip_rk3568_pcat_manager/tree/v1) 使用控制 Socket，不直接操作 MCU 串口。内置官方 v1 C 版 PMU-only 后台替代原 Go 版 pcat-mgr，通过 `/tmp/pcat-manager.sock` 获取电量及电源模式；需要重新编译刷机验证。具体限制见插件 README。
 
 ## 配置与脚本说明
 

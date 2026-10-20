@@ -241,7 +241,7 @@ return view.extend({
                 '.pcat-power .pcat-switch:focus-visible{outline:2px solid #2563eb;outline-offset:3px}.pcat-power input:disabled{opacity:.5;cursor:default}',
                 '@media(max-width:600px){.pcat-power .pcat-card{padding:16px;margin:12px 0}.pcat-power .pcat-stats{gap:8px}.pcat-power .pcat-stats strong{font-size:17px}.pcat-power .pcat-percentage{font-size:36px}.pcat-power .pcat-row{gap:10px}}'
             ].join('')),
-            E('h2', {}, '电池与电源'),
+            E('h2', {}, '光影猫管理'),
             E('p', { 'class': 'pcat-muted' }, '查看电池状态，设置电量显示和自动开关机。'),
             E('section', { 'class': 'pcat-card pcat-hero' }, [
                 E('div', { 'class': 'pcat-head' }, [ percentage, supply ]), meter,
