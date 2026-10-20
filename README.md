@@ -42,7 +42,7 @@ Wi-Fi 按检测到的实际频段生成，不固定网卡编号。保留配置�
 
 ## 电池管理器与电量显示
 
-已恢复顶部 [luci-mod-battstatus](packages/luci-mod-battstatus/) 电池显示及简体中文翻译，保留 Aurora 紧凑样式。顶部图标通过电源插件只读 UBUS 获取电量，与系统 → 光影猫电源管理页面共享 [pcat-manager-v1 PMU-only](packages/pcat-manager-v1/) 数据来源；新管理器仍是 `/dev/ttyS4` 唯一访问者，不依赖旧 Go FUSE。
+现在只需一个软件包：[luci-app-photonicat-power](packages/luci-app-photonicat-power/)。其中同时包含顶部电量显示、系统 → 光影猫电源管理页面、简体中文翻译和 PMU-only MCU 后台。保留 Aurora 紧凑样式；后台是 `/dev/ttyS4` 的唯一访问者，不依赖旧 Go FUSE。
 
 电池页可保存右上角显示开关、低电量提醒及阈值（默认 20%），点击顶部电量可直接进入。新增手机电量卡片及 UPS 自动倒计时；显示设置重启保留，低电量提醒仅在打开路由器后台时生效。
 
@@ -50,7 +50,7 @@ Wi-Fi 按检测到的实际频段生成，不固定网卡编号。保留配置�
 
 ## 光影猫一代电源管理（实验性）
 
-内置 [luci-app-photonicat-power](packages/luci-app-photonicat-power/)：系统 → 光影猫电源管理，支持手动、车载/UPS 延时关机、每日定时开关机。按官方 [pcat-manager v1 协议](https://github.com/photonicat/rockchip_rk3568_pcat_manager/tree/v1) 实现，仅使用控制 Socket，不操作 MCU 串口。**使用官方 v1 C 版 PMU-only 后台替代原 Go 版 pcat-mgr**，通过 `/tmp/pcat-manager.sock` 获取电量及电源模式；安装后端需要重新编译刷机验证。具体限制见插件 README。
+系统 → 光影猫电源管理支持手动、车载/UPS 延时关机、每日定时开关机。插件中的页面按官方 [pcat-manager v1 协议](https://github.com/photonicat/rockchip_rk3568_pcat_manager/tree/v1) 使用控制 Socket，不直接操作 MCU 串口。内置官方 v1 C 版 PMU-only 后台替代原 Go 版 pcat-mgr，通过 `/tmp/pcat-manager.sock` 获取电量及电源模式；需要重新编译刷机验证。具体限制见插件 README。
 
 ## 配置与脚本说明
 

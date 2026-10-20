@@ -19,16 +19,15 @@
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 使用本次上游检测脚本，调整频段顺序并生成 Photonicat 分频 SSID、WPA2 密码 |
 
-## 电池指示插件（直接集成）
+## 光影猫电池与电源插件
 
-- 完整的 [luci-mod-battstatus](../packages/luci-mod-battstatus/) 直接放入项目，包含 [battstatus.js](../packages/luci-mod-battstatus/htdocs/luci-static/resources/preload/battstatus.js)、原版电池 RPC、ACL 和全部上游翻译。
-- 编译时由 `build/prepare.sh` 将本地插件复制进 `package/`，随后移除 Feeds 的同名符号链接。
+- [luci-app-photonicat-power](../packages/luci-app-photonicat-power/) 包含 [battstatus.js](../packages/luci-app-photonicat-power/htdocs/luci-static/resources/preload/battstatus.js)、电源管理页面、两个 RPC 服务、MCU 守护进程、ACL 和电池翻译源码；固件内只安装这个插件。
+- 编译时由 `build/prepare.sh` 复制整个本地包，并移除 Feeds 的同名电池插件链接。简体中文翻译随包安装，无需额外选择翻译包。
 - 不再需要 `fix-aurora-battstatus.py` 或 `files/www/` 静态覆盖，**不修改 Aurora 主题源码**。
 
 ## 项目内置的 LuCI 插件
 
-- [电池状态 luci-mod-battstatus](../packages/luci-mod-battstatus/README.md)：整套插件源码内置，含 Aurora 电池显示修改、RPC 及翻译。
-- [电池与电源管理](../packages/luci-app-photonicat-power/README.md)：电量卡片、顶部显示开关、低电量提醒和 UPS 倒计时；显示设置保存到独立 UCI 配置。
+- [电池与电源管理](../packages/luci-app-photonicat-power/README.md)：电量卡片、顶部显示开关、低电量提醒、UPS 倒计时和 PMU 后台；显示设置保存到独立 UCI 配置。
 - [CPU 调频管理 luci-app-cpufreq](../packages/luci-app-cpufreq/README.md)：整个插件直接存放在项目内；可修改网页、菜单、权限及简体中文翻译。后台仍采用官方 `cpufreq`，无需另外的修改脚本。
 - [在线升级 luci-app-online-upgrade](../packages/luci-app-online-upgrade/README.md)：整套网页、后端、配置、菜单、权限及上游翻译存放在插件目录内，已包含光影猫固件识别和升级校验。
 - 编译时 `build/prepare.sh` 复制本地源码；随后移除 Feeds 中同名符号链接以避免重复注册。

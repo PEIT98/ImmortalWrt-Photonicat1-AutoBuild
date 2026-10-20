@@ -8,7 +8,7 @@
           "runtime",
           "battery"
         ],
-        "luci.battstatus": ["getSettings"]
+        "luci.battstatus": ["getBatteryStatus", "getSettings"]
       }
     },
     "write": {

@@ -1,0 +1,5 @@
+#!/bin/sh
+# The former luci-i18n-battstatus-zh-cn package registered this language.
+uci -q set luci.languages.zh_cn='简体中文 (Simplified Chinese)'
+uci -q commit luci
+exit 0

@@ -70,58 +70,36 @@ grep -Fxq 'LUCI_DEPENDS:=+cpufreq' "$CPUFREQ_DST/Makefile"
 grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$CPUFREQ_DST/Makefile"
 echo 'CPU 调频管理：本地 luci-app-cpufreq（网页、ACL、中文翻译）已安装到源码树。'
 
-# 右上角电池图标复用现有 luci-mod-battstatus，RPC 数据由新 PMU-only 管理器提供。
-# 不启用旧 Go FUSE 电池路径，不修改 Aurora 主题与其它设备支持。
-BATTERY_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-mod-battstatus"
-BATTERY_PACKAGE_DST="$SRC/package/luci-mod-battstatus"
-test -f "$BATTERY_PACKAGE_SRC/Makefile" || { echo "::error::缺少项目内置 luci-mod-battstatus" >&2; exit 1; }
-test ! -e "$BATTERY_PACKAGE_DST" || { echo "::error::目标 luci-mod-battstatus 路径已存在，禁止覆盖" >&2; exit 1; }
-mkdir -p "$BATTERY_PACKAGE_DST"
-cp -a "$BATTERY_PACKAGE_SRC/." "$BATTERY_PACKAGE_DST/"
-test -f "$BATTERY_PACKAGE_DST/htdocs/luci-static/resources/preload/battstatus.js"
-test -x "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
-test -f "$BATTERY_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-mod-battstatus.json"
-test -f "$BATTERY_PACKAGE_DST/po/zh_Hans/battstatus.po"
-grep -Fxq 'include $(TOPDIR)/feeds/luci/luci.mk' "$BATTERY_PACKAGE_DST/Makefile"
-grep -Fq 'luci.photonicat_power battery' "$BATTERY_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
-echo '顶部电池插件已复制：光影猫一代通过 PMU-only RPC 获取状态，保留 Aurora 5 秒指示。'
-
-# 唯一 MCU 串口管理器：光影猫一代官方 PMU-only C 后台。
-# 设备默认包也需要切换，否则设备定义还会自动拉入 Go pcat-mgr。
-PMU_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/pcat-manager-v1"
-PMU_DST="$SRC/package/pcat-manager-v1"
-test -f "$PMU_SRC/Makefile" || { echo "::error::缺少本地 pcat-manager-v1 封装" >&2; exit 1; }
-test ! -e "$PMU_DST" || { echo "::error::本地 pcat-manager-v1 路径被占用" >&2; exit 1; }
-python3 "$(dirname "$0")/switch-pcat-manager.py" "$SRC/target/linux/rockchip/image/armv8.mk"
-mkdir -p "$PMU_DST"
-cp -a "$PMU_SRC/." "$PMU_DST/"
-test -x "$PMU_DST/files/pcat-manager.init"
-test -f "$PMU_DST/files/pcat-manager.conf"
-test -f "$PMU_DST/files/modem-manager-noop.c"
-test -f "$PMU_DST/files/patch-main.py"
-test -f "$PMU_DST/files/patch-photonicat-ups.py"
-sh -n "$PMU_DST/files/pcat-manager.init"
-python3 -m py_compile "$PMU_DST/files/patch-main.py" "$PMU_DST/files/patch-photonicat-ups.py"
-grep -Fq 'patch-photonicat-ups.py' "$PMU_DST/Makefile"
-echo '光影猫一代 PMU-only 管理器已添加；Go 版 pcat-mgr 从设备默认包移除。'
-
-# 一代电源管理页面由 PMU Socket 同时提供电池状态和电源模式。
-# 顶部电池指示与页面电池状态使用同一 PMU Socket 后台，QModem 独立控制模组。
+# 单一软件包内含 MCU 服务、电源页面及右上角电池状态。
+# 设备默认包同步替换，避免原 Go pcat-mgr 争用 /dev/ttyS4。
 POWER_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-photonicat-power"
 POWER_PACKAGE_DST="$SRC/package/luci-app-photonicat-power"
 test -f "$POWER_PACKAGE_SRC/Makefile" || { echo "::error::缺少 luci-app-photonicat-power 本地源码" >&2; exit 1; }
 test ! -e "$POWER_PACKAGE_DST" || { echo "::error::电源管理目标路径被上游占用，禁止覆盖" >&2; exit 1; }
+python3 "$(dirname "$0")/switch-pcat-manager.py" "$SRC/target/linux/rockchip/image/armv8.mk"
 mkdir -p "$POWER_PACKAGE_DST"
 cp -a "$POWER_PACKAGE_SRC/." "$POWER_PACKAGE_DST/"
+test -x "$POWER_PACKAGE_DST/files/pcat-manager.init"
+test -f "$POWER_PACKAGE_DST/files/pcat-manager.conf"
+test -f "$POWER_PACKAGE_DST/files/modem-manager-noop.c"
+test -f "$POWER_PACKAGE_DST/files/patch-main.py"
+test -f "$POWER_PACKAGE_DST/files/patch-photonicat-ups.py"
+test -x "$POWER_PACKAGE_DST/files/98-photonicat-battery-language"
+sh -n "$POWER_PACKAGE_DST/files/pcat-manager.init" "$POWER_PACKAGE_DST/files/98-photonicat-battery-language"
+python3 -c 'import ast,sys; [ast.parse(open(p).read()) for p in sys.argv[1:]]' "$POWER_PACKAGE_DST/files/patch-main.py" "$POWER_PACKAGE_DST/files/patch-photonicat-ups.py"
+grep -Fq 'patch-photonicat-ups.py' "$POWER_PACKAGE_DST/Makefile"
 POWER_RPC="$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_power"
-test -f "$POWER_RPC" || exit 1
-chmod 755 "$POWER_RPC"
-sh -n "$POWER_RPC"
+test -x "$POWER_RPC" || exit 1
+test -x "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus" || exit 1
+sh -n "$POWER_RPC" "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
 python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/luci/menu.d/luci-app-photonicat-power.json" >/dev/null
 python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/view/photonicat-power.js"
-grep -Fq 'include $(TOPDIR)/feeds/luci/luci.mk' "$POWER_PACKAGE_DST/Makefile"
-echo '光影猫一代电池/电源 LuCI 已安装，后端使用官方 PMU-only 管理器。'
+test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/preload/battstatus.js"
+test -f "$POWER_PACKAGE_DST/root/etc/config/luci_battstatus"
+test -f "$POWER_PACKAGE_DST/po/zh_Hans/battstatus.po"
+grep -Fq 'luci.photonicat_power battery' "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
+echo '光影猫一代电池与电源已合并为单一软件包，保留 Aurora 显示与 PMU-only 后台。'
 
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
