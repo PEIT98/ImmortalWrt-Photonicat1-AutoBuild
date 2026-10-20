@@ -19,9 +19,19 @@ function node(tag, attrs, children) {
 	return result;
 }
 nodes.indicators = node('div');
+let isAurora = true, nativeShown = 0;
+const nativeAttrs = { 'data-indicator': 'battery-Photonicat' };
+const nativeStyle = { color: '', removeProperty(key) { this[key] = ''; } };
+const nativeIndicator = {
+	getAttribute(key) { return nativeAttrs[key]; },
+	hasAttribute(key) { return key in nativeAttrs; },
+	setAttribute(key, value) { nativeAttrs[key] = value; },
+	addEventListener() {}, style: nativeStyle
+};
 const document = {
 	head: node('head'),
-	querySelector() { return {}; },
+	querySelector() { return isAurora ? {} : null; },
+	querySelectorAll() { return [nativeIndicator]; },
 	getElementById(id) { return nodes[id]; },
 	addEventListener() {}
 };
@@ -41,7 +51,7 @@ const rpc = { declare(options) {
 } };
 const app = new Function('ui', 'rpc', 'poll', 'baseclass', 'E', 'L', 'document',
 	'sessionStorage', '_', source)(
-	{ hideIndicator() {}, showIndicator() {}, addNotification() {} }, rpc,
+	{ hideIndicator() {}, showIndicator() { nativeShown++; }, addNotification() {} }, rpc,
 	{ add(fn, seconds) { calls.push(seconds); } }, { extend(value) { return value; } },
 	node, { bind: (fn, self) => fn.bind(self), url: x => x, resource: x => x },
 	document, { getItem() { return null; }, setItem() {}, removeItem() {} }, x => x);
@@ -74,6 +84,12 @@ async function run() {
 	battery = { Photonicat: { ...battery.Photonicat, indicator_enabled: false } };
 	await app.updateIndicator();
 	assert.equal(strip.children.length, 5, 'existing battery display switch is respected');
+	isAurora = false;
+	battery = { Photonicat: { ...battery.Photonicat, indicator_enabled: true, percentage: 19 } };
+	await app.updateIndicator();
+	assert.equal(nativeShown, 1, 'other themes retain the native battery indicator');
+	assert.equal(nativeAttrs['data-power-link'], '1', 'native battery remains linked to management');
+	assert.equal(nativeStyle.color, 'Red', 'native low battery color remains');
 	console.log('Photonicat header: dual PHY, link, no-service, mode and battery states passed');
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

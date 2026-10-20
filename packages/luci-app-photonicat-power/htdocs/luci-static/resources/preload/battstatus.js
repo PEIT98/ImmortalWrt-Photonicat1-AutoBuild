@@ -75,6 +75,31 @@ function aurora() {
 	return !!document.querySelector('link[href*="/luci-static/aurora/main.css"]');
 }
 
+function decorateNativeBattery(info) {
+	for (const el of document.querySelectorAll('#indicators > span[data-indicator]')) {
+		if (el.getAttribute('data-indicator') !== info.name) continue;
+		el.title = info.status;
+		if (info.power_page && !el.hasAttribute('data-power-link')) {
+			el.setAttribute('data-power-link', '1');
+			el.setAttribute('role', 'link');
+			el.setAttribute('tabindex', '0');
+			el.setAttribute('aria-label', '打开光影猫管理');
+			el.style.cursor = 'pointer';
+			el.addEventListener('click', function() { window.location.href = L.url('admin/system/photonicat-power'); });
+			el.addEventListener('keydown', function(event) {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault();
+					el.click();
+				}
+			});
+		}
+		if (info.valid && info.percentage <= 20) el.style.color = 'Red';
+		else if (info.valid && info.percentage <= 30) el.style.color = 'GoldenRod';
+		else el.style.removeProperty('color');
+		break;
+	}
+}
+
 function showHeader(data, battery) {
 	if (!aurora()) return;
 	const indicators = document.getElementById('indicators');
@@ -170,6 +195,7 @@ return baseclass.extend({
 					: info.message;
 				info.state = info.valid ? 'active' : 'inactive';
 				ui.showIndicator(info.name, info.status, null, info.state);
+				decorateNativeBattery(info);
 			}
 			for (const dev in devices) {
 				if (!Object.prototype.hasOwnProperty.call(devs, dev)) {
