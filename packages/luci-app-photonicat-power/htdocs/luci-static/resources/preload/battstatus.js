@@ -121,6 +121,13 @@ function aurora() {
 
 function headerStyle() {
 	if (!aurora()) return null;
+	const header = document.querySelector('header .header-content');
+	if (header) {
+		header.classList.add('pcat-header');
+		const brand = header.querySelector('a.brand');
+		if (brand && brand.textContent.trim() === 'Photonicat-Wrt')
+			brand.setAttribute('data-pcat-mobile-brand', 'Pwrt');
+	}
 	let link = document.getElementById('photonicat-header-style');
 	if (!link) {
 		link = E('link', { id: 'photonicat-header-style', rel: 'stylesheet',

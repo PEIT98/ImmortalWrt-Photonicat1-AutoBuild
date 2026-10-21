@@ -57,47 +57,71 @@
 }
 
 @media (max-width: 740px) {
-  header .header-content:has(#photonicat-status) {
-    height: auto !important;
-    min-height: 56px;
-    flex-wrap: wrap;
-    align-content: center;
-    row-gap: 3px;
+  header .header-content.pcat-header {
+    height: 52px !important;
+    min-height: 52px;
+    padding-inline: 10px;
+    padding-block: 0;
+    flex-wrap: nowrap;
+    gap: 4px;
   }
-  header .header-content:has(#photonicat-status) > .cmdk-trigger {
+  header .header-content.pcat-header > .navigation-controls { margin-right: 4px; }
+  header .header-content.pcat-header > .brand {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  header .header-content.pcat-header > .brand[data-pcat-mobile-brand] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    font-size: 0;
+  }
+  header .header-content.pcat-header > .brand[data-pcat-mobile-brand]::after {
+    content: attr(data-pcat-mobile-brand);
+    font-size: 16px;
+    line-height: 1;
+  }
+  header .header-content.pcat-header > .cmdk-trigger {
     order: 1;
     margin-left: auto;
+    width: 28px;
+    height: 28px;
   }
-  header #indicators:has(#photonicat-status) {
-    order: 5;
-    width: 100%;
-    max-width: 100%;
-    flex: 1 0 100%;
+  header .header-content.pcat-header > #indicators {
+    order: 2;
+    width: auto;
+    max-width: none;
+    flex: 0 1 auto;
+    min-width: 0;
     margin: 0;
     overflow-x: auto;
     scrollbar-width: none;
     flex-direction: row;
     justify-content: flex-start;
-    gap: 8px;
+    gap: 4px;
   }
-  header #indicators:has(#photonicat-status)::-webkit-scrollbar { display: none; }
+  header .header-content.pcat-header > #indicators::-webkit-scrollbar { display: none; }
   #photonicat-status {
-    flex: 0 1 auto;
-    max-width: 100%;
-    gap: 9px;
-    padding: 1px 0 3px;
+    flex: 0 0 auto;
+    max-width: none;
+    gap: 3px;
+    padding: 0;
+    overflow: visible;
   }
-  #photonicat-status .pcat-name { max-width: 64px; }
+  #photonicat-status .pcat-item { min-width: 18px; height: 26px; gap: 2px; font-size: 10px; }
+  #photonicat-status .pcat-item svg { width: 16px; height: 16px; }
+  #photonicat-status .pcat-ethernet svg { width: 18px; height: 17px; }
+  #photonicat-status .pcat-battery { margin-left: 0; }
+  #photonicat-status .pcat-battery svg { width: 45px; height: 19px; }
+  #photonicat-status .pcat-name { display: none; }
 }
 
 @media (max-width: 370px) {
-  #photonicat-status { gap: 7px; }
-  #photonicat-status .pcat-signal .pcat-name,
-  #photonicat-status .pcat-car .pcat-name,
-  #photonicat-status .pcat-manual .pcat-name,
-  #photonicat-status .pcat-timer .pcat-name { display: none; }
-  #photonicat-status .pcat-item { font-size: 11px; }
-  #photonicat-status .pcat-item svg { width: 18px; height: 18px; }
-  #photonicat-status .pcat-ethernet svg { width: 21px; height: 19px; }
-  #photonicat-status .pcat-battery svg { width: 48px; height: 20px; }
+  header .header-content.pcat-header { padding-inline: 8px; gap: 3px; }
+  header .header-content.pcat-header > #indicators { gap: 2px; }
+  #photonicat-status { gap: 2px; }
+  #photonicat-status .pcat-item { min-width: 17px; }
+  #photonicat-status .pcat-item svg { width: 15px; height: 15px; }
+  #photonicat-status .pcat-ethernet svg { width: 17px; height: 16px; }
+  #photonicat-status .pcat-battery svg { width: 43px; height: 18px; }
 }

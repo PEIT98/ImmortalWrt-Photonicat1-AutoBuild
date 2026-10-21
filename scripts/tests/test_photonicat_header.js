@@ -37,9 +37,18 @@ const nativeIndicator = {
 	setAttribute(key, value) { nativeAttrs[key] = value; },
 	addEventListener() {}, style: nativeStyle
 };
+const brandAttrs = {}, headerClasses = new Set();
+const brand = { textContent: 'Photonicat-Wrt', setAttribute(key, value) { brandAttrs[key] = value; } };
+const headerShell = {
+	classList: { add(value) { headerClasses.add(value); } },
+	querySelector(selector) { return selector === 'a.brand' ? brand : null; }
+};
 const document = {
 	head: node('head'),
-	querySelector() { return isAurora ? {} : null; },
+	querySelector(selector) {
+		if (!isAurora) return null;
+		return selector === 'header .header-content' ? headerShell : {};
+	},
 	querySelectorAll() { return [nativeIndicator]; },
 	createElementNS(namespaceURI, tag) {
 		return {
@@ -78,6 +87,8 @@ const app = createApp(rpc);
 
 async function run() {
 	app.__init__();
+	assert.ok(headerClasses.has('pcat-header'), 'Aurora header gets the mobile layout class');
+	assert.equal(brandAttrs['data-pcat-mobile-brand'], 'Pwrt', 'default mobile brand is abbreviated');
 	assert.equal(nodes['photonicat-status'], undefined,
 		'first load waits for both replies instead of flashing partial placeholders');
 	await Promise.resolve();
@@ -176,9 +187,12 @@ async function run() {
 	delete nodes['photonicat-header-style'];
 	document.head = node('head');
 	styleImmediate = false;
+	brand.textContent = 'CustomHost';
+	delete brandAttrs['data-pcat-mobile-brand'];
 	const pendingRpc = { declare() { return () => new Promise(() => {}); } };
 	const nextPage = createApp(pendingRpc);
 	nextPage.__init__();
+	assert.equal(brandAttrs['data-pcat-mobile-brand'], undefined, 'custom hostname is retained');
 	assert.equal(nodes['photonicat-status'], undefined, 'icons wait for their stylesheet to avoid a flash');
 	nodes['photonicat-header-style'].sheet = {};
 	nodes['photonicat-header-style'].dispatchEvent('load');
