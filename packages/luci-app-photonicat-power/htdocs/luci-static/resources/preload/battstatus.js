@@ -76,12 +76,16 @@ function icon(kind, level, state) {
 		return svg([ shape('path', { d: 'M2 9a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0' }),
 			shape('circle', { cx: 12, cy: 19, r: 1, fill: 'currentColor', stroke: 'none' }) ]);
 	case 'car':
-		return svg([ shape('path', { d: 'M5 16H3v-5l2-2h14l2 2v5h-2M5 16h14M6 9l2-4h8l2 4' }),
-			shape('circle', { cx: 7, cy: 17, r: 2 }), shape('circle', { cx: 17, cy: 17, r: 2 }) ]);
+		return svg([ shape('circle', { cx: 12, cy: 12, r: 9 }),
+			shape('path', { d: 'M3.5 9.5h17M10.7 15.3l-1.5 5M13.3 15.3l1.5 5' }),
+			shape('circle', { cx: 12, cy: 13.5, r: 2.2 }) ]);
 	case 'timer':
-		return svg([ shape('circle', { cx: 12, cy: 13, r: 8 }), shape('path', { d: 'M12 8v5l3 2M9 2h6' }) ]);
+		return svg([ shape('circle', { cx: 12, cy: 12, r: 9 }),
+			shape('path', { d: 'M12 6.5V12l4 2.3' }) ]);
 	case 'manual':
-		return svg([ shape('path', { d: 'M7 13V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v5-3a1.5 1.5 0 0 1 3 0v7a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7l-3-4.5a1.6 1.6 0 0 1 2.6-1.8L7 13Z' }) ]);
+		return svg([ shape('path', { d: 'M3 7h8m4 0h6M3 17h3m4 0h11' }),
+			shape('circle', { cx: 13, cy: 7, r: 2 }),
+			shape('circle', { cx: 8, cy: 17, r: 2 }) ]);
 	case 'unknown':
 		return svg([ shape('circle', { cx: 12, cy: 12, r: 9 }),
 			shape('path', { d: 'M9.5 9a2.5 2.5 0 1 1 4 2l-1.5 1.2V14M12 17h.01' }) ]);

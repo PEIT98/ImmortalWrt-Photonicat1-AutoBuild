@@ -136,6 +136,15 @@ async function run() {
 	assert.equal(strip.children[0].attrs.title, '读取中', 'a failed status request is not called no service');
 	assert.match(strip.children[3].attrs.title, /定时/);
 	assert.equal(strip.children[3].children[0].namespaceURI, 'http://www.w3.org/2000/svg');
+	const timerIcon = strip.children[3].children[0];
+	header.mode = 'manual';
+	await app.updateHeader();
+	assert.match(strip.children[3].attrs.title, /手动/);
+	assert.notStrictEqual(strip.children[3].children[0], timerIcon, 'mode changes update only its icon');
+	header.mode = 'car';
+	await app.updateHeader();
+	assert.match(strip.children[3].attrs.title, /车载/);
+	assert.equal(strip.children[3].attrs.href, 'admin/system/photonicat-power');
 
 	battery = { Photonicat: { ...battery.Photonicat, indicator_enabled: false } };
 	await app.updateIndicator();
