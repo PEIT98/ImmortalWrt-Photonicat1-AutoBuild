@@ -28,7 +28,7 @@
 | 主机名及界面品牌 | `Photonicat-Wrt` |
 | 后台地址 | `http://172.16.0.1`（LAN：`172.16.0.1/24`） |
 | 后台／SSH 账号及密码 | `root`／`photonicat` |
-| 2.4 GHz Wi-Fi | `Photonicat-2.4G` |
+| 2.4 GHz Wi-Fi | `Photonicat` |
 | 5 GHz Wi-Fi | `Photonicat-5G` |
 | Wi-Fi 密码／加密 | `photonicat`／WPA2-PSK |
 
