@@ -18,7 +18,7 @@ if not match:
     raise SystemExit('::error::上游 mac80211.uc 的频段定义已变更，请检查 Wi-Fi 默认配置')
 updated = data[:match.start()] + '''const bands_order = [ "2G", "5G", "6G", "60G" ];
 const photonicat_defaults = {
-	"2g": { ssid: "Photonicat-2.4G", encryption: "psk2", key: "photonicat" },
+	"2g": { ssid: "Photonicat", encryption: "psk2", key: "photonicat" },
 	"5g": { ssid: "Photonicat-5G", encryption: "psk2", key: "photonicat" }
 };''' + data[match.end():]
 replacements = {
