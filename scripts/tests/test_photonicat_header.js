@@ -9,12 +9,21 @@ const root = path.resolve(__dirname, '../..');
 const source = fs.readFileSync(path.join(root,
 	'packages/luci-app-photonicat-power/htdocs/luci-static/resources/preload/battstatus.js'), 'utf8');
 const nodes = {};
+let styleImmediate = true;
 function node(tag, attrs, children) {
 	const result = {
 		tag, attrs: attrs || {}, children: Array.isArray(children) ? children : children == null ? [] : [children],
-		appendChild(child) { this.children.push(child); if (child.attrs.id) nodes[child.attrs.id] = child; },
+		appendChild(child) {
+			this.children.push(child);
+			if (child.attrs.id) nodes[child.attrs.id] = child;
+			if (this.tag === 'head' && child.tag === 'link' && styleImmediate) child.sheet = {};
+		},
 		prepend(child) { this.children.unshift(child); if (child.attrs.id) nodes[child.attrs.id] = child; },
-		replaceChildren(...items) { this.children = items; }
+		replaceChild(child, previous) { this.children[this.children.indexOf(previous)] = child; },
+		removeChild(child) { this.children.splice(this.children.indexOf(child), 1); },
+		get lastElementChild() { return this.children[this.children.length - 1]; },
+		addEventListener(type, callback) { (this.listeners ||= {})[type] = callback; },
+		dispatchEvent(type) { this.listeners[type](); }
 	};
 	return result;
 }
@@ -56,15 +65,21 @@ const calls = [];
 const rpc = { declare(options) {
 	return () => Promise.resolve(options.object === 'luci.battstatus' ? battery : header);
 } };
-const app = new Function('ui', 'rpc', 'poll', 'baseclass', 'E', 'L', 'document',
+const storage = {};
+const sessionStorage = { getItem(key) { return storage[key] || null; },
+	setItem(key, value) { storage[key] = value; }, removeItem(key) { delete storage[key]; } };
+const createApp = (provider) => new Function('ui', 'rpc', 'poll', 'baseclass', 'E', 'L', 'document',
 	'sessionStorage', '_', source)(
-	{ hideIndicator() {}, showIndicator() { nativeShown++; }, addNotification() {} }, rpc,
+	{ hideIndicator() {}, showIndicator() { nativeShown++; }, addNotification() {} }, provider,
 	{ add(fn, seconds) { calls.push(seconds); } }, { extend(value) { return value; } },
 	node, { bind: (fn, self) => fn.bind(self), url: x => x, resource: x => x },
-	document, { getItem() { return null; }, setItem() {}, removeItem() {} }, x => x);
+	document, sessionStorage, x => x);
+const app = createApp(rpc);
 
 async function run() {
 	app.__init__();
+	assert.equal(nodes['photonicat-status'], undefined,
+		'first load waits for both replies instead of flashing partial placeholders');
 	await Promise.resolve();
 	await Promise.resolve();
 	assert.deepEqual(calls, [5, 15]);
@@ -85,6 +100,11 @@ async function run() {
 		4, 'QModem RSRP lights all four steps');
 	assert.equal(strip.children[1].attrs['data-state'], 'on');
 	assert.equal(strip.children[2].attrs['data-state'], 'off');
+	assert.equal(strip.children[0].attrs.href, 'admin/modem/qmodem');
+	assert.equal(strip.children[1].attrs.href, 'admin/network/network');
+	assert.equal(strip.children[2].attrs.href, 'admin/network/network');
+	assert.equal(strip.children[3].attrs.href, 'admin/network/wireless');
+	assert.equal(strip.children[4].attrs.href, 'admin/network/wireless');
 	assert.match(strip.children[3].attrs.title, /phy0.*已开启/);
 	assert.match(strip.children[4].attrs.title, /phy1.*未开启/);
 	assert.match(strip.children[5].attrs.title, /车载/);
@@ -92,6 +112,13 @@ async function run() {
 	assert.equal(strip.children[6].children.length, 1, 'battery has no separate percentage label');
 	assert.equal(strip.children[6].children[0].children.find(child => child.tag === 'text').textContent,
 		'81', 'percentage is drawn inside the battery SVG');
+	const unchangedPort = strip.children[1];
+	await app.updateIndicator();
+	assert.strictEqual(strip.children[1], unchangedPort, 'identical polling keeps existing icons');
+	battery.Photonicat.percentage = 80;
+	await app.updateIndicator();
+	assert.strictEqual(strip.children[1], unchangedPort, 'battery changes leave the port icon in place');
+	assert.match(strip.children[6].attrs.title, /80%/);
 
 	header = { cellular: { connection: 'no', generation: '', bars: 0 },
 		ethernet: header.ethernet, wifi: [], mode: 'timer' };
@@ -119,6 +146,31 @@ async function run() {
 	assert.equal(nativeShown, 1, 'other themes retain the native battery indicator');
 	assert.equal(nativeAttrs['data-power-link'], '1', 'native battery remains linked to management');
 	assert.equal(nativeStyle.color, 'Red', 'native low battery color remains');
-	console.log('Photonicat header: dual PHY, link, no-service, mode and battery states passed');
+
+	isAurora = true;
+	header.cellular = { connection: 'yes', generation: '5G', bars: 3, rsrp: '-83' };
+	await app.updateHeader();
+	assert.ok(storage['photonicat-header-cache-v1'], 'recent status is kept for navigation');
+	nodes.indicators = node('div');
+	delete nodes['photonicat-status'];
+	delete nodes['photonicat-header-style'];
+	document.head = node('head');
+	styleImmediate = false;
+	const pendingRpc = { declare() { return () => new Promise(() => {}); } };
+	const nextPage = createApp(pendingRpc);
+	nextPage.__init__();
+	assert.equal(nodes['photonicat-status'], undefined, 'icons wait for their stylesheet to avoid a flash');
+	nodes['photonicat-header-style'].sheet = {};
+	nodes['photonicat-header-style'].dispatchEvent('load');
+	assert.match(nodes['photonicat-status'].children[0].attrs.title, /5G · RSRP -83 dBm/,
+		'navigation shows the recent status before either new reply');
+	const expired = JSON.parse(storage['photonicat-header-cache-v1']);
+	expired.updatedAt = Date.now() - 61000;
+	storage['photonicat-header-cache-v1'] = JSON.stringify(expired);
+	delete nodes['photonicat-status'];
+	const stalePage = createApp(pendingRpc);
+	stalePage.__init__();
+	assert.equal(nodes['photonicat-status'], undefined, 'expired status is not shown as live data');
+	console.log('Photonicat header: links, steady polling, navigation cache and radio states passed');
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

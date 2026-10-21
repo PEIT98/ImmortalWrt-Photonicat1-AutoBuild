@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-photonicat-power
 PKG_VERSION:=1.0.16
-PKG_RELEASE:=6
+PKG_RELEASE:=7
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/photonicat/rockchip_rk3568_pcat_manager.git
 PKG_SOURCE_DATE:=2025-08-18

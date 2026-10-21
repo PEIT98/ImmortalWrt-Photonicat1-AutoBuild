@@ -7,6 +7,23 @@
 const callBatteryStatus = rpc.declare({ object: 'luci.battstatus', method: 'getBatteryStatus', expect: { '': {} } });
 const callHeaderStatus = rpc.declare({ object: 'luci.photonicat_header', method: 'status', expect: { '': {} } });
 const devices = {}, warned = {};
+const HEADER_CACHE_KEY = 'photonicat-header-cache-v1';
+const HEADER_CACHE_MS = 60000;
+let headerStyleReady = false, headerStyleLoading = false, pendingHeader = null;
+
+function readHeaderCache() {
+	try {
+		const cached = JSON.parse(sessionStorage.getItem(HEADER_CACHE_KEY));
+		const age = Date.now() - cached.updatedAt;
+		return cached.header && age >= 0 && age < HEADER_CACHE_MS ? cached : null;
+	} catch (e) { return null; }
+}
+
+function saveHeaderCache(header, battery, updatedAt) {
+	if (!header || !updatedAt || Date.now() - updatedAt >= HEADER_CACHE_MS) return;
+	try { sessionStorage.setItem(HEADER_CACHE_KEY, JSON.stringify({ header, battery, updatedAt })); }
+	catch (e) {}
+}
 
 function checkLowBattery(dev, info) {
 	const key = 'photonicat-low-battery-' + dev;
@@ -79,19 +96,32 @@ function icon(kind, level, state) {
 	}
 }
 
-function item(kind, label, title, state, textLabel, link, level) {
+function item(kind, label, title, state, textLabel, target, level) {
 	const attrs = { 'class': 'pcat-item pcat-' + kind, 'data-state': state,
 		title: title, 'aria-label': title };
-	if (link) attrs.href = L.url('admin/system/photonicat-power');
+	if (target) attrs.href = L.url(target);
 	else attrs.role = 'img';
 	const children = [icon(kind, level, state)];
 	if (label) children.push(E('span', { 'class': 'pcat-label' }, label));
 	if (textLabel) children.push(E('span', { 'class': 'pcat-name' }, textLabel));
-	return E(link ? 'a' : 'span', attrs, children);
+	const element = E(target ? 'a' : 'span', attrs, children);
+	element._pcatKey = JSON.stringify([kind, label, title, state, textLabel, target, level]);
+	return element;
 }
 
 function aurora() {
 	return !!document.querySelector('link[href*="/luci-static/aurora/main.css"]');
+}
+
+function headerStyle() {
+	if (!aurora()) return null;
+	let link = document.getElementById('photonicat-header-style');
+	if (!link) {
+		link = E('link', { id: 'photonicat-header-style', rel: 'stylesheet',
+			href: L.resource('photonicat-header.css') });
+		document.head.appendChild(link);
+	}
+	return link;
 }
 
 function decorateNativeBattery(info) {
@@ -120,12 +150,27 @@ function decorateNativeBattery(info) {
 }
 
 function showHeader(data, battery) {
-	if (!aurora()) return;
+	const style = headerStyle();
+	if (!style) return;
+	if (!style.sheet && !headerStyleReady) {
+		pendingHeader = { data, battery };
+		if (!headerStyleLoading) {
+			headerStyleLoading = true;
+			const ready = function() {
+				if (headerStyleReady) return;
+				headerStyleReady = true;
+				const latest = pendingHeader;
+				pendingHeader = null;
+				if (latest) showHeader(latest.data, latest.battery);
+			};
+			style.addEventListener('load', ready, { once: true });
+			style.addEventListener('error', ready, { once: true });
+		}
+		return;
+	}
+	pendingHeader = null;
 	const indicators = document.getElementById('indicators');
 	if (!indicators) return;
-	if (!document.getElementById('photonicat-header-style'))
-		document.head.appendChild(E('link', { id: 'photonicat-header-style', rel: 'stylesheet',
-			href: L.resource('photonicat-header.css') }));
 	let strip = document.getElementById('photonicat-status');
 	if (!strip) {
 		strip = E('div', { id: 'photonicat-status', role: 'group', 'aria-label': '光影猫设备状态' });
@@ -139,24 +184,26 @@ function showHeader(data, battery) {
 	const bars = connected ? Math.max(0, Math.min(4, Number(cellular.bars) || 0)) : 0;
 	const cellTitle = generation + (connected && cellular.rsrp ? ' · RSRP ' + cellular.rsrp + ' dBm' : '');
 	cells.push(item('signal', generation, cellTitle,
-		connected ? 'on' : (connection === 'no' ? 'off' : 'unknown'), null, false, bars));
+		connected ? 'on' : (connection === 'no' ? 'off' : 'unknown'), null, 'admin/modem/qmodem', bars));
 	const ethernet = data && data.ethernet || [
 		{ name: 'eth0', label: 'WAN' }, { name: 'eth1', label: 'LAN' }
 	];
 	ethernet.forEach(function(port) {
 		const title = (port.label || port.name) + ' (' + port.name + ') · ' +
 			(port.linked == null ? '状态未知' : (port.linked ? '已连接' : '未连接'));
-		cells.push(item('ethernet', null, title, port.linked == null ? 'unknown' : (port.linked ? 'on' : 'off')));
+		cells.push(item('ethernet', null, title, port.linked == null ? 'unknown' : (port.linked ? 'on' : 'off'),
+			null, 'admin/network/network'));
 	});
 	const wifi = data && data.wifi || [];
 	wifi.forEach(function(radio) {
 		const title = radio.phy + (radio.driver ? ' · ' + radio.driver : '') +
 			' · 驱动已加载 · ' + (radio.enabled ? '已开启' : '未开启');
-		cells.push(item('wifi', null, title, radio.enabled ? 'on' : 'off'));
+		cells.push(item('wifi', null, title, radio.enabled ? 'on' : 'off', null, 'admin/network/wireless'));
 	});
 	const mode = data && data.mode || '';
 	const modeName = { manual: '手动', car: '车载', timer: '定时' }[mode] || '未读取';
-	cells.push(item(mode || 'unknown', null, '电池模式 · ' + modeName, mode ? 'on' : 'unknown', modeName, true));
+	cells.push(item(mode || 'unknown', null, '电池模式 · ' + modeName, mode ? 'on' : 'unknown',
+		modeName, 'admin/system/photonicat-power'));
 	if (battery && battery.indicator_enabled !== false) {
 		const percentage = battery.valid ? Number(battery.percentage) : null;
 		const title = battery.valid
@@ -164,34 +211,53 @@ function showHeader(data, battery) {
 			: (battery.message || '电量暂不可用');
 		cells.push(item('battery', null, title,
 			battery.valid ? (percentage <= 20 ? 'low' : 'on') : 'unknown', null,
-			!!battery.power_page, percentage));
+			battery.power_page ? 'admin/system/photonicat-power' : null, percentage));
 	}
-	strip.replaceChildren.apply(strip, cells);
+	for (let i = 0; i < cells.length; i++) {
+		const current = strip.children[i];
+		if (!current) strip.appendChild(cells[i]);
+		else if (current._pcatKey !== cells[i]._pcatKey) strip.replaceChild(cells[i], current);
+	}
+	while (strip.children.length > cells.length) strip.removeChild(strip.lastElementChild);
 }
 
 return baseclass.extend({
 	__init__() {
+		const cached = readHeaderCache();
 		this.revision = 0;
 		this.headerRevision = 0;
-		this.headerData = null;
-		this.batteryData = null;
-		showHeader(null, null);
+		this.headerData = cached ? cached.header : null;
+		this.batteryData = cached ? cached.battery : null;
+		this.headerUpdatedAt = cached ? cached.updatedAt : 0;
+		this.batteryUpdatedAt = cached ? cached.updatedAt : 0;
+		this.headerReady = !!cached;
+		this.batteryReady = !!cached;
+		headerStyle();
+		if (cached) showHeader(this.headerData, this.batteryData);
 		this.updateIndicator();
 		this.updateHeader();
 		poll.add(L.bind(this.updateIndicator, this), 5);
 		poll.add(L.bind(this.updateHeader, this), 15);
 		document.addEventListener('photonicat-battery-settings-changed', L.bind(this.updateIndicator, this));
 	},
+	renderHeader() {
+		if (!this.headerReady || !this.batteryReady) return;
+		showHeader(this.headerData, this.batteryData);
+		saveHeaderCache(this.headerData, this.batteryData, this.headerUpdatedAt);
+	},
 	updateHeader() {
 		const revision = ++this.headerRevision;
 		return callHeaderStatus().then(L.bind(function(data) {
 			if (revision !== this.headerRevision) return;
 			this.headerData = data;
-			showHeader(data, this.batteryData);
+			this.headerUpdatedAt = Date.now();
+			this.headerReady = true;
+			this.renderHeader();
 		}, this)).catch(L.bind(function() {
 			if (revision !== this.headerRevision) return;
-			this.headerData = null;
-			showHeader(null, this.batteryData);
+			if (Date.now() - this.headerUpdatedAt >= HEADER_CACHE_MS) this.headerData = null;
+			this.headerReady = true;
+			this.renderHeader();
 		}, this));
 	},
 	updateIndicator() {
@@ -199,6 +265,7 @@ return baseclass.extend({
 		return callBatteryStatus().then(L.bind(function(devs) {
 			if (revision !== this.revision) return;
 			this.batteryData = null;
+			this.batteryUpdatedAt = Date.now();
 			for (const dev in devs) {
 				const info = devs[dev];
 				checkLowBattery(dev, info);
@@ -222,15 +289,17 @@ return baseclass.extend({
 					delete devices[dev];
 				}
 			}
-			showHeader(this.headerData, this.batteryData);
+			this.batteryReady = true;
+			this.renderHeader();
 		}, this)).catch(L.bind(function() {
 			if (revision !== this.revision) return;
-			this.batteryData = null;
+			if (Date.now() - this.batteryUpdatedAt >= HEADER_CACHE_MS) this.batteryData = null;
 			for (const dev in devices) {
 				ui.hideIndicator(devices[dev].name);
 				delete devices[dev];
 			}
-			showHeader(this.headerData, null);
+			this.batteryReady = true;
+			this.renderHeader();
 		}, this));
 	}
 });
