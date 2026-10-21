@@ -1,0 +1,63 @@
+# One-time cleanup of the 15 older non-prerelease firmware releases.
+# Existing pre-releases, git tags, source code, and build workflows are untouched.
+name: One-time cleanup of old stable releases
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cleanup-stable-releases.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'chore: remove stable releases and retain prereleases' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Delete only the identified non-prereleases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY}"
+          ids=(
+            415045727
+            414545610
+            414147742
+            414041853
+            413926796
+            413780119
+            413654392
+            412355082
+            412311525
+            411922773
+            411628182
+            411509359
+            411399500
+            411057224
+            410814876
+          )
+          removed=0
+          for id in "${ids[@]}"; do
+            if ! release="$(gh api "repos/${repo}/releases/${id}" 2>/dev/null)"; then
+              echo "Release ${id}: already absent, skipping"
+              continue
+            fi
+            kind="$(jq -r 'if .draft then "draft" elif .prerelease then "prerelease" else "stable" end' <<< "${release}")"
+            if [[ "${kind}" != "stable" ]]; then
+              echo "Release ${id}: ${kind}, preserving"
+              continue
+            fi
+            tag="$(jq -r '.tag_name' <<< "${release}")"
+            echo "Deleting old stable release: ${tag} (ID ${id})"
+            gh api -X DELETE "repos/${repo}/releases/${id}" --silent
+            removed=$((removed+1))
+          done
+          leftovers="$(gh api --paginate "repos/${repo}/releases?per_page=100" | jq -s '[.[][] | select(.draft == false and .prerelease == false)] | length')"
+          pre_count="$(gh api --paginate "repos/${repo}/releases?per_page=100" | jq -s '[.[][] | select(.draft == false and .prerelease == true)] | length')"
+          echo "Deleted ${removed} stable releases. Remaining published stable releases: ${leftovers}; pre-releases: ${pre_count}"
+          [[ "${leftovers}" -eq 0 ]] || exit 1
