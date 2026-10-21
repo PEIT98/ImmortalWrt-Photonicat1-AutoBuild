@@ -1,0 +1,67 @@
+# Remove Git tags left behind by previously deleted stable Releases only.
+# Retain all tags for existing Pre-release or draft Releases.
+name: One-time cleanup of old stable tags
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cleanup-orphan-release-tags.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Delete checked orphaned tags and verify retained releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY}"
+          tags=(
+            photonicat1-20261013-003923-9
+            photonicat1-20261013-065249-10
+            photonicat1-20261013-152406-14
+            photonicat1-20261013-173451-15
+            photonicat1-20261013-200201-19
+            photonicat1-20261014-011229-20
+            photonicat1-20261014-113041-21
+            photonicat1-20261014-130622-22
+            photonicat1-20261015-175843-26
+            photonicat1-20261015-202353-27
+            photonicat1-20261015-224410-28
+            photonicat1-20261016-004143-29
+            photonicat1-20261016-024024-30
+            photonicat1-20261016-124314-32
+            photonicat1-20261016-222022-34
+          )
+          release_tags="$(mktemp)"
+          gh api --paginate "repos/${repo}/releases?per_page=100" | jq -s '[.[][] | .tag_name]' > "${release_tags}"
+          deleted=0
+          for tag in "${tags[@]}"; do
+            if jq -e --arg t "${tag}" 'index($t) != null' "${release_tags}" >/dev/null; then
+              echo "ERROR: ${tag} still belongs to a Release; refusing to delete" >&2
+              exit 1
+            fi
+            if gh api "repos/${repo}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+              gh api -X DELETE "repos/${repo}/git/refs/tags/${tag}" --silent
+              echo "Removed orphan tag: ${tag}"
+              deleted=$((deleted+1))
+            else
+              echo "Orphan tag already absent: ${tag}"
+            fi
+          done
+          remaining="$(gh api "repos/${repo}/git/matching-refs/tags/photonicat1-" | jq 'length')"
+          alive="$(gh api --paginate "repos/${repo}/releases?per_page=100" | jq -s '[.[][] | .tag_name]')"
+          while IFS= read -r tag; do
+            gh api "repos/${repo}/git/ref/tags/${tag}" >/dev/null || {
+              echo "ERROR: missing retained release tag ${tag}" >&2
+              exit 1
+            }
+          done < <(jq -r '.[]' <<< "${alive}")
+          echo "Deleted ${deleted} orphan tags. Remaining firmware tags: ${remaining}"
+          test "${remaining}" -eq "$(jq 'length' <<< "${alive}")"
