@@ -111,7 +111,7 @@ async function run() {
 	assert.match(strip.children[6].attrs.title, /81%/);
 	assert.equal(strip.children[6].children.length, 1, 'battery has no separate percentage label');
 	assert.equal(strip.children[6].children[0].children.find(child => child.tag === 'text').textContent,
-		'81', 'percentage is drawn inside the battery SVG');
+		'81%', 'percentage is drawn inside the battery SVG');
 	assert.equal(strip.children[6].children[0].children.some(child => child.attrs.class === 'pcat-charge-bolt'),
 		false, 'battery power does not show a charging bolt');
 	const unchangedPort = strip.children[1];
@@ -124,10 +124,12 @@ async function run() {
 	battery.Photonicat.charging = true;
 	battery.Photonicat.percentage = 100;
 	await app.updateIndicator();
-	assert.ok(strip.children[6].children[0].children.some(child => child.attrs.class === 'pcat-charge-bolt'),
+	const chargeIcon = strip.children[6].children[0];
+	assert.ok(chargeIcon.children.some(child => child.attrs.class === 'pcat-charge-bolt'),
 		'external power adds the SVG bolt while preserving the live percentage');
+	assert.equal(chargeIcon.attrs.viewBox, '0 0 48 20', 'battery and separate bolt both fit the SVG');
 	assert.equal(strip.children[6].children[0].children.find(child => child.tag === 'text').textContent,
-		'100', 'the battery number comes from the PMU RPC');
+		'100%', 'the battery number comes from the PMU RPC');
 
 	header = { cellular: { connection: 'no', generation: '', bars: 0 },
 		ethernet: header.ethernet, wifi: [], mode: 'timer' };

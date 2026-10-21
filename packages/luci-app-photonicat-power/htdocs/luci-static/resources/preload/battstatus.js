@@ -94,11 +94,11 @@ function icon(kind, level, state, charging) {
 			shape('path', { d: 'M36 7v6' }),
 			shape('rect', { x: 3, y: 4, width: Math.max(0, Math.min(29, Math.round((Number.isFinite(level) ? level : 0) * 29 / 100))),
 				height: 12, rx: 1, fill: 'currentColor', stroke: 'none', opacity: .16 }),
-			shape('text', { x: charging ? 16 : 17.5, y: 13.8, 'text-anchor': 'middle',
-				'font-size': 10, 'font-weight': 700, fill: 'currentColor', stroke: 'none' },
-				Number.isFinite(level) ? Math.round(level) : '—') ].concat(charging ?
-				[shape('path', { d: 'M30.5 4.5 27.2 10h2.5L28.5 16l4-7h-2.3l1.9-4.5Z',
-					'class': 'pcat-charge-bolt', fill: 'currentColor', stroke: 'none' })] : []), '0 0 39 20');
+			shape('text', { x: 17.5, y: 13.8, 'text-anchor': 'middle',
+				'font-size': 9.5, 'font-weight': 700, fill: 'currentColor', stroke: 'none' },
+				Number.isFinite(level) ? Math.round(level) + '%' : '—') ].concat(charging ?
+				[shape('path', { d: 'M43 3l-3.5 7h3l-1 7L47 9h-3l1.5-6Z',
+					'class': 'pcat-charge-bolt', fill: 'currentColor', stroke: 'none' })] : []), '0 0 48 20');
 	}
 }
 
