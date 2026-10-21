@@ -42,7 +42,7 @@ Wi-Fi 按检测到的实际频段生成，不固定网卡编号。保留配置�
 
 ## 光影猫管理与顶部状态
 
-现在只需一个软件包：[luci-app-photonicat-power](packages/luci-app-photonicat-power/)。其中同时包含 Aurora 顶部设备状态、系统 → 光影猫管理页面、简体中文翻译和 PMU-only MCU 后台。顶部依次显示 QModem 4G/5G 与模组名称及信号、WAN/LAN 两个网口、已加载的各个 Wi-Fi 射频、电池模式和电量；手机使用第二行可横向滚动。无线按内核 PHY 动态显示，双射频卡会出现两个图标。后台是 `/dev/ttyS4` 的唯一访问者，不依赖旧 Go FUSE。
+现在只需一个软件包：[luci-app-photonicat-power](packages/luci-app-photonicat-power/)。其中同时包含 Aurora 顶部设备状态、系统 → 光影猫管理页面、简体中文翻译和 PMU-only MCU 后台。顶部依次显示 QModem 拨号状态对应的 4G/5G 与 RSRP 阶梯信号、WAN/LAN 两个网口、已加载的各个 Wi-Fi 射频、电池模式和电量；不显示模组名称，手机使用第二行可横向滚动。无线按内核 PHY 动态显示，双射频卡会出现两个图标。后台是 `/dev/ttyS4` 的唯一访问者，不依赖旧 Go FUSE。
 
 电池页可保存右上角显示开关、低电量提醒及阈值（默认 20%），点击顶部电量可直接进入。新增手机电量卡片及 UPS 自动倒计时；显示设置重启保留，低电量提醒仅在打开路由器后台时生效。
 

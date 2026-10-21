@@ -209,6 +209,7 @@ jobs:
           grep -Fq "object: 'luci.photonicat_header'" "$batt_js"
           grep -Fq "poll.add(L.bind(this.updateIndicator, this), 5)" "$batt_js"
           node ../scripts/tests/test_photonicat_header.js
+          node ../scripts/tests/test_photonicat_header_backend.js
           test -s "$power_pkg/htdocs/luci-static/resources/photonicat-header.css"
           test -x "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_header"
           test -x "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"

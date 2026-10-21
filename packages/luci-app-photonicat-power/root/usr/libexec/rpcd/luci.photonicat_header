@@ -16,53 +16,94 @@ collect_modem() {
     [ "$enabled" = 0 ] || modem_sections="$modem_sections $1"
 }
 
-modem_name='移动网络'
+connection=no
 generation=''
 rsrp=''
 bars=0
 if [ -f /etc/config/qmodem ] && ubus -S list qmodem >/dev/null 2>&1; then
     config_load qmodem
     config_foreach collect_modem modem-device
+    [ -z "$modem_sections" ] || connection=unknown
+    all_disconnected=1
     for section in $modem_sections; do
-        config_get modem_name "$section" name "$section"
-        # QModem caches cell_info for 10 seconds. Bound a slow or absent AT port.
-        cell="$(timeout 5 ubus -S call qmodem cell_info "{\"config_section\":\"$section\"}" 2>/dev/null)" || cell=''
-        [ -n "$cell" ] && json_load "$cell" 2>/dev/null || continue
-        json_select modem_info 2>/dev/null || continue
+        # This is the same connected state shown by QModem, not its dialer process state.
+        connect="$(timeout 6 ubus -S call qmodem get_connect_status "{\"config_section\":\"$section\"}" 2>/dev/null)" || connect=''
+        if [ -z "$connect" ] || ! json_load "$connect" 2>/dev/null; then
+            all_disconnected=0
+            continue
+        fi
+        json_get_var reported connection_status
+        case "$reported" in
+            Yes|yes|connected|Connected|1|true)
+                connection=yes
+                break
+                ;;
+            No|no|disconnected|Disconnected|0|false) ;;
+            *) all_disconnected=0 ;;
+        esac
+    done
+    if [ "$connection" != yes ] && [ "$all_disconnected" = 1 ]; then
+        connection=no
+    fi
+fi
+
+if [ "$connection" = yes ]; then
+    # The current RAT and RSRP come from QModem's serving-cell readings.
+    # A slow AT reply must not turn a connected modem into "no service".
+    cell="$(timeout 10 ubus -S call qmodem cell_info "{\"config_section\":\"$section\"}" 2>/dev/null)" || cell=''
+    network_mode=''
+    lte_rsrp='' nr_rsrp='' other_rsrp=''
+    if [ -n "$cell" ] && json_load "$cell" 2>/dev/null && json_select modem_info 2>/dev/null; then
         json_get_keys entries
-        lte_rsrp='' nr_rsrp=''
         for entry in $entries; do
             json_select "$entry" 2>/dev/null || continue
             json_get_var key key
             json_get_var value value
             json_get_var extra extra_info
             case "$key" in
-                network_mode|'Network Mode') generation="$value" ;;
-                NR5G-SA|NR5G-NSA) generation="$key" ;;
+                network_mode|'Network Mode') network_mode="$value" ;;
                 RSRP)
-                    case "$extra" in *NR*|*5G*) nr_rsrp="$value" ;; *) lte_rsrp="$value" ;; esac
+                    case "$extra" in
+                        *NR*|*5G*) nr_rsrp="$value" ;;
+                        *LTE*|*4G*) lte_rsrp="$value" ;;
+                        *) other_rsrp="$value" ;;
+                    esac
                     ;;
             esac
             json_select ..
         done
         json_select ..
-        case "$generation" in
-            *EN-DC*|*NR*|*5G*) generation=5G; rsrp="${nr_rsrp:-$lte_rsrp}" ;;
-            *LTE*|*4G*) generation=4G; rsrp="$lte_rsrp" ;;
-            *) generation=''; rsrp='' ;;
-        esac
-        [ -n "$generation" ] && break
-    done
+    fi
+    # Some modem implementations report the current RAT only in network_info.
+    if [ -z "$network_mode" ]; then
+        network="$(timeout 5 ubus -S call qmodem network_info "{\"config_section\":\"$section\"}" 2>/dev/null)" || network=''
+        if [ -n "$network" ] && json_load "$network" 2>/dev/null && json_select modem_info 2>/dev/null; then
+            json_get_keys entries
+            for entry in $entries; do
+                json_select "$entry" 2>/dev/null || continue
+                json_get_var key key
+                json_get_var value value
+                [ "$key" != 'Network Type' ] || network_mode="$value"
+                json_select ..
+            done
+            json_select ..
+        fi
+    fi
+    case "$network_mode" in
+        *EN-DC*|*NR*|*5G*) generation=5G; rsrp="${nr_rsrp:-${lte_rsrp:-$other_rsrp}}" ;;
+        *LTE*|*4G*) generation=4G; rsrp="${lte_rsrp:-$other_rsrp}" ;;
+    esac
 fi
 
-# Unknown/missing readings get zero bars rather than a made-up signal.
-case "$rsrp" in
-    -[0-9]*|-1[0-9]*)
-        case "${rsrp#-}" in *[!0-9]*|'') rsrp='' ;; esac
-        if [ -n "$rsrp" ] && [ "$rsrp" -ge -140 ] && [ "$rsrp" -le -40 ]; then
-            if [ "$rsrp" -ge -85 ]; then bars=4
-            elif [ "$rsrp" -ge -95 ]; then bars=3
-            elif [ "$rsrp" -ge -105 ]; then bars=2
+# QModem uses -80/-90/-100 dBm as RSRP quality boundaries.
+rsrp_int="${rsrp%%.*}"
+case "$rsrp_int" in
+    -[0-9]*)
+        case "${rsrp_int#-}" in *[!0-9]*|'') rsrp_int='' ;; esac
+        if [ -n "$rsrp_int" ] && [ "$rsrp_int" -ge -140 ] && [ "$rsrp_int" -le -44 ]; then
+            if [ "$rsrp_int" -ge -80 ]; then bars=4
+            elif [ "$rsrp_int" -ge -90 ]; then bars=3
+            elif [ "$rsrp_int" -ge -100 ]; then bars=2
             else bars=1; fi
         else rsrp=''; fi
         ;;
@@ -98,7 +139,7 @@ fi
 
 json_init
 json_add_object cellular
-json_add_string name "$modem_name"
+json_add_string connection "$connection"
 json_add_string generation "$generation"
 json_add_int bars "$bars"
 json_add_string rsrp "$rsrp"

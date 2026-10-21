@@ -45,7 +45,7 @@ const document = {
 let battery = { Photonicat: { valid: true, charging: false, percentage: 81,
 	indicator_enabled: true, low_alert: false, power_page: true } };
 let header = {
-	cellular: { name: 'RM520N', generation: '5G', bars: 3, rsrp: '-91' },
+	cellular: { connection: 'yes', generation: '5G', bars: 4, rsrp: '-75' },
 	ethernet: [ { name: 'eth0', label: 'WAN', linked: true },
 		{ name: 'eth1', label: 'LAN', linked: false } ],
 	wifi: [ { phy: 'phy0', driver: 'mt7915e', enabled: true },
@@ -77,7 +77,12 @@ async function run() {
 		assert.ok(picture.children.every(child => child.namespaceURI === picture.namespaceURI),
 			'all SVG paths use the SVG namespace');
 	}
-	assert.match(strip.children[0].attrs.title, /RM520N · 5G · -91 dBm/);
+	assert.equal(strip.children[0].children.length, 2, 'modem name is not rendered');
+	assert.equal(strip.children[0].children[1].children[0], '5G');
+	assert.match(strip.children[0].attrs.title, /5G · RSRP -75 dBm/);
+	assert.doesNotMatch(strip.children[0].attrs.title, /RM520N/);
+	assert.equal(strip.children[0].children[0].children.filter(child => child.tag === 'rect' && child.attrs.opacity === '1').length,
+		4, 'QModem RSRP lights all four steps');
 	assert.equal(strip.children[1].attrs['data-state'], 'on');
 	assert.equal(strip.children[2].attrs['data-state'], 'off');
 	assert.match(strip.children[3].attrs.title, /phy0.*已开启/);
@@ -88,13 +93,20 @@ async function run() {
 	assert.equal(strip.children[6].children[0].children.find(child => child.tag === 'text').textContent,
 		'81', 'percentage is drawn inside the battery SVG');
 
-	header = { cellular: { name: 'RM520N', generation: '', bars: 0 },
+	header = { cellular: { connection: 'no', generation: '', bars: 0 },
 		ethernet: header.ethernet, wifi: [], mode: 'timer' };
 	await app.updateHeader();
 	strip = nodes['photonicat-status'];
 	assert.equal(strip.children.length, 5, 'no Wi-Fi icons without a loaded PHY');
 	assert.match(strip.children[0].attrs.title, /无服务/);
 	assert.equal(strip.children[0].attrs['data-state'], 'off');
+	header.cellular = { connection: 'yes', generation: '4G', bars: 2, rsrp: '-92' };
+	await app.updateHeader();
+	assert.match(strip.children[0].attrs.title, /4G · RSRP -92 dBm/);
+	assert.equal(strip.children[0].attrs['data-state'], 'on');
+	header.cellular = { connection: 'unknown', generation: '', bars: 0 };
+	await app.updateHeader();
+	assert.equal(strip.children[0].attrs.title, '读取中', 'a failed status request is not called no service');
 	assert.match(strip.children[3].attrs.title, /定时/);
 	assert.equal(strip.children[3].children[0].namespaceURI, 'http://www.w3.org/2000/svg');
 

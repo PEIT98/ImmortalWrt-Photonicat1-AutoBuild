@@ -128,10 +128,14 @@ function showHeader(data, battery) {
 		indicators.prepend(strip);
 	}
 	const cells = [], cellular = data && data.cellular || {};
-	const name = cellular.name || '移动网络', generation = cellular.generation || '';
-	const bars = Math.max(0, Math.min(4, Number(cellular.bars) || 0));
-	const cellTitle = name + ' · ' + (generation ? generation + (bars ? ' · ' + cellular.rsrp + ' dBm' : ' · 无服务') : '无服务');
-	cells.push(item('signal', generation || '无服务', cellTitle, bars ? 'on' : 'off', name, false, bars));
+	const connection = cellular.connection || 'unknown';
+	const connected = connection === 'yes';
+	const generation = connected ? (cellular.generation || '已连接') :
+		(connection === 'no' ? '无服务' : '读取中');
+	const bars = connected ? Math.max(0, Math.min(4, Number(cellular.bars) || 0)) : 0;
+	const cellTitle = generation + (connected && cellular.rsrp ? ' · RSRP ' + cellular.rsrp + ' dBm' : '');
+	cells.push(item('signal', generation, cellTitle,
+		connected ? 'on' : (connection === 'no' ? 'off' : 'unknown'), null, false, bars));
 	const ethernet = data && data.ethernet || [
 		{ name: 'eth0', label: 'WAN' }, { name: 'eth1', label: 'LAN' }
 	];
