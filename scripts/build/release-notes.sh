@@ -11,7 +11,7 @@ test -f "$dir/build-sources.txt"
   echo '> 尚需光影猫一代真机验证，刷机前备份并准备恢复方案。'
   echo
   echo '- ImmortalWrt：openwrt-25.12（编译时最新）'
-  echo '- 品牌：Photonicat-Wrt；默认后台 http://172.16.0.1；Wi-Fi 优先 5GHz：Photonicat-5G，支持时 AX／80MHz，信道 36；其次 2.4GHz：Photonicat；密码 photonicat（保留配置升级不覆盖已有网络设置）'
+  echo '- 品牌：Photonicat-Wrt；默认后台 http://172.16.0.1；5GHz / 2.4GHz Wi-Fi 名称均为 Photonicat-Wrt，优先 5GHz（支持时 AX／80MHz，信道 36），其次 2.4GHz；密码 photonicat（保留配置升级不覆盖已有网络设置）'
   echo '- 后台／SSH 默认账号 root，默认密码 photonicat；保留已设置的 root 密码'
   echo '- QModem：官方 FUjr/QModem main（Next 界面、短信后台）+ PEIT98/luci-app-qmodem-generic main（自有复刻），mwan3、OpenClash、CPU 调频、电池状态'
   echo '- 网页终端、Aurora 官方主题、多品牌 PCIe Wi-Fi 驱动、iStore、Docker/Compose 与 Dockerman' 
