@@ -1,6 +1,6 @@
 # 光影猫一代 Photonicat-Wrt 自动编译
 
-基于 **ImmortalWrt 25.12**，适用于 **Ariaboard Photonicat 一代（RK3568）**。
+**Photonicat-Wrt** 是基于 **ImmortalWrt 25.12** 的光影猫一代固件，适用于 **Ariaboard Photonicat 一代（RK3568）**。
 
 - 固件源码：[ImmortalWrt](https://github.com/immortalwrt/immortalwrt) `openwrt-25.12`
 - 设备参考：[光影猫一代](https://github.com/a757814283/ImmortalWrt_Photonicat1)
@@ -23,14 +23,18 @@
 
 每次手动编译会从 OpenClash 官方 `core` 分支获取当时最新的稳定版 **Meta linux-arm64 内核**，按官方 SHA256 清单校验并内置。新固件首次启动（包括保留配置升级）会接入内置内核，无需在 OpenClash 页面另行下载；Smart、Oix、开发版以及手动启用的小闪存模式仍按 OpenClash 原流程处理。已运行的固件不会因此自动更新，需编译并刷入新固件。
 
+## 默认网络设置
+
+以下为当前 `main` 分支的默认值，需重新编译并生成无线配置后生效。历史 Release 下载文件使用各自构建时的配置。
+
 | 首次刷入／恢复出厂设置 | 默认值 |
 | --- | --- |
 | 主机名及界面品牌 | `Photonicat-Wrt` |
 | 后台地址 | `http://172.16.0.1`（LAN：`172.16.0.1/24`） |
 | 后台／SSH 账号及密码 | `root`／`photonicat` |
-| 5 GHz Wi-Fi | `Photonicat-Wrt` |
+| 5GHz／2.4GHz Wi-Fi 名称 | 均为 `Photonicat-Wrt` |
+| 频段判断顺序 | 优先 5GHz，其次 2.4GHz |
 | 5 GHz 模式／带宽／信道 | AX（HE80）／80MHz／36；不支持 AX 或 80MHz 的网卡按硬件能力回退 |
-| 2.4 GHz Wi-Fi | `Photonicat-Wrt` |
 | Wi-Fi 密码／加密 | `photonicat`／WPA2-PSK |
 
 Wi-Fi 按检测到的实际频段生成，同一射频优先判断 5GHz，其次 2.4GHz，不固定网卡编号。保留配置升级时，已有 LAN 地址、无线设置、root 密码和自定义主机名继续保留；原默认主机名 `ImmortalWrt`／`OpenWrt` 会迁移为 `Photonicat-Wrt`。固件信息及页脚使用新品牌，登录页、左侧名称和浏览器标题跟随主机名；软件源和设备兼容标识保持原配置。root 默认密码只在账号尚未设置密码时初始化，由系统 `passwd` 生成并保存哈希。

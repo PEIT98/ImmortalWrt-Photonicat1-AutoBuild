@@ -17,7 +17,7 @@
 | --- | --- |
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
-| [wifi-band-order.sh](patches/wifi-band-order.sh) | 使用本次上游检测脚本，优先 5GHz（支持时 AX／80MHz，信道 36），其次 2.4GHz；SSID 均为 Photonicat-Wrt，使用 WPA2 密码 |
+| [wifi-band-order.sh](patches/wifi-band-order.sh) | 双频 Wi-Fi 统一命名 Photonicat-Wrt；优先 5GHz（支持时 AX／80MHz／36 信道），其次 2.4GHz；WPA2-PSK，密码 photonicat |
 
 ## 光影猫电池与电源插件
 
@@ -43,7 +43,9 @@
 
 **编译触发：** 仅通过 Actions 手动 `Run workflow` 编译。保留所有插件、系统配置、源码缓存及 CCache。
 
-**品牌和网络默认值：** `photonicat1.config` 使用上游版本选项设置 `Photonicat-Wrt`，Aurora 无需改源码；[首启配置](../files/etc/uci-defaults/99-photonicat-brand) 迁移原默认主机名，并仅在 root 密码为空时使用系统 `passwd` 初始化为 `photonicat`。LAN 默认为 `172.16.0.1/24`，无线优先判断 5GHz（支持时 AX／80MHz，信道 36），其次 2.4GHz；两个频段的名称均为 `Photonicat-Wrt`，密码 `photonicat`。保留配置升级时不覆盖已有网络、无线、root 密码和自定义主机名。
+**品牌和网络默认值：** 主机名及 5GHz／2.4GHz Wi-Fi 名称均为 `Photonicat-Wrt`；后台 [http://172.16.0.1](http://172.16.0.1/)；后台 root 密码与 Wi-Fi 密码均为 `photonicat`。无线优先判断 5GHz（支持时 AX／80MHz／36 信道），其次 2.4GHz。完整默认值见[主说明](../README.md#默认网络设置)。
+
+`photonicat1.config` 设置固件品牌，Aurora 无需改源码；[首启配置](../files/etc/uci-defaults/99-photonicat-brand) 迁移原默认主机名，并仅在 root 密码为空时初始化密码。这些默认值需要重新编译；保留配置升级时沿用已有网络、无线、root 密码和自定义主机名。
 
 **QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“移动网络”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留。
 
