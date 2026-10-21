@@ -58,7 +58,7 @@ function svg(shapes, viewBox) {
 	return element;
 }
 
-function icon(kind, level, state) {
+function icon(kind, level, state, charging) {
 	switch (kind) {
 	case 'signal':
 		return svg([ [2, 16, 4], [7, 12, 8], [12, 8, 12], [17, 4, 16] ].map(function(bar, index) {
@@ -94,22 +94,24 @@ function icon(kind, level, state) {
 			shape('path', { d: 'M36 7v6' }),
 			shape('rect', { x: 3, y: 4, width: Math.max(0, Math.min(29, Math.round((Number.isFinite(level) ? level : 0) * 29 / 100))),
 				height: 12, rx: 1, fill: 'currentColor', stroke: 'none', opacity: .16 }),
-			shape('text', { x: 17.5, y: 13.8, 'text-anchor': 'middle',
+			shape('text', { x: charging ? 16 : 17.5, y: 13.8, 'text-anchor': 'middle',
 				'font-size': 10, 'font-weight': 700, fill: 'currentColor', stroke: 'none' },
-				Number.isFinite(level) ? Math.round(level) : '—') ], '0 0 39 20');
+				Number.isFinite(level) ? Math.round(level) : '—') ].concat(charging ?
+				[shape('path', { d: 'M30.5 4.5 27.2 10h2.5L28.5 16l4-7h-2.3l1.9-4.5Z',
+					'class': 'pcat-charge-bolt', fill: 'currentColor', stroke: 'none' })] : []), '0 0 39 20');
 	}
 }
 
-function item(kind, label, title, state, textLabel, target, level) {
+function item(kind, label, title, state, textLabel, target, level, charging) {
 	const attrs = { 'class': 'pcat-item pcat-' + kind, 'data-state': state,
 		title: title, 'aria-label': title };
 	if (target) attrs.href = L.url(target);
 	else attrs.role = 'img';
-	const children = [icon(kind, level, state)];
+	const children = [icon(kind, level, state, charging)];
 	if (label) children.push(E('span', { 'class': 'pcat-label' }, label));
 	if (textLabel) children.push(E('span', { 'class': 'pcat-name' }, textLabel));
 	const element = E(target ? 'a' : 'span', attrs, children);
-	element._pcatKey = JSON.stringify([kind, label, title, state, textLabel, target, level]);
+	element._pcatKey = JSON.stringify([kind, label, title, state, textLabel, target, level, charging]);
 	return element;
 }
 
@@ -215,7 +217,7 @@ function showHeader(data, battery) {
 			: (battery.message || '电量暂不可用');
 		cells.push(item('battery', null, title,
 			battery.valid ? (percentage <= 20 ? 'low' : 'on') : 'unknown', null,
-			battery.power_page ? 'admin/system/photonicat-power' : null, percentage));
+			battery.power_page ? 'admin/system/photonicat-power' : null, percentage, battery.charging));
 	}
 	for (let i = 0; i < cells.length; i++) {
 		const current = strip.children[i];
