@@ -41,7 +41,7 @@ function svg(shapes, viewBox) {
 	return element;
 }
 
-function icon(kind, level) {
+function icon(kind, level, state) {
 	switch (kind) {
 	case 'signal':
 		return svg([ [2, 16, 4], [7, 12, 8], [12, 8, 12], [17, 4, 16] ].map(function(bar, index) {
@@ -49,8 +49,12 @@ function icon(kind, level) {
 				fill: 'currentColor', stroke: 'none', opacity: index < level ? 1 : .22 });
 		}));
 	case 'ethernet':
-		return svg([ shape('rect', { x: 2, y: 4, width: 20, height: 16, rx: 2 }),
-			shape('path', { d: 'M7 4v6h10V4M7 15h10M9 20v-5m3 5v-5m3 5v-5' }) ]);
+		return svg([ shape('path', { d: 'M9 2H19V4H21V6H23V9H26V21H2V9H5V6H7V4H9Z' +
+			'M5 14H7V19H5ZM9 14H11V19H9ZM13 14H15V19H13Z' +
+			'M17 14H19V19H17ZM21 14H23V19H21Z',
+			'fill-rule': 'evenodd', fill: 'currentColor', stroke: 'none' }) ].concat(state === 'on' ?
+			[shape('rect', { x: 1, y: 23, width: 26, height: 2.3, rx: 1.15,
+				fill: '#1ac766', stroke: 'none' })] : []), '0 0 28 26');
 	case 'wifi':
 		return svg([ shape('path', { d: 'M2 9a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0' }),
 			shape('circle', { cx: 12, cy: 19, r: 1, fill: 'currentColor', stroke: 'none' }) ]);
@@ -80,7 +84,7 @@ function item(kind, label, title, state, textLabel, link, level) {
 		title: title, 'aria-label': title };
 	if (link) attrs.href = L.url('admin/system/photonicat-power');
 	else attrs.role = 'img';
-	const children = [icon(kind, level)];
+	const children = [icon(kind, level, state)];
 	if (label) children.push(E('span', { 'class': 'pcat-label' }, label));
 	if (textLabel) children.push(E('span', { 'class': 'pcat-name' }, textLabel));
 	return E(link ? 'a' : 'span', attrs, children);

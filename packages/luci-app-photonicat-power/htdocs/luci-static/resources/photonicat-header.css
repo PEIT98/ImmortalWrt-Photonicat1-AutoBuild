@@ -42,6 +42,7 @@
   height: 20px;
   flex: none;
 }
+#photonicat-status .pcat-ethernet svg { width: 27px; height: 25px; }
 #photonicat-status .pcat-battery svg { width: 42px; height: 22px; }
 #photonicat-status .pcat-name {
   max-width: 85px;
@@ -97,5 +98,6 @@
   #photonicat-status .pcat-timer .pcat-name { display: none; }
   #photonicat-status .pcat-item { font-size: 11px; }
   #photonicat-status .pcat-item svg { width: 18px; height: 18px; }
+  #photonicat-status .pcat-ethernet svg { width: 23px; height: 22px; }
   #photonicat-status .pcat-battery svg { width: 39px; height: 20px; }
 }
