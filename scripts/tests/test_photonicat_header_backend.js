@@ -53,6 +53,8 @@ case "$*" in
 esac
 `;
 	fs.writeFileSync(path.join(temp, 'ubus'), ubus, { mode: 0o755 });
+	// Match the router, where the external timeout utility is absent.
+	fs.writeFileSync(path.join(temp, 'timeout'), '#!/bin/sh\nexit 127\n', { mode: 0o755 });
 	const instrumented = source
 		.replace('. /usr/share/libubox/jshn.sh', '. "$QMODEM_TEST_JSHN"')
 		.replace('. /lib/functions.sh', '. "$QMODEM_TEST_FUNCTIONS"')
@@ -84,6 +86,9 @@ esac
 	const network = { modem_info: [ { key: 'Network Type', value: 'LTE' } ] };
 	assert.equal(run('{"connection_status":"Yes"}', cell('NR5G-SA Mode', '-75', 'NR5G-SA'), network),
 		'yes|5G|4|-75', 'connected 5G uses the NR RSRP shown by QModem');
+	assert.equal(run('{"connection_status":"Yes"}', cell('NR5G-SA Mode', '-81', 'NR5G-SA'),
+		{ modem_info: [{ key: 'Network Type', value: 'NR5G' }] }),
+		'yes|5G|3|-81', 'the connected FM160 reading works without the timeout utility');
 	assert.equal(run('{"connection_status":"Yes"}', cell('LTE Mode', '-92', 'LTE'), network),
 		'yes|4G|2|-92', 'connected LTE uses the same quality boundaries as QModem');
 	assert.equal(run('{"connection_status":"No"}', cell('NR5G-SA Mode', '-75', 'NR5G-SA'), network),

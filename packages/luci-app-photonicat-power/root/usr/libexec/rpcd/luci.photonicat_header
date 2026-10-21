@@ -27,7 +27,7 @@ if [ -f /etc/config/qmodem ] && ubus -S list qmodem >/dev/null 2>&1; then
     all_disconnected=1
     for section in $modem_sections; do
         # This is the same connected state shown by QModem, not its dialer process state.
-        connect="$(timeout 6 ubus -S call qmodem get_connect_status "{\"config_section\":\"$section\"}" 2>/dev/null)" || connect=''
+        connect="$(ubus -t 6 -S call qmodem get_connect_status "{\"config_section\":\"$section\"}" 2>/dev/null)" || connect=''
         if [ -z "$connect" ] || ! json_load "$connect" 2>/dev/null; then
             all_disconnected=0
             continue
@@ -50,7 +50,7 @@ fi
 if [ "$connection" = yes ]; then
     # The current RAT and RSRP come from QModem's serving-cell readings.
     # A slow AT reply must not turn a connected modem into "no service".
-    cell="$(timeout 10 ubus -S call qmodem cell_info "{\"config_section\":\"$section\"}" 2>/dev/null)" || cell=''
+    cell="$(ubus -t 10 -S call qmodem cell_info "{\"config_section\":\"$section\"}" 2>/dev/null)" || cell=''
     network_mode=''
     lte_rsrp='' nr_rsrp='' other_rsrp=''
     if [ -n "$cell" ] && json_load "$cell" 2>/dev/null && json_select modem_info 2>/dev/null; then
@@ -76,7 +76,7 @@ if [ "$connection" = yes ]; then
     fi
     # Some modem implementations report the current RAT only in network_info.
     if [ -z "$network_mode" ]; then
-        network="$(timeout 5 ubus -S call qmodem network_info "{\"config_section\":\"$section\"}" 2>/dev/null)" || network=''
+        network="$(ubus -t 5 -S call qmodem network_info "{\"config_section\":\"$section\"}" 2>/dev/null)" || network=''
         if [ -n "$network" ] && json_load "$network" 2>/dev/null && json_select modem_info 2>/dev/null; then
             json_get_keys entries
             for entry in $entries; do
