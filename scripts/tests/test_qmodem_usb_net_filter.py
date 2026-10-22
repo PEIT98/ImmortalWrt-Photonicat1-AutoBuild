@@ -46,6 +46,8 @@ static struct usb_interface interfaces[] = {
 };
 static size_t cursor;
 static int has_rule = 1;
+static int net_first;
+static int strict_rule;
 enum { LOG_L_DEBUG, LOG_L_WARN };
 static void log_msg(int level, const char *format, ...) {
     (void)level; (void)format;
@@ -85,7 +87,10 @@ static struct dirent *fake_readdir(DIR *dir) {
     static struct dirent entry;
     (void)dir;
     if (cursor == sizeof(interfaces) / sizeof(interfaces[0])) return NULL;
-    snprintf(entry.d_name, sizeof(entry.d_name), "6-1:%s", interfaces[cursor++].port);
+    size_t index = cursor++;
+    if (net_first)
+        index = (index + 4) % 5;
+    snprintf(entry.d_name, sizeof(entry.d_name), "6-1:%s", interfaces[index].port);
     return &entry;
 }
 static int fake_closedir(DIR *dir) { (void)dir; return 0; }
@@ -99,9 +104,13 @@ static void load_port_rule(const char *vid, const char *pid, struct port_rule *r
     memset(rule, 0, sizeof(*rule));
     if (!has_rule) return;
     rule->has_rule = 1;
-    sl_add(&rule->include, "1.2");
-    sl_add(&rule->include, "1.3");
-    sl_add(&rule->include, "1.4");
+    if (strict_rule) {
+        sl_add(&rule->include, "9.9");
+    } else {
+        sl_add(&rule->include, "1.2");
+        sl_add(&rule->include, "1.3");
+        sl_add(&rule->include, "1.4");
+    }
     snprintf(rule->voice_pcm_interface, sizeof(rule->voice_pcm_interface), "1.1");
 }
 static void apply_option_driver(const char *vid, const char *pid) {
@@ -157,7 +166,19 @@ int main(void) {
     check_case("usb-storage", "1.10", 0);
     has_rule = 0;
     check_case("cdc_ether", "1.10", 1);
-    puts("9 组 USB 扫描回归通过：ECM/RNDIS/MBIM/NCM/QMI、AT 过滤、语音端口、通用扫描。");
+    has_rule = 1;
+    check_case("cdc_ether", "1.200", 1);
+    net_first = 1;
+    check_case("cdc_ether", "1.10", 1);
+    strict_rule = 1;
+    struct scan_result result = {0};
+    scan_usb_slot("6-1", &result);
+    require(sl_contains(&result.net_devices, "usb0"), "AT 全部被限制时网卡仍应被收集");
+    require(result.at_ports.len == 0, "严格 AT 白名单被放宽");
+    require(!strcmp(result.voice_pcm_port, "/dev/ttyUSB1"), "严格白名单下语音端口丢失");
+    sl_free(&result.net_devices);
+    sl_free(&result.at_ports);
+    puts("12 组 USB 扫描回归通过：通用网卡识别、接口顺序、严格 AT 过滤和语音端口。");
     return 0;
 }
 '''
@@ -184,11 +205,20 @@ def main() -> None:
     parser.add_argument("feed", type=Path, help="已应用补丁的 QModem Feed 目录")
     args = parser.parse_args()
     source = (args.feed / patch.SCANNER).read_text(encoding="utf-8")
-    if patch.PATCHED not in source or patch.patch_source(source) != source:
+    if patch.NETWORK_FIRST not in source or patch.patch_source(source) != source:
         parser.exit(1, "USB 网卡扫描补丁未生效，或重复执行改变源码\n")
-    original = source.replace(patch.PATCHED, patch.ORIGINAL, 1)
+    body = patch.usb_scan_function(source)
+    if body.count(patch.SERIAL_END) != 1:
+        parser.exit(1, "AT 串口分支结构变化\n")
+    original_body = body.replace(patch.NETWORK_FIRST, "", 1).replace(
+        patch.SERIAL_END, "\t\t\tsl_free(&ttys);\n" + patch.NETWORK_TAIL, 1
+    )
+    original = source.replace(body, original_body, 1)
     if patch.patch_source(original) != source:
         parser.exit(1, "补丁修改超出预期范围\n")
+    legacy = original.replace(patch.ORIGINAL, patch.LEGACY_PATCHED, 1)
+    if patch.patch_source(legacy) != source:
+        parser.exit(1, "上一版补丁迁移失败\n")
     try:
         patch.patch_source(original.replace(patch.GUARD, "", 1))
     except ValueError:
@@ -207,7 +237,7 @@ def main() -> None:
         if after.returncode:
             parser.exit(1, after.stderr)
         print(after.stdout, end="")
-    print("原版故障复现、补丁重复执行及上游结构检查通过。")
+    print("原版故障复现、旧补丁迁移、重复执行及上游结构检查通过。")
 
 
 if __name__ == "__main__":

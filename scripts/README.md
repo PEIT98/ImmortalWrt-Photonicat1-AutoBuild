@@ -17,7 +17,7 @@
 | --- | --- |
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
-| [fix-qmodem-usb-net-filter.py](patches/fix-qmodem-usb-net-filter.py) | USB 网卡按驱动识别，端口白名单仅筛选 AT 串口；保留语音端口规则 |
+| [fix-qmodem-usb-net-filter.py](patches/fix-qmodem-usb-net-filter.py) | 将 USB 网卡识别前置，收集后跳过端口限制，再按原规则处理 AT 串口和语音端口；无需逐型号补接口 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 双频 Wi-Fi 统一命名 Photonicat-Wrt；优先 5GHz（支持时 AX／80MHz／36 信道），其次 2.4GHz；WPA2-PSK，密码 photonicat |
 
 ## 光影猫电池与电源插件

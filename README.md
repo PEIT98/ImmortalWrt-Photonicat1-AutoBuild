@@ -76,7 +76,7 @@ QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文�
 
 QModem 首次启动默认开启 **USB 开机扫描**，并设置 **15 秒追加扫描**。通过[独立首启配置](files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan)应用一次；之后可在 **移动网络 → QModem → QModem 设置** 调整，保留配置升级时不会重复覆盖。不固定 USB 槽位或模组别名，继续动态识别接口。
 
-USB 网卡按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动识别，不受 AT 端口白名单限制；保留原有 AT 串口和语音端口筛选。构建时应用[兼容补丁](scripts/patches/fix-qmodem-usb-net-filter.py)，并执行真实扫描函数的回归检查，避免 RG520F-EB 的 ECM 接口 `1.10/1.11` 被过滤。
+USB 扫描先按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动收集网卡，匹配后直接跳过后面的端口限制，再按原规则筛选 AT 串口和语音端口。构建时应用[通用兼容补丁](scripts/patches/fix-qmodem-usb-net-filter.py)，并执行真实扫描函数的回归检查；不按型号、USB ID 或接口编号逐个补白名单。网卡能被收集后，完整识别和拨号仍需要有效 AT 口、型号支持及正常网络配置。
 
 QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`qmodem-smsd` 和 `sms-forwarder-next` 是新版 Next 的短信依赖。
 
