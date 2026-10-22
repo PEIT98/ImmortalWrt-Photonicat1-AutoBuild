@@ -1,0 +1,15 @@
+#!/bin/sh
+# 首次启用 USB 开机扫描和 15 秒追加扫描，后续保留后台手动调整的值。
+# 只使用官方 QModem 参数，不设置固定 USB 槽位、网卡名或模组别名。
+set -eu
+get() { uci -q get "$1" 2>/dev/null || true; }
+
+# QModem 配置尚未就绪时保留首启脚本，下一次启动再尝试。
+[ "$(get qmodem.main)" = main ] || exit 1
+[ "$(get qmodem.main.photonicat_usb_scan_defaults)" != 1 ] || exit 0
+
+uci set qmodem.main.enable_usb_scan=1
+uci set qmodem.main.start_delay=15
+uci set qmodem.main.photonicat_usb_scan_defaults=1
+uci commit qmodem
+exit 0

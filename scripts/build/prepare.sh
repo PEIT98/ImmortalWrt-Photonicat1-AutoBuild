@@ -140,6 +140,13 @@ done
 grep -Fq 'modem_config' "$QMODEM_MWAN_SYNC" || exit 1
 grep -Fq 'qmodem_priority3' "$QMODEM_MWAN_SYNC" || exit 1
 
+# 首启配置只应用一次，后续保留 QModem 后台设置，不改上游 Feed 源码。
+QMODEM_USB_SCAN_DEFAULT="$SRC/files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan"
+test -f "$QMODEM_USB_SCAN_DEFAULT" || { echo "::error::缺少 QModem USB 开机扫描配置" >&2; exit 1; }
+chmod 755 "$QMODEM_USB_SCAN_DEFAULT"
+sh -n "$QMODEM_USB_SCAN_DEFAULT"
+echo 'QModem：首次开启 USB 开机扫描，并设置 15 秒追加扫描；保留动态接口识别。'
+
 # MyOpenWrt 的 tom_modem 权限文件直接放进固件根文件系统。
 # rpcd 启动时会读取 acl.d，无须额外设置首启重启。
 TOM_ACL="$SRC/files/usr/share/rpcd/acl.d/tom_modem.json"

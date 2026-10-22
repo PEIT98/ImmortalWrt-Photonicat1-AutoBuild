@@ -74,6 +74,8 @@ Wi-Fi 按检测到的实际频段生成，同一射频优先判断 5GHz，其次
 
 QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称。每次构建通过 Feeds 拉取官方 QModem `main` 和 [PEIT98/Generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main`。Generic 已原样复刻，后续 WebUI 修复在自有仓库维护。
 
+QModem 首次启动默认开启 **USB 开机扫描**，并设置 **15 秒追加扫描**。通过[独立首启配置](files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan)应用一次；之后可在 **移动网络 → QModem → QModem 设置** 调整，保留配置升级时不会重复覆盖。不固定 USB 槽位或模组别名，继续动态识别接口。
+
 QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`qmodem-smsd` 和 `sms-forwarder-next` 是新版 Next 的短信依赖。
 
 Generic 位于 **移动网络 → 模组管理**，与官方 **QModem** 页面并列，共用同一套模组配置和拨号后台。先用官方页面完成扫描与拨号，避免同时从两个页面修改模组。Generic 原版自带缓存、流量采集、MT5700 SIM 初始化和支持库同步服务，也会随上游一并启用。
