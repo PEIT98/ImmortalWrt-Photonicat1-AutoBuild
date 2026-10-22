@@ -153,6 +153,11 @@ jobs:
           grep -Fxq 'PKG_BUILD_DEPENDS:=luci-base/host' package/luci-app-photonicat-power/Makefile
           echo '单一光影猫电源包将提供 MCU 服务、页面、电池状态和中文翻译。'
 
+      - name: 修复 QModem USB 网卡被端口白名单过滤
+        run: |
+          python3 scripts/patches/fix-qmodem-usb-net-filter.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
+          python3 scripts/tests/test_qmodem_usb_net_filter.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
+
       - name: 修复 iStore 软件包名称
         run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 

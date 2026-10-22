@@ -17,6 +17,7 @@
 | --- | --- |
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
+| [fix-qmodem-usb-net-filter.py](patches/fix-qmodem-usb-net-filter.py) | USB 网卡按驱动识别，端口白名单仅筛选 AT 串口；保留语音端口规则 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 双频 Wi-Fi 统一命名 Photonicat-Wrt；优先 5GHz（支持时 AX／80MHz／36 信道），其次 2.4GHz；WPA2-PSK，密码 photonicat |
 
 ## 光影猫电池与电源插件
@@ -35,7 +36,7 @@
 ## 配置来源与构建顺序
 
 1. `build/prepare.sh` 继承参考设备配置，并加载兼容补丁。
-2. 更新 Feeds 后，`build/select-packages.py` 应用根目录 `photonicat1.config` 的覆盖项。
+2. 更新 Feeds 后，应用并回归 QModem USB 网卡扫描补丁，再由 `build/select-packages.py` 应用根目录 `photonicat1.config` 的覆盖项。
 3. 运行 `make defconfig`，再由 `build/verify-config.sh` 检查依赖。
 4. 编译成功后用 `build/release-notes.sh` 生成发布说明。
 
