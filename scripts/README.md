@@ -54,6 +54,6 @@
 
 **在线升级：** `build/prepare.sh` 将项目内完整 [luci-app-online-upgrade](../packages/luci-app-online-upgrade/) 复制到 `package/luci-app-online-upgrade`，光影猫适配直接在插件源码中维护。Actions 核对整套源码复制一致，并将同一个 Release 标签写进固件身份和发布任务；检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。固件及 Release 的来源信息记录本项目提交号。
 
-**管理工具：** 文件管理、历史统计、Travelmate 和 SQM 来自官方软件源；Aurora 设置直接拉取主题作者 `master`，保留上游关闭旧 jsmin 的设置并记录实际提交号。[首次配置](../files/etc/uci-defaults/92-photonicat-network-tools) 将 Travelmate 关联 `wwan` 并保持关闭；只有原始统计配置才应用 60 秒采样、温度/Ping 与内存存储默认值。
+**管理工具：** 文件管理、Travelmate 和 SQM 来自官方软件源；Aurora 设置直接拉取主题作者 `master`，保留上游关闭旧 jsmin 的设置并记录实际提交号。[首次配置](../files/etc/uci-defaults/92-photonicat-network-tools) 将 Travelmate 关联 `wwan` 并保持关闭。
 
 **cake-autorate：** [本地包](../packages/cake-autorate/README.md) 固定稳定版提交和下载 SHA256，原样安装上游核心，首次关闭。启动前检查实际 QModem/mwan3 接口、SQM 和真实 CAKE/IFB 队列，探测固定走选定出口。网络事件会刷新实际接口，缺少队列时不启动；原有网络、防火墙和 SQM 配置由用户维护。

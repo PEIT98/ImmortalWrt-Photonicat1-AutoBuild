@@ -1,5 +1,5 @@
 #!/bin/sh
-# 文件管理和 Aurora 使用上游默认值；首次统计只写入内存，Travelmate 保持关闭。
+# 文件管理和 Aurora 使用上游默认值；Travelmate 首次保持关闭。
 set -eu
 get() { uci -q get "$1" 2>/dev/null || true; }
 
@@ -17,20 +17,6 @@ if [ -f /etc/config/travelmate ] && [ -z "$(get travelmate.global.trm_iface)" ];
 	uci set travelmate.global.trm_iface=wwan
 	uci set travelmate.global.trm_enabled=0
 	uci commit travelmate
-fi
-
-# 只调整未经用户修改的原始默认统计配置；升级保留已有统计设置。
-if [ -f /rom/etc/config/luci_statistics ] && cmp -s /etc/config/luci_statistics /rom/etc/config/luci_statistics; then
-	uci set luci_statistics.collectd.Interval=60
-	uci set luci_statistics.collectd_rrdtool.DataDir=/tmp/rrd
-	uci set luci_statistics.collectd_rrdtool.backup=0
-	uci set luci_statistics.collectd_thermal.enable=1
-	uci set luci_statistics.collectd_ping.enable=1
-	uci set 'luci_statistics.collectd_ping.Hosts=223.5.5.5 119.29.29.29'
-	uci set luci_statistics.collectd_ping.Interval=60
-	uci -q delete luci_statistics.collectd_interface.Interfaces || true
-	uci set luci_statistics.collectd_interface.IgnoreSelected=0
-	uci commit luci_statistics
 fi
 
 # 首次不启用 SQM 默认示例；保留用户此前修改过的 SQM 配置。

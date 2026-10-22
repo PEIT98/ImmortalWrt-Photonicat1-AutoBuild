@@ -34,10 +34,6 @@ need=(
   CONFIG_PACKAGE_luci-i18n-filemanager-zh-cn
   CONFIG_PACKAGE_luci-app-aurora-config
   CONFIG_PACKAGE_luci-i18n-aurora-config-zh-cn
-  CONFIG_PACKAGE_luci-app-statistics
-  CONFIG_PACKAGE_luci-i18n-statistics-zh-cn
-  CONFIG_PACKAGE_collectd-mod-ping
-  CONFIG_PACKAGE_collectd-mod-thermal
   CONFIG_PACKAGE_luci-app-travelmate
   CONFIG_PACKAGE_luci-i18n-travelmate-zh-cn
   CONFIG_PACKAGE_travelmate
@@ -157,6 +153,11 @@ for key in "${need[@]}"; do
   fi
 done
 absent=(
+  CONFIG_PACKAGE_luci-app-statistics
+  CONFIG_PACKAGE_luci-i18n-statistics-zh-cn
+  CONFIG_PACKAGE_collectd
+  CONFIG_PACKAGE_collectd-mod-ping
+  CONFIG_PACKAGE_collectd-mod-thermal
   CONFIG_PACKAGE_pcat-mgr
   CONFIG_DEFAULT_pcat-mgr
   CONFIG_PACKAGE_pcat-manager-v1
@@ -197,4 +198,4 @@ if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代必选配置通过：现有插件及驱动、文件管理、Aurora 设置、统计、Travelmate、SQM/CAKE 与 cake-autorate 均已保留。'
+echo '光影猫一代必选配置通过：现有插件及驱动、文件管理、Aurora 设置、Travelmate、SQM/CAKE 与 cake-autorate 均已保留。'

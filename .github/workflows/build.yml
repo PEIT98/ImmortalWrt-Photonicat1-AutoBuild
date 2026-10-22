@@ -165,7 +165,6 @@ jobs:
         working-directory: immortalwrt
         run: |
           test -f feeds/luci/applications/luci-app-filemanager/Makefile
-          test -f feeds/luci/applications/luci-app-statistics/Makefile
           test -f feeds/luci/applications/luci-app-travelmate/Makefile
           test -f package/luci-app-aurora-config/Makefile
           test -x package/luci-app-aurora-config/root/usr/libexec/rpcd/luci.aurora
@@ -276,7 +275,7 @@ jobs:
           grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-app-photonicat-power|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
           make defconfig
           echo '===== 核对上游插件是否被注册为目标包 ====='
-          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-app-photonicat-power luci-app-filemanager luci-app-aurora-config luci-app-statistics luci-app-travelmate cake-autorate luci-app-sqm; do
+          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-app-photonicat-power luci-app-filemanager luci-app-aurora-config luci-app-travelmate cake-autorate luci-app-sqm; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
               echo "registered: $pkg"
             else

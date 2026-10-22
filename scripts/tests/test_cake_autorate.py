@@ -206,15 +206,13 @@ class CakeAutorateTests(unittest.TestCase):
         self.state['status']['l3_device'] = 'wwan1'
         self.rejected('唯一的 CAKE')
 
-    def run_integration_script(self, name, *, writable=False, custom_statistics=False, custom_sqm=False):
+    def run_integration_script(self, name, *, writable=False, custom_sqm=False):
         state = self.root / 'state.json'
         state.write_text(json.dumps(self.state))
         (self.root / 'etc/config').mkdir(parents=True, exist_ok=True)
         (self.root / 'rom/etc/config').mkdir(parents=True, exist_ok=True)
-        for rel in ('etc/config/travelmate', 'etc/config/luci_statistics', 'rom/etc/config/luci_statistics', 'etc/config/sqm', 'rom/etc/config/sqm'):
-            (self.root / rel).write_text('config statistics collectd\n')
-        if custom_statistics:
-            (self.root / 'etc/config/luci_statistics').write_text('# user configuration\n')
+        for rel in ('etc/config/travelmate', 'etc/config/sqm', 'rom/etc/config/sqm'):
+            (self.root / rel).write_text('# default configuration\n')
         if custom_sqm:
             (self.root / 'etc/config/sqm').write_text('# user sqm\n')
         source = REPO / ('files/etc/uci-defaults/92-photonicat-network-tools' if name == 'defaults' else 'packages/cake-autorate/files/98-cake-autorate')
@@ -240,8 +238,6 @@ class CakeAutorateTests(unittest.TestCase):
         self.assertEqual(values['network.wwan.proto'], 'dhcp')
         self.assertEqual(values['travelmate.global.trm_iface'], 'wwan')
         self.assertEqual(values['travelmate.global.trm_enabled'], '0')
-        self.assertEqual(values['luci_statistics.collectd_rrdtool.DataDir'], '/tmp/rrd')
-        self.assertEqual(values['luci_statistics.collectd_ping.Interval'], '60')
         self.assertEqual(values['sqm.mobile.enabled'], '0')
 
     def test_existing_wwan_is_not_reconfigured(self):
@@ -250,12 +246,11 @@ class CakeAutorateTests(unittest.TestCase):
         self.assertEqual(self.state['uci']['network.wwan.proto'], 'static')
         self.assertEqual(self.state['uci']['network.wwan.metric'], '55')
 
-    def test_existing_travelmate_and_statistics_are_preserved(self):
-        self.state['uci'].update({'travelmate.global.trm_iface': 'my_wifi', 'travelmate.global.trm_enabled': '1', 'luci_statistics.collectd.Interval': '15'})
-        self.run_integration_script('defaults', writable=True, custom_statistics=True)
+    def test_existing_travelmate_is_preserved(self):
+        self.state['uci'].update({'travelmate.global.trm_iface': 'my_wifi', 'travelmate.global.trm_enabled': '1'})
+        self.run_integration_script('defaults', writable=True)
         self.assertEqual(self.state['uci']['travelmate.global.trm_iface'], 'my_wifi')
         self.assertEqual(self.state['uci']['travelmate.global.trm_enabled'], '1')
-        self.assertEqual(self.state['uci']['luci_statistics.collectd.Interval'], '15')
 
     def test_first_boot_respects_enabled_autorate(self):
         self.state['uci']['cake-autorate.main.enabled'] = '1'

@@ -186,7 +186,7 @@ test -x "$CAKE_DST/files/98-cake-autorate"
 sh -n "$CAKE_DST/files/cake-autorate.init" "$CAKE_DST/files/cake-autorate-prepare" "$CAKE_DST/files/98-cake-autorate"
 test -x "$SRC/files/etc/uci-defaults/92-photonicat-network-tools"
 sh -n "$SRC/files/etc/uci-defaults/92-photonicat-network-tools"
-echo '文件管理、统计和 Travelmate 使用官方包；Aurora 设置及 cake-autorate 已准备。'
+echo '文件管理和 Travelmate 使用官方包；Aurora 设置及 cake-autorate 已准备。'
 
 # 固件版本/存储卡片只使用 rootfs 覆盖文件；不能修改 Aurora 主题。
 INFO_RPC="$SRC/files/usr/libexec/rpcd/luci.photonicat1"
