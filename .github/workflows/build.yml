@@ -94,6 +94,7 @@ jobs:
         working-directory: immortalwrt
         run: |
           ./scripts/feeds update -a
+          python3 ../scripts/patches/fix-qmodem-ndisc6-source.py feeds/qmodem/application/ndisc6/Makefile
           ./scripts/feeds install -a
           ./scripts/feeds install -a -f -p qmodem
           ./scripts/feeds install -a -f -p qmodem_generic
@@ -371,7 +372,10 @@ jobs:
 
       - name: Download sources
         working-directory: immortalwrt
-        run: make download -j4
+        run: |
+          # ndisc6 是 QModem IPv6 依赖；先验证它的源码和 SHA256，避免编译两小时后才发现旧链接失效。
+          make package/feeds/qmodem/ndisc6/download V=s
+          make download -j4
 
       - name: Save source downloads
         if: steps.download_cache.outputs.cache-hit != 'true'
