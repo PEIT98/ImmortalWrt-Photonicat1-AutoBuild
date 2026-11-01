@@ -384,8 +384,9 @@ jobs:
       - name: Download sources
         working-directory: immortalwrt
         run: |
-          # ndisc6 是 QModem IPv6 依赖；先验证它的源码和 SHA256，避免编译两小时后才发现旧链接失效。
+          # 提前验证 ndisc6 源码校验和补丁应用，避免正式编译时才发现上游变动。
           make package/feeds/qmodem/ndisc6/download V=s
+          make package/feeds/qmodem/ndisc6/prepare V=s
           make download -j4
 
       - name: Save source downloads
