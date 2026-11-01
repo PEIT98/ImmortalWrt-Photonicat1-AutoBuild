@@ -18,6 +18,7 @@
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
 | [fix-qmodem-usb-net-filter.py](patches/fix-qmodem-usb-net-filter.py) | 将 USB 网卡识别前置，收集后跳过端口限制，再按原规则处理 AT 串口和语音端口；无需逐型号补接口 |
+| [fix-qmodem-boot-scan.py](patches/fix-qmodem-boot-scan.py) | 使官方延时补扫遵从 USB/PCIe 开关，关闭自动扫描时不额外扫描 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 双频 Wi-Fi 统一命名 Photonicat-Wrt；优先 5GHz（支持时 AX／80MHz／36 信道），其次 2.4GHz；WPA2-PSK，密码 photonicat |
 
 ## 光影猫电池与电源插件
@@ -51,6 +52,8 @@
 **QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“移动网络”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留。
 
 **QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [PEIT98/luci-app-qmodem-generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装。Generic 原样复刻自 LianXia233，后续 WebUI 修复直接在自有仓库维护。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
+
+**QModem 开机识别：** [有限启动检查](../files/usr/bin/photonicat-qmodem-scan)在实际 USB 网卡和同设备串口出现后补充扫描，最多检查 36 轮；识别成功即退出，持续失败且没有已识别模组时最多恢复一次扫描服务。已有配置及关闭扫描的选择保留，不写死槽位、AT 口和网卡名，不要求安装 `timeout`。独立的首启迁移标记使旧固件升级也能启用此服务。执行 `python3 scripts/tests/test_qmodem_boot_scan.py` 验证晚到端口、异步去重、恢复边界、单次恢复、并发锁及旧配置迁移；Actions 在固件编译前执行同一测试。
 
 **在线升级：** `build/prepare.sh` 将项目内完整 [luci-app-online-upgrade](../packages/luci-app-online-upgrade/) 复制到 `package/luci-app-online-upgrade`，光影猫适配直接在插件源码中维护。Actions 核对整套源码复制一致，并将同一个 Release 标签写进固件身份和发布任务；检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。固件及 Release 的来源信息记录本项目提交号。
 

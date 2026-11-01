@@ -170,6 +170,17 @@ jobs:
           python3 scripts/patches/fix-qmodem-usb-net-filter.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
           python3 scripts/tests/test_qmodem_usb_net_filter.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
 
+      - name: 检查 QModem 开机就绪与限次恢复
+        run: |
+          python3 scripts/patches/fix-qmodem-boot-scan.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
+          sh -n immortalwrt/feeds/qmodem/application/qmodem/files/etc/init.d/qmodem_init
+          sh -n files/usr/bin/photonicat-qmodem-scan
+          sh -n files/etc/init.d/photonicat-qmodem-scan
+          sh -n files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan
+          test -x immortalwrt/files/usr/bin/photonicat-qmodem-scan
+          test -x immortalwrt/files/etc/init.d/photonicat-qmodem-scan
+          python3 scripts/tests/test_qmodem_boot_scan.py
+
       - name: 修复 iStore 软件包名称
         run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 
