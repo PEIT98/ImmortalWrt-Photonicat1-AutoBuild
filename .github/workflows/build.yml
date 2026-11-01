@@ -118,11 +118,22 @@ jobs:
           version = re.search(r'^QMODEM_VERSION\s*:?=\s*(\S+)', Path('feeds/qmodem/version.mk').read_text(), re.M)
           assert version and re.fullmatch(r'[0-9]+(?:\.[0-9]+)*(?:_(?:alpha|beta|pre|rc)[0-9]*)?', version.group(1)), 'QModem 版本格式不适用于 APK，请检查上游 version.mk'
           PY
-          # Feeds 保留上游执行权限，确保 Generic 后台任务和缓存服务能被 rpcd/procd 调用。
+          # Feeds 保留 Generic 当前流量统计与模组支持组件的执行权限，供 rpcd/procd 调用。
           generic_root=feeds/qmodem_generic/luci-app-qmodem-generic/root
-          test -x "$generic_root/usr/bin/qmodem-task"
-          test -x "$generic_root/usr/sbin/qmodem-worker"
-          test -x "$generic_root/usr/libexec/rpcd/qmodem_cache"
+          for component in \
+            usr/bin/qmodem-stats-collect \
+            usr/bin/qmodem-stats-loop \
+            usr/sbin/qmodem-modem-support \
+            usr/sbin/qmodem-support-custom \
+            usr/libexec/rpcd/qmodem_stats \
+            usr/libexec/rpcd/qmodem_support \
+            etc/init.d/qmodem-stats-collect \
+            etc/init.d/qmodem-modem-support; do
+            test -x "$generic_root/$component" || {
+              echo "::error::Generic 组件缺失或不可执行：$component"
+              exit 1
+            }
+          done
           ./scripts/feeds install -a -f -p openclash
           # iStore's Lua taskd / UI packages take precedence from official iStore feed.
           ./scripts/feeds install -a -f -p istore
