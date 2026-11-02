@@ -70,7 +70,7 @@ jobs:
             flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man \
             intltool jq libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev \
             libmpc-dev libmpfr-dev libncurses-dev libreadline-dev libssl-dev libtool \
-            lrzsz mkisofs msmtp ninja-build patch pkgconf python3 python3-pyelftools \
+            lrzsz mkisofs msmtp musl-tools ninja-build patch pkgconf python3 python3-pyelftools \
             python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig \
             texinfo unzip vim wget xmlto xxd zlib1g-dev zstd python3-ply python3-docutils re2c
           sudo apt-get clean
@@ -387,6 +387,7 @@ jobs:
           # 提前验证 ndisc6 源码校验和补丁应用，避免正式编译时才发现上游变动。
           make package/feeds/qmodem/ndisc6/download V=s
           make package/feeds/qmodem/ndisc6/prepare V=s
+          python3 ../scripts/tests/check_qmodem_ndisc6_build.py feeds/qmodem/application/ndisc6 dl
           make download -j4
 
       - name: Save source downloads
