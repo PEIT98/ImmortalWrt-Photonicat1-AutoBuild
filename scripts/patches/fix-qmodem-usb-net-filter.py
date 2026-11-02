@@ -55,6 +55,28 @@ def usb_scan_function(source: str) -> str:
     return source[start:end]
 
 
+def upstream_filters_only_at(body: str) -> bool:
+    """上游已独立收集网卡，并且只在 AT 分支使用接口白名单。"""
+    guard = "if (!interface_allowed(&rule, if_port)) {"
+    if (
+        body.count(PATH_LINE) != 1
+        or body.count(SERIAL) != 1
+        or body.count(NETWORK_TAIL) != 1
+        or body.count(guard) != 1
+    ):
+        return False
+    serial_start = body.index(SERIAL)
+    network_start = body.index(NETWORK_TAIL)
+    if serial_start >= network_start:
+        return False
+    at_branch = body[serial_start:network_start]
+    if guard not in at_branch or "sl_init(&ttys);" not in at_branch:
+        return False
+    # 白名单必须在 AT 端口加入结果前生效；网卡分支不经过它。
+    before_at_ports = at_branch[:at_branch.index("sl_init(&ttys);")]
+    return guard in before_at_ports and "continue;" in before_at_ports[before_at_ports.index(guard):]
+
+
 def patch_source(source: str) -> str:
     original_body = usb_scan_function(source)
     body = original_body
@@ -70,6 +92,8 @@ def patch_source(source: str) -> str:
         ):
             return source
         raise ValueError("QModem 网卡前置补丁结构不完整，请核对源码")
+    if upstream_filters_only_at(body):
+        return source
     if (
         body.count(ORIGINAL) != 1
         or body.count(NETWORK_TAIL) != 1
@@ -95,7 +119,10 @@ def main() -> None:
         parser.exit(1, f"::error::{exc}\n")
     if updated != original:
         path.write_text(updated, encoding="utf-8")
-    print("QModem：先收集 USB 网卡，再按原规则筛选 AT 串口；保留语音端口和动态模组配置。")
+    if updated == original and NETWORK_FIRST not in updated:
+        print("QModem 上游已独立收集 USB 网卡，并仅对 AT 串口应用白名单；保留上游实现。")
+    else:
+        print("QModem：先收集 USB 网卡，再按原规则筛选 AT 串口；保留语音端口和动态模组配置。")
 
 
 if __name__ == "__main__":

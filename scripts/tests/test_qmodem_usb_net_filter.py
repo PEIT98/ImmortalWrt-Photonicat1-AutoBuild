@@ -23,6 +23,7 @@ HARNESS = r'''
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define QMODEM_SYSFS_ROOT "/sys"
 
 struct str_list { char *items[32]; size_t len; };
 struct port_rule {
@@ -205,22 +206,28 @@ def main() -> None:
     parser.add_argument("feed", type=Path, help="已应用补丁的 QModem Feed 目录")
     args = parser.parse_args()
     source = (args.feed / patch.SCANNER).read_text(encoding="utf-8")
-    if patch.NETWORK_FIRST not in source or patch.patch_source(source) != source:
+    if patch.patch_source(source) != source:
         parser.exit(1, "USB 网卡扫描补丁未生效，或重复执行改变源码\n")
     body = patch.usb_scan_function(source)
-    if body.count(patch.SERIAL_END) != 1:
-        parser.exit(1, "AT 串口分支结构变化\n")
-    original_body = body.replace(patch.NETWORK_FIRST, "", 1).replace(
-        patch.SERIAL_END, "\t\t\tsl_free(&ttys);\n" + patch.NETWORK_TAIL, 1
-    )
-    original = source.replace(body, original_body, 1)
-    if patch.patch_source(original) != source:
-        parser.exit(1, "补丁修改超出预期范围\n")
-    legacy = original.replace(patch.ORIGINAL, patch.LEGACY_PATCHED, 1)
-    if patch.patch_source(legacy) != source:
-        parser.exit(1, "上一版补丁迁移失败\n")
+    if patch.NETWORK_FIRST in source:
+        if body.count(patch.SERIAL_END) != 1:
+            parser.exit(1, "AT 串口分支结构变化\n")
+        original_body = body.replace(patch.NETWORK_FIRST, "", 1).replace(
+            patch.SERIAL_END, "\t\t\tsl_free(&ttys);\n" + patch.NETWORK_TAIL, 1
+        )
+        original = source.replace(body, original_body, 1)
+        if patch.patch_source(original) != source:
+            parser.exit(1, "补丁修改超出预期范围\n")
+        legacy = original.replace(patch.ORIGINAL, patch.LEGACY_PATCHED, 1)
+        if patch.patch_source(legacy) != source:
+            parser.exit(1, "上一版补丁迁移失败\n")
+        before = original
+    else:
+        if not patch.upstream_filters_only_at(body):
+            parser.exit(1, "上游未完整保留 USB 网卡与 AT 白名单分离逻辑\n")
+        before = None
     try:
-        patch.patch_source(original.replace(patch.GUARD, "", 1))
+        patch.patch_source(source.replace("if (!interface_allowed(&rule, if_port)) {", "if (0) {", 1))
     except ValueError:
         pass
     else:
@@ -230,14 +237,15 @@ def main() -> None:
         parser.exit(1, "缺少主机 C 编译器，请安装 build-essential\n")
     with tempfile.TemporaryDirectory(prefix="qmodem-usb-test-") as tmp:
         directory = Path(tmp)
-        before = build_and_run(original, directory, "before", compiler)
-        if before.returncode != 1 or "网卡被 AT 白名单过滤" not in before.stderr:
-            parser.exit(1, "未能复现原版 ECM 接口过滤问题\n")
+        if before:
+            old = build_and_run(before, directory, "before", compiler)
+            if old.returncode != 1 or "网卡被 AT 白名单过滤" not in old.stderr:
+                parser.exit(1, "未能复现原版 ECM 接口过滤问题\n")
         after = build_and_run(source, directory, "after", compiler)
         if after.returncode:
             parser.exit(1, after.stderr)
         print(after.stdout, end="")
-    print("原版故障复现、旧补丁迁移、重复执行及上游结构检查通过。")
+    print("USB 网卡、AT 白名单、语音端口及重复执行检查通过。")
 
 
 if __name__ == "__main__":
