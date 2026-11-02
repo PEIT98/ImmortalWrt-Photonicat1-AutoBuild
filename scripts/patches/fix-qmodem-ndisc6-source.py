@@ -25,6 +25,8 @@ NEW_INSTALL = (
     "\t$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/rltraceroute6 "
     "$(PKG_INSTALL_DIR)/usr/bin/tcptraceroute6 $(1)/usr/bin/\n"
 )
+OLD_CFLAGS = "TARGET_CFLAGS += -std=c99\n"
+NEW_CFLAGS = "TARGET_CFLAGS += -std=gnu11\n"
 
 
 def patch_source(source: str) -> str:
@@ -46,6 +48,12 @@ def patch_source(source: str) -> str:
         source = source.replace(OLD_INSTALL, NEW_INSTALL, 1)
     elif source.count(NEW_INSTALL) != 1:
         raise ValueError("QModem traceroute6 安装定义已变化，请检查")
+
+    # 1.0.8 的 trace-tcp.c 使用 <stdalign.h> 的 alignas，需要 C11。
+    if source.count(OLD_CFLAGS) == 1:
+        source = source.replace(OLD_CFLAGS, NEW_CFLAGS, 1)
+    elif source.count(NEW_CFLAGS) != 1:
+        raise ValueError("QModem ndisc6 编译标准已变化，请检查")
     return source
 
 
@@ -71,7 +79,7 @@ def main() -> None:
         for path in obsolete:
             path.unlink()
         if old != new or obsolete:
-            print("QModem ndisc6：升级到 1.0.8，移除不兼容的旧补丁，保留 IPv6 工具。")
+            print("QModem ndisc6：升级到 1.0.8，使用 GNU C11，移除不兼容的旧补丁，保留 IPv6 工具。")
         else:
             print("QModem ndisc6：上游已有新版本或修复，无需替换。")
     except (OSError, ValueError) as exc:
