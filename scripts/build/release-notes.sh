@@ -20,7 +20,7 @@ test -f "$dir/build-sources.txt"
   echo '| 后台／SSH 密码 | `photonicat` |'
   echo '| 5GHz／2.4GHz Wi-Fi 名称 | 均为 `Photonicat-Wrt` |'
   echo '| Wi-Fi 密码／加密 | `photonicat`／WPA2-PSK |'
-  echo '| 频段判断顺序 | 优先 5GHz，其次 2.4GHz |'
+  echo '| 频段判断顺序 | 板载 SDIO 优先 2.4GHz；M.2 等其他网卡优先 5GHz；按网卡能力回退 |'
   echo '| 5GHz 模式／带宽／信道 | AX（HE80）／80MHz／36；按网卡能力回退 |'
   echo
   echo '默认值用于首次刷入、恢复出厂或新生成配置；保留配置升级沿用已有网络、无线、root 密码和自定义主机名。'

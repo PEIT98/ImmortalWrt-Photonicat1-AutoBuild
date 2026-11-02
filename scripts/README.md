@@ -19,7 +19,7 @@
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
 | [fix-qmodem-usb-net-filter.py](patches/fix-qmodem-usb-net-filter.py) | 将 USB 网卡识别前置，收集后跳过端口限制，再按原规则处理 AT 串口和语音端口；无需逐型号补接口 |
 | [fix-qmodem-boot-scan.py](patches/fix-qmodem-boot-scan.py) | 使官方延时补扫遵从 USB/PCIe 开关，关闭自动扫描时不额外扫描 |
-| [wifi-band-order.sh](patches/wifi-band-order.sh) | 双频 Wi-Fi 统一命名 Photonicat-Wrt；优先 5GHz（支持时 AX／80MHz／36 信道），其次 2.4GHz；WPA2-PSK，密码 photonicat |
+| [wifi-band-order.sh](patches/wifi-band-order.sh) | 板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz，按网卡频段能力回退；统一 SSID Photonicat-Wrt，WPA2-PSK，密码 photonicat |
 
 ## 光影猫电池与电源插件
 
@@ -45,7 +45,7 @@
 
 **编译触发：** 仅通过 Actions 手动 `Run workflow` 编译。保留所有插件、系统配置、源码缓存及 CCache。
 
-**品牌和网络默认值：** 主机名及 5GHz／2.4GHz Wi-Fi 名称均为 `Photonicat-Wrt`；后台 [http://172.16.0.1](http://172.16.0.1/)；后台 root 密码与 Wi-Fi 密码均为 `photonicat`。无线优先判断 5GHz（支持时 AX／80MHz／36 信道），其次 2.4GHz。完整默认值见[主说明](../README.md#默认网络设置)。
+**品牌和网络默认值：** 主机名及 5GHz／2.4GHz Wi-Fi 名称均为 `Photonicat-Wrt`；后台 [http://172.16.0.1](http://172.16.0.1/)；后台 root 密码与 Wi-Fi 密码均为 `photonicat`。板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz（支持时 AX／80MHz／36 信道）；实际频段由网卡能力决定。完整默认值见[主说明](../README.md#默认网络设置)。
 
 `photonicat1.config` 设置固件品牌，Aurora 无需改源码；[首启配置](../files/etc/uci-defaults/99-photonicat-brand) 迁移原默认主机名，并仅在 root 密码为空时初始化密码。这些默认值需要重新编译；保留配置升级时沿用已有网络、无线、root 密码和自定义主机名。
 
