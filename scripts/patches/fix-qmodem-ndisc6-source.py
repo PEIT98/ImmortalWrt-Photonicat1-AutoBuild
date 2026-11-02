@@ -4,13 +4,9 @@
 import argparse
 import hashlib
 from pathlib import Path
+import re
 
 
-OLD = (
-    "PKG_VERSION:=1.0.2",
-    "PKG_SOURCE_URL:=http://www.remlab.net/files/ndisc6",
-    "PKG_MD5SUM:=50cb4c19606cf6ff2b7388e71832f579",
-)
 NEW = (
     "PKG_VERSION:=1.0.8",
     "PKG_SOURCE_URL:=https://www.remlab.net/files/ndisc6",
@@ -38,10 +34,24 @@ def patch_source(source: str) -> str:
             raise ValueError("上游 ndisc6 包定义已变化，请检查")
         return source
     else:
-        if any(source.count(line + "\n") != 1 for line in OLD):
-            raise ValueError("QModem ndisc6 1.0.2 包定义已变化，请检查源码地址")
-        for old, new in zip(OLD, NEW):
-            source = source.replace(old + "\n", new + "\n", 1)
+        # 1.0.2 的下载地址/校验方式可能由上游更新；这里只使用验证过的
+        # 1.0.8 源码，先检查包名和归档结构，再整体替换下载定义。
+        required = (
+            "PKG_NAME:=ndisc6\n",
+            "PKG_VERSION:=1.0.2\n",
+            "PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2\n",
+        )
+        if any(source.count(line) != 1 for line in required):
+            raise ValueError("QModem ndisc6 1.0.2 包结构已变化，请检查")
+        replacements = (
+            (r"^PKG_VERSION:=1\.0\.2\n", NEW[0] + "\n"),
+            (r"^PKG_SOURCE_URL:=[^\n]+\n", NEW[1] + "\n"),
+            (r"^(?:PKG_MD5SUM|PKG_HASH):=[^\n]+\n", NEW[2] + "\n"),
+        )
+        for pattern, value in replacements:
+            source, count = re.subn(pattern, lambda _: value, source, flags=re.M)
+            if count != 1:
+                raise ValueError("QModem ndisc6 源码定义已变化，请检查")
 
     # /bin/sh 不展开 {rl,tcp}，明确列出 1.0.8 安装的两个程序。
     if source.count(OLD_INSTALL) == 1:
