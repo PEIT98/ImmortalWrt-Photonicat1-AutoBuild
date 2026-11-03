@@ -1,0 +1,12 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+case "$1" in
+    list) printf '%s\n' '{"getSettings":{},"setSettings":{"source":""}}' ;;
+    call)
+        case "$2" in
+            getSettings) /usr/libexec/photonicat-package-source status; exit 0 ;;
+            setSettings) /usr/libexec/photonicat-package-source set; exit 0 ;;
+            *) printf '%s\n' '{"ok":false,"error":"不支持的操作"}' ;;
+        esac
+        ;;
+esac

@@ -2,8 +2,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-photonicat-power
-PKG_VERSION:=1.0.16
-PKG_RELEASE:=12
+PKG_VERSION:=1.0.17
+PKG_RELEASE:=1
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/photonicat/rockchip_rk3568_pcat_manager.git
 PKG_SOURCE_DATE:=2025-08-18
@@ -22,7 +22,7 @@ define Package/luci-app-photonicat-power
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
   TITLE:=Photonicat1 management and header status
-  DEPENDS:=@TARGET_rockchip_armv8 +luci-base +socat +iw +glib2 +libjson-c
+  DEPENDS:=@TARGET_rockchip_armv8 +luci-base +socat +iw +glib2 +libjson-c +jq-full +flock
   CONFLICTS:=pcat-mgr pcat-manager pcat-manager-v1 luci-mod-battstatus luci-i18n-battstatus-zh-cn
 endef
 
@@ -34,6 +34,7 @@ define Package/luci-app-photonicat-power/conffiles
 /etc/pcat-manager.conf
 /etc/pcat-manager-userdata.conf
 /etc/config/luci_battstatus
+/etc/config/photonicat_packages
 endef
 
 define Build/Prepare
@@ -55,12 +56,18 @@ define Package/luci-app-photonicat-power/install
 	$(INSTALL_BIN) ./root/usr/libexec/rpcd/luci.photonicat_power $(1)/usr/libexec/rpcd/
 	$(INSTALL_BIN) ./root/usr/libexec/rpcd/luci.photonicat_header $(1)/usr/libexec/rpcd/
 	$(INSTALL_BIN) ./root/usr/libexec/rpcd/luci.battstatus $(1)/usr/libexec/rpcd/
+	$(INSTALL_BIN) ./root/usr/libexec/rpcd/luci.photonicat_packages $(1)/usr/libexec/rpcd/
+	$(INSTALL_BIN) ./root/usr/libexec/photonicat-package-source $(1)/usr/libexec/
+	$(INSTALL_DIR) $(1)/usr/share/photonicat
+	$(INSTALL_DATA) ./root/usr/share/photonicat/package-sources.awk $(1)/usr/share/photonicat/
 	$(INSTALL_DATA) ./root/usr/share/luci/menu.d/luci-app-photonicat-power.json $(1)/usr/share/luci/menu.d/
 	$(INSTALL_DATA) ./root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json $(1)/usr/share/rpcd/acl.d/
 	$(INSTALL_CONF) ./root/etc/config/luci_battstatus $(1)/etc/config/luci_battstatus
+	$(INSTALL_CONF) ./root/etc/config/photonicat_packages $(1)/etc/config/photonicat_packages
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/i18n $(1)/etc/uci-defaults
 	po2lmo ./po/zh_Hans/battstatus.po $(1)/usr/lib/lua/luci/i18n/battstatus.zh-cn.lmo
 	$(INSTALL_BIN) ./files/98-photonicat-battery-language $(1)/etc/uci-defaults/
+	$(INSTALL_BIN) ./files/99-photonicat-package-source $(1)/etc/uci-defaults/
 endef
 
 $(eval $(call BuildPackage,luci-app-photonicat-power))

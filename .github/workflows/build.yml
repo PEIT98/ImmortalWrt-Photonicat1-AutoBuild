@@ -96,6 +96,9 @@ jobs:
         run: |
           ./scripts/feeds update -a
           python3 ../scripts/patches/fix-qmodem-ndisc6-source.py feeds/qmodem/application/ndisc6/Makefile
+          python3 ../scripts/patches/fix-weechat-provider.py .
+          python3 ../scripts/tests/test_build_dependencies.py
+          ./scripts/feeds update -i luci
           ./scripts/feeds install -a
           ./scripts/feeds install -a -f -p qmodem
           ./scripts/feeds install -a -f -p qmodem_generic
@@ -254,6 +257,8 @@ jobs:
           grep -Fq "poll.add(L.bind(this.updateIndicator, this), 5)" "$batt_js"
           node ../scripts/tests/test_photonicat_header.js
           node ../scripts/tests/test_photonicat_header_backend.js
+          python3 ../scripts/tests/test_package_sources.py
+          node ../scripts/tests/test_package_sources_frontend.js
           test -s "$power_pkg/htdocs/luci-static/resources/photonicat-header.css"
           test -x "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_header"
           test -x "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"
@@ -270,6 +275,8 @@ jobs:
           assert {'getBatteryStatus', 'getSettings'} <= set(acl['read']['ubus']['luci.battstatus'])
           assert {'status'} <= set(acl['read']['ubus']['luci.photonicat_header'])
           assert {'setSettings'} <= set(acl['write']['ubus']['luci.battstatus'])
+          assert {'getSettings'} <= set(acl['read']['ubus']['luci.photonicat_packages'])
+          assert {'setSettings'} <= set(acl['write']['ubus']['luci.photonicat_packages'])
           PY
           python3 - <<'PY'
           import json
@@ -306,6 +313,7 @@ jobs:
       - name: 应用并核对固件配置
         working-directory: immortalwrt
         run: |
+          set -euo pipefail
           # 修改过 iStore Makefile 后，强制重新扫描包定义，避免复用旧缓存。
           rm -f tmp/.packageinfo tmp/.config-package.in
           # feeds install -a 会重置 .config，因此必须在安装完成后再应用选项
@@ -313,7 +321,11 @@ jobs:
           cp .config .config.before-defconfig
           echo '===== defconfig 前核心插件 ====='
           grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-app-photonicat-power|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
-          make defconfig
+          make defconfig 2>&1 | tee ../photonicat-defconfig.log
+          if grep -Eq 'recursive dependency detected|(^|:)error:' ../photonicat-defconfig.log; then
+            echo '::error::Kconfig 配置解析失败，已停止构建，请查看 photonicat-defconfig.log'
+            exit 1
+          fi
           echo '===== 核对上游插件是否被注册为目标包 ====='
           for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-app-photonicat-power luci-app-filemanager luci-app-aurora-config luci-app-travelmate cake-autorate luci-app-sqm; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
@@ -342,6 +354,7 @@ jobs:
             immortalwrt/feeds.conf.default
             immortalwrt/tmp/.packageinfo
             immortalwrt/tmp/.config-package.in
+            photonicat-defconfig.log
           include-hidden-files: true
           retention-days: 14
 

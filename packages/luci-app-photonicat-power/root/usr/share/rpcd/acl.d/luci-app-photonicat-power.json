@@ -9,7 +9,8 @@
           "battery"
         ],
         "luci.battstatus": ["getBatteryStatus", "getSettings"],
-        "luci.photonicat_header": ["status"]
+        "luci.photonicat_header": ["status"],
+        "luci.photonicat_packages": ["getSettings"]
       }
     },
     "write": {
@@ -18,7 +19,8 @@
           "set_mode",
           "set_daily"
         ],
-        "luci.battstatus": ["setSettings"]
+        "luci.battstatus": ["setSettings"],
+        "luci.photonicat_packages": ["setSettings"]
       }
     }
   }

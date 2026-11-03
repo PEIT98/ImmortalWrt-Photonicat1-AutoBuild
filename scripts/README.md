@@ -72,3 +72,7 @@
 - `tests/test_disk_keepalive.py`：验证硬盘标识和直接读取；没有 loop 设备时仍运行不接触真实磁盘的识别测试。
 
 存储组件来源：SlAlot/ImmortalWrt_Photonicat1 `ae655185`，AGPL-3.0-only。移植保持现有网络、电源与 Docker 配置。
+
+**软件包镜像设置：** `luci-app-photonicat-power` 内置 `photonicat-package-source` 与 `package-sources.awk`，由同页独立 RPC 管理。首启脚本 `99-photonicat-package-source` 默认应用南京大学镜像，并在保留配置升级后重用用户选择。`tests/test_package_sources.py` 与前端测试覆盖源路径保留、权限、失败恢复和 MCU 离线场景。
+
+**构建依赖兼容：** `patches/fix-weechat-provider.py` 将 WeeChat 的虚拟依赖落实为已有的默认 `weechat-minimal` 提供者，避免 Kconfig 自递归，不额外启用该插件。自动扩容使用明确选中的 `coreutils-od` 读取文件系统头，不依赖默认配置中隐藏的 BusyBox 选项。配置解析日志保存在 `photonicat-defconfig.log`，发现递归错误时立即停止。

@@ -108,6 +108,14 @@ test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/view/photonicat-power.j
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/preload/battstatus.js"
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/photonicat-header.css"
 test -f "$POWER_PACKAGE_DST/root/etc/config/luci_battstatus"
+test -f "$POWER_PACKAGE_DST/root/etc/config/photonicat_packages"
+test -x "$POWER_PACKAGE_DST/root/usr/libexec/photonicat-package-source"
+test -x "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_packages"
+test -x "$POWER_PACKAGE_DST/files/99-photonicat-package-source"
+test -f "$POWER_PACKAGE_DST/root/usr/share/photonicat/package-sources.awk"
+for script in "$POWER_PACKAGE_DST/root/usr/libexec/photonicat-package-source" "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_packages" "$POWER_PACKAGE_DST/files/99-photonicat-package-source"; do
+    sh -n "$script"
+done
 test -f "$POWER_PACKAGE_DST/po/zh_Hans/battstatus.po"
 grep -Fq 'luci.photonicat_power battery' "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus"
 echo '光影猫管理：单一软件包提供 Aurora 设备状态、电池与电源页面及 PMU-only 后台。'

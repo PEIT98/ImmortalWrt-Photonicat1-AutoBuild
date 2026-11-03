@@ -33,3 +33,15 @@ MCU 服务使用 [photonicat/rockchip_rk3568_pcat_manager](https://github.com/ph
 - 顶部电量保持每 5 秒一次只读电池查询；顶部设备状态每 15 秒刷新一次。关闭顶部显示和低电量提醒后，电量查询停止，设备状态仍会读取电源模式。
 - 显示设置由 `luci.battstatus getSettings/setSettings` 存入 `/etc/config/luci_battstatus`，只提交这一份配置；保存模式的 MCU 写入及其应答校验仍保持 `-T 1`。
 - 不变更 MCU 串口协议或 QModem 配置。构建时仍使用原先锁定的上游 C 源码与本地 PMU-only/UPS 补丁，只将产物安装到这个软件包。
+
+### 软件包下载源
+
+“系统 → 光影猫管理 → 软件包下载源”默认使用 **南京大学加速镜像**，可切换回 **ImmortalWrt 官方源**。保存后到软件包管理刷新列表，列表和软件包下载使用所选地址。
+
+- 只替换已识别的 ImmortalWrt 官方/NJU 地址前缀，保留版本、架构、目标、内核 ABI、仓库路径、标签和注释；第三方仓库保持原样。
+- 读取实际 APK 源配置，兼容主列表、`repositories.d` 与已有 OPKG 兼容源。不关闭签名或 HTTPS 校验，也不自动安装或升级软件包。
+- 选择存入 `/etc/config/photonicat_packages`，保留配置升级后重新应用到生成的软件源列表；自定义源未识别时提示手动检查。
+- 保存使用互斥锁、同目录临时文件和失败恢复，不提交其他 LuCI 页面尚未保存的修改。
+- 独立 RPC `luci.photonicat_packages getSettings/setSettings` 不依赖 MCU，读取权限与修改权限分开。
+
+软件包镜像与“在线升级”中的 GitHub 固件下载源分别保存。

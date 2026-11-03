@@ -15,10 +15,17 @@ trap '[ -z "$loop" ] || losetup -d "$loop"' EXIT
 
 log() { printf '%s\n' "swrt-autogrow: $*" >/dev/kmsg; }
 error() { log "$*"; printf '%s\n' "$*" >&2; return 1; }
-u32() { hexdump -v -s "$2" -n 4 -e '1/4 "%u"' "$1"; }
+u32() {
+    local words
+    words=$(od -An -v -j "$2" -N 4 -tu4 "$1") || return 1
+    # shellcheck disable=SC2086
+    set -- $words
+    [ "$#" = 1 ] || return 1
+    printf '%s\n' "$1"
+}
 u64() {
     local words
-    words=$(hexdump -v -s "$2" -n 8 -e '2/4 "%u "' "$1")
+    words=$(od -An -v -j "$2" -N 8 -tu4 "$1") || return 1
     # The RK3568 and the x86 test environment are little endian.
     # shellcheck disable=SC2086
     set -- $words

@@ -1,0 +1,6 @@
+#!/bin/sh
+# Reapply the saved choice to regenerated distribution feeds after a firmware upgrade.
+if ! /usr/libexec/photonicat-package-source apply >/dev/null; then
+    logger -t photonicat-packages '软件源设置暂未应用，请到光影猫管理重新保存'
+fi
+exit 0

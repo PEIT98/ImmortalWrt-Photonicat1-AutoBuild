@@ -27,6 +27,7 @@ need=(
   CONFIG_PACKAGE_coreutils-sha256sum
   CONFIG_PACKAGE_coreutils-stat
   CONFIG_PACKAGE_coreutils-dd
+  CONFIG_PACKAGE_coreutils-od
   CONFIG_PACKAGE_coreutils-timeout
   CONFIG_PACKAGE_luci-app-swrt-disk-keepalive
   CONFIG_PACKAGE_sfdisk
@@ -37,7 +38,6 @@ need=(
   CONFIG_PACKAGE_resize2fs
   CONFIG_PACKAGE_f2fsck
   CONFIG_PACKAGE_mkf2fs
-  CONFIG_BUSYBOX_CONFIG_HEXDUMP
   CONFIG_PACKAGE_luci-app-mwan3
   CONFIG_PACKAGE_mwan3
   CONFIG_PACKAGE_luci-app-openclash

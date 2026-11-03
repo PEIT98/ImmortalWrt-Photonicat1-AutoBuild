@@ -17,11 +17,11 @@ class StorageIntegrationTests(unittest.TestCase):
     def test_regex_provider_and_all_runtime_tools_are_selected(self):
         config = (ROOT / "photonicat1.config").read_text()
         self.assertIn("# CONFIG_PACKAGE_jq is not set", config)
-        for name in ("jq-full", "coreutils-dd", "coreutils-timeout", "coreutils-stat",
+        for name in ("jq-full", "coreutils-dd", "coreutils-od", "coreutils-timeout", "coreutils-stat",
                      "sfdisk", "partx-utils", "blockdev", "blkid", "losetup",
                      "resize2fs", "f2fsck", "mkf2fs"):
             self.assertIn("CONFIG_PACKAGE_" + name + "=y", config)
-        self.assertIn("CONFIG_BUSYBOX_CONFIG_HEXDUMP=y", config)
+        self.assertNotIn("CONFIG_BUSYBOX_CONFIG_HEXDUMP", config)
 
     def test_tools_are_self_contained_and_do_not_pull_a_network_panel(self):
         for name in ("luci-app-online-upgrade", "luci-app-swrt-disk-keepalive"):

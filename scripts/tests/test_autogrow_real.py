@@ -12,7 +12,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOLS = ('losetup', 'sfdisk', 'partx', 'blockdev', 'mkfs.f2fs', 'resize.f2fs',
-         'mkfs.ext4', 'resize2fs', 'mksquashfs', 'jq', 'hexdump')
+         'mkfs.ext4', 'resize2fs', 'mksquashfs', 'jq', 'od')
 AVAILABLE = os.name != 'nt' and os.geteuid() == 0 and all(shutil.which(p) for p in TOOLS)
 if os.environ.get('SWRT_REQUIRE_AUTOGROW_TESTS') == '1' and not AVAILABLE:
     raise RuntimeError('Required auto-expansion integration tests cannot run')
