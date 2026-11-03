@@ -32,10 +32,19 @@ test -f "$ONLINE_SRC/Makefile" || { echo "::error::缺少项目内置 luci-app-o
 test ! -e "$ONLINE_DST" || { echo "::error::在线升级目标路径已存在，禁止覆盖" >&2; exit 1; }
 mkdir -p "$ONLINE_DST"
 cp -a "$ONLINE_SRC/." "$ONLINE_DST/"
-test -x "$ONLINE_DST/root/usr/bin/online-upgrade.sh"
-test -f "$ONLINE_DST/root/www/luci-static/resources/view/system/online-upgrade.js"
+test -x "$ONLINE_DST/root/usr/libexec/swrt-upgrade"
+test -f "$ONLINE_DST/root/www/luci-static/resources/view/system/swrt-upgrade.js"
 test -f "$ONLINE_DST/root/usr/share/rpcd/acl.d/luci-app-online-upgrade.json"
-echo '在线升级：完整本地插件已复制，使用项目内置的光影猫适配源码。'
+echo '在线升级：SWRT 更新器已适配本仓库、日期标签与预发行通道。'
+
+KEEPALIVE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-swrt-disk-keepalive"
+KEEPALIVE_DST="$SRC/package/luci-app-swrt-disk-keepalive"
+test -f "$KEEPALIVE_SRC/Makefile"
+test ! -e "$KEEPALIVE_DST" || { echo '::error::硬盘保活目标路径已存在，禁止覆盖' >&2; exit 1; }
+mkdir -p "$KEEPALIVE_DST"
+cp -a "$KEEPALIVE_SRC/." "$KEEPALIVE_DST/"
+test -x "$KEEPALIVE_DST/root/usr/libexec/swrt-disk-keepalive"
+echo '硬盘保活：已复制完整本地插件，首次默认关闭。'
 
 
 # OpenClash 官方维护的 Mihomo/Clash LuCI 软件源。
@@ -106,6 +115,12 @@ echo '光影猫管理：单一软件包提供 Aurora 设备状态、电池与电
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
+
+# 在 preinit 挂载 overlay 前扩容；同时允许后续升级保留扩大的分区边界。
+AUTOGROW="$SRC/files/usr/libexec/swrt-autogrow"
+test -x "$AUTOGROW"
+sh -n "$AUTOGROW" "$SRC/files/lib/preinit/79-swrt-autogrow"
+python3 "$(dirname "$0")/../patches/enable-emmc-autogrow.py" "$SRC"
 
 # Aurora 使用系统主机名显示品牌；默认配置在首启生成后应用。
 BRAND_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-brand"

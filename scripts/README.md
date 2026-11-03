@@ -31,7 +31,7 @@
 
 - [电池与电源管理](../packages/luci-app-photonicat-power/README.md)：电量卡片、顶部显示开关、低电量提醒、UPS 倒计时和 PMU 后台；显示设置保存到独立 UCI 配置。
 - [CPU 调频管理 luci-app-cpufreq](../packages/luci-app-cpufreq/README.md)：整个插件直接存放在项目内；可修改网页、菜单、权限及简体中文翻译。后台仍采用官方 `cpufreq`，无需另外的修改脚本。
-- [在线升级 luci-app-online-upgrade](../packages/luci-app-online-upgrade/README.md)：整套网页、后端、配置、菜单、权限及上游翻译存放在插件目录内，已包含光影猫固件识别和升级校验。
+- [在线升级 luci-app-online-upgrade](../packages/luci-app-online-upgrade/README.md)：SWRT 更新器适配本仓库，包含独立网页、后台、配置、菜单和权限，支持正式/预发行通道及国内/GitHub 源。
 - 编译时 `build/prepare.sh` 复制本地源码；随后移除 Feeds 中同名符号链接以避免重复注册。
 
 ## 配置来源与构建顺序
@@ -60,3 +60,15 @@
 **管理工具：** 文件管理、Travelmate 和 SQM 来自官方软件源；Aurora 设置直接拉取主题作者 `master`，保留上游关闭旧 jsmin 的设置并记录实际提交号。[首次配置](../files/etc/uci-defaults/92-photonicat-network-tools) 将 Travelmate 关联 `wwan` 并保持关闭。
 
 **cake-autorate：** [本地包](../packages/cake-autorate/README.md) 固定稳定版提交和下载 SHA256，原样安装上游核心，首次关闭。启动前检查实际 QModem/mwan3 接口、SQM 和真实 CAKE/IFB 队列，探测固定走选定出口。网络事件会刷新实际接口，缺少队列时不启动；原有网络、防火墙和 SQM 配置由用户维护。
+
+## eMMC 与 USB 存储
+
+- `patches/enable-emmc-autogrow.py`：检查 Rockchip 的镜像校验及刷写流程，保留扩大的根分区；上游无关注释变化不阻断构建，受影响逻辑变化时停止并提示核对。
+- `files/usr/libexec/swrt-autogrow` 与 `files/lib/preinit/79-swrt-autogrow`：在 overlay 挂载前扩展 eMMC 的连续可用空间。
+- `build/stamp-firmware.py`：验证并写入在线更新使用的不可变版本身份。
+- `packages/luci-app-swrt-disk-keepalive`：完整本地 USB 硬盘保活插件，默认关闭。
+- `tests/test_autogrow.py`、`tests/test_storage_integration.py`：验证分区比较、生产扩容计划、额外分区保护和依赖。
+- `tests/test_autogrow_real.py`：在临时稀疏磁盘与 loop 设备上验证 F2FS/ext4 扩容；需要 Linux root、相关工具和内核支持。
+- `tests/test_disk_keepalive.py`：验证硬盘标识和直接读取；没有 loop 设备时仍运行不接触真实磁盘的识别测试。
+
+存储组件来源：SlAlot/ImmortalWrt_Photonicat1 `ae655185`，AGPL-3.0-only。移植保持现有网络、电源与 Docker 配置。

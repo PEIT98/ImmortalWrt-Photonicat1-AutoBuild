@@ -1,0 +1,160 @@
+[
+  {
+    "tag_name": "photonicat1-20261102-222244-55",
+    "draft": false,
+    "prerelease": true,
+    "body": "GitHub release metadata fixture; content omitted.",
+    "published_at": "2026-11-02T15:28:53Z",
+    "assets": [
+      {
+        "id": 702211945,
+        "name": "build-sources.txt",
+        "size": 822,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/build-sources.txt",
+        "digest": "sha256:d364ab3254f55064105a4105e01056b9566cb36e8a8d1c8fd8f06e839871d66f"
+      },
+      {
+        "id": 702211951,
+        "name": "config.buildinfo",
+        "size": 11617,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/config.buildinfo",
+        "digest": "sha256:42680db7a3a18173783c6751a0c3477fa7cb368925cecff06084cf99a791ede7"
+      },
+      {
+        "id": 702211941,
+        "name": "feeds.buildinfo",
+        "size": 886,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/feeds.buildinfo",
+        "digest": "sha256:597cf777864cb9610bb191f177097ef04869cca576184d4db0610cf08383e2eb"
+      },
+      {
+        "id": 702211944,
+        "name": "immortalwrt-recent-commits.txt",
+        "size": 1691,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/immortalwrt-recent-commits.txt",
+        "digest": "sha256:beb331a0e5dbfd08247af8eb9fbfffbfdc96bda58dfe5b73d6f0af13ab517a24"
+      },
+      {
+        "id": 702211957,
+        "name": "photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_2026110223.img.gz",
+        "size": 123357847,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_2026110223.img.gz",
+        "digest": "sha256:eb94874136bfd783a8958a1ee2c98a1aab252546da1764a9791cd9aa28bc27ec"
+      },
+      {
+        "id": 702211948,
+        "name": "photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat.manifest",
+        "size": 14640,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat.manifest",
+        "digest": "sha256:c8531f9a77a289380f8617d6a27d026e6317b763c4a25378792bbd7c318ad341"
+      },
+      {
+        "id": 702211939,
+        "name": "profiles.json",
+        "size": 1860,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/profiles.json",
+        "digest": "sha256:9ce9ea68655e693a1c57df6a0ca8cfe0c967cbfaa299c89e06c9d77b15e90bcd"
+      },
+      {
+        "id": 702211942,
+        "name": "release-notes.md",
+        "size": 20216,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/release-notes.md",
+        "digest": "sha256:5cb968e533044fd5bfad86917f702ca45380a11cbe354155abd9df9ece025e71"
+      },
+      {
+        "id": 702211938,
+        "name": "SHA256SUMS.txt",
+        "size": 861,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/SHA256SUMS.txt",
+        "digest": "sha256:e536d4f53502d03961ce8884490f181e500286988a86717c3ca912fb3567c62b"
+      },
+      {
+        "id": 702211937,
+        "name": "version.buildinfo",
+        "size": 12,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-222244-55/version.buildinfo",
+        "digest": "sha256:96aa556b03a7627784ed95f0b2d734702ee4108a2f654430b30627f758faa43e"
+      }
+    ]
+  },
+  {
+    "tag_name": "photonicat1-20261102-105142-52",
+    "draft": false,
+    "prerelease": true,
+    "body": "GitHub release metadata fixture; content omitted.",
+    "published_at": "2026-11-02T03:45:54Z",
+    "assets": [
+      {
+        "id": 700417997,
+        "name": "build-sources.txt",
+        "size": 822,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/build-sources.txt",
+        "digest": "sha256:b007d8c06bba518ee8cf07b8249bb3e672d49bf310cb26afec07e193bcb84648"
+      },
+      {
+        "id": 700417999,
+        "name": "config.buildinfo",
+        "size": 11617,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/config.buildinfo",
+        "digest": "sha256:42680db7a3a18173783c6751a0c3477fa7cb368925cecff06084cf99a791ede7"
+      },
+      {
+        "id": 700417998,
+        "name": "feeds.buildinfo",
+        "size": 886,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/feeds.buildinfo",
+        "digest": "sha256:fca76410cf3ec0d394e59977a029c91b55a7097fb6c71c08b8740c4c03adcac7"
+      },
+      {
+        "id": 700418001,
+        "name": "immortalwrt-recent-commits.txt",
+        "size": 1691,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/immortalwrt-recent-commits.txt",
+        "digest": "sha256:beb331a0e5dbfd08247af8eb9fbfffbfdc96bda58dfe5b73d6f0af13ab517a24"
+      },
+      {
+        "id": 700418009,
+        "name": "photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_2026110211.img.gz",
+        "size": 123357301,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_2026110211.img.gz",
+        "digest": "sha256:eb65cd9cd62199174a54bca8ef81d59df3ef1e3494b403a20ec7dc89a002ae24"
+      },
+      {
+        "id": 700418007,
+        "name": "photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat.manifest",
+        "size": 14640,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat.manifest",
+        "digest": "sha256:5b05256d7b17d8df78e17add6d5491dfa74fe011b799829a57f3d0f52bc9172f"
+      },
+      {
+        "id": 700418002,
+        "name": "profiles.json",
+        "size": 1860,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/profiles.json",
+        "digest": "sha256:63b12024a41d7c4feaf7afb45d9906a4cc748899406aa7dd4f5c64b7e7af86fe"
+      },
+      {
+        "id": 700418008,
+        "name": "release-notes.md",
+        "size": 20161,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/release-notes.md",
+        "digest": "sha256:5cc82bb0ec0d32747624aaca1c73c10c3c1e19302bcc61eade064b63165d812c"
+      },
+      {
+        "id": 700418003,
+        "name": "SHA256SUMS.txt",
+        "size": 861,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/SHA256SUMS.txt",
+        "digest": "sha256:544ca1f1304d81f8ecb0b7016c2150a3a19385f1baec4846edf54cf0830b9a4d"
+      },
+      {
+        "id": 700417996,
+        "name": "version.buildinfo",
+        "size": 12,
+        "browser_download_url": "https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases/download/photonicat1-20261102-105142-52/version.buildinfo",
+        "digest": "sha256:96aa556b03a7627784ed95f0b2d734702ee4108a2f654430b30627f758faa43e"
+      }
+    ]
+  }
+]

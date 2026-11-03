@@ -1,0 +1,4 @@
+config keepalive 'main'
+	option enabled '0'
+	option interval '60'
+	option usb_awake '1'

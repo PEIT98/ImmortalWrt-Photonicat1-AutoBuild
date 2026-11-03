@@ -1,0 +1,154 @@
+#!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only
+# Based on SlAlot/ImmortalWrt_Photonicat1 ae655185.
+# Photonicat 1 eMMC expansion; no formatting and no container storage policy.
+# OpenWrt ash supports function-local variables.
+# shellcheck disable=SC3043
+set -eu
+SYS=${SWRT_AUTOGROW_SYS:-/sys}
+MOUNTINFO=${SWRT_AUTOGROW_MOUNTINFO:-/proc/self/mountinfo}
+MOUNTS=${SWRT_AUTOGROW_MOUNTS:-/proc/mounts}
+DEV=${SWRT_AUTOGROW_DEV:-/dev}
+WORK=${SWRT_AUTOGROW_WORK:-/tmp/swrt-autogrow}
+loop=
+trap '[ -z "$loop" ] || losetup -d "$loop"' EXIT
+
+log() { printf '%s\n' "swrt-autogrow: $*" >/dev/kmsg; }
+error() { log "$*"; printf '%s\n' "$*" >&2; return 1; }
+u32() { hexdump -v -s "$2" -n 4 -e '1/4 "%u"' "$1"; }
+u64() {
+    local words
+    words=$(hexdump -v -s "$2" -n 8 -e '2/4 "%u "' "$1")
+    # The RK3568 and the x86 test environment are little endian.
+    # shellcheck disable=SC2086
+    set -- $words
+    [ "$#" = 2 ] || return 1
+    printf '%s\n' "$(( $1 + $2 * 4294967296 ))"
+}
+
+detect() {
+    local compatible number syspart parent name partition removable type
+    compatible=$(tr '\000' '\n' < "$SYS/firmware/devicetree/base/compatible")
+    printf '%s\n' "$compatible" | grep -Fxq 'ariaboard,photonicat' || return 1
+    number=$(awk '{for (i=7; i<=NF; i++) if ($i=="-" && $(i+2)=="/dev/root") {print $3; exit}}' "$MOUNTINFO")
+    [ -n "$number" ] || number=$(awk '$5 == "/" {print $3; exit}' "$MOUNTINFO")
+    syspart=$(readlink -f "$SYS/dev/block/$number")
+    [ -f "$syspart/partition" ] || return 1
+    partition=$(cat "$syspart/partition")
+    [ "$partition" = 2 ] || return 1
+    parent=${syspart%/*}; name=${parent##*/}
+    case "$name" in mmcblk[0-9]*) ;; *) return 1 ;; esac
+    type=$(cat "$parent/device/type")
+    removable=$(cat "$parent/removable")
+    [ "$type" = MMC ] && [ "$removable" = 0 ] || return 1
+    [ "$(cat "$parent/queue/logical_block_size")" = 512 ] || return 1
+    disk="$DEV/$name"; root="$DEV/${syspart##*/}"
+    [ -b "$disk" ] && [ -b "$root" ] || return 1
+    sectors=$(blockdev --getsz "$disk")
+    [ "$sectors" -gt 2097152 ] || return 1
+    root_type=$(blkid -p -o value -s TYPE "$root")
+    case "$root_type" in squashfs|ext4) ;; *) return 1 ;; esac
+}
+
+plan() {
+    sfdisk --json "$disk" > "$WORK/table.before.json"
+    jq -e --arg root "$root" --arg canonical "$(readlink -f "$root")" --argjson sectors "$sectors" '
+      .partitiontable |
+      select(.label == "dos" and .sectorsize == 512 and (.id | test("^0x[0-9a-fA-F]{8}$"))) |
+      . as $table | .partitions as $parts |
+      select($parts | length >= 2) |
+      select([$parts[] | (.start|type)=="number" and (.size|type)=="number" and
+        .start >= 0 and .size > 0 and (.start|floor)==.start and (.size|floor)==.size and
+        (.start+.size) <= $sectors] | all) |
+      select((reduce ($parts|sort_by(.start)|.[]) as $p ({end:0,ok:true};
+        .ok = (.ok and (.end <= $p.start)) | .end=($p.start+$p.size))) | .ok) |
+      [$parts[] | select(.node==$root or .node==$canonical)] as $roots |
+      select($roots | length==1) | $roots[0] as $r |
+      select($r.type=="83") |
+      ([$parts[] | select(.start > $r.start) | .start] + [$sectors] | min) as $limit |
+      ([ $r.size, (($limit/2048|floor)*2048 - $r.start) ] | max) as $size |
+      {disk_id:$table.id,start:$r.start,old_size:$r.size,new_size:$size,disk_sectors:$sectors}
+    ' "$WORK/table.before.json" > "$WORK/plan.json" || {
+        error 'Unexpected or overlapping partition layout; existing partitions left unchanged'; return 1
+    }
+    start=$(jq -r .start "$WORK/plan.json")
+    old_size=$(jq -r .old_size "$WORK/plan.json")
+    new_size=$(jq -r .new_size "$WORK/plan.json")
+}
+
+grow_partition() {
+    [ "$new_size" -gt "$old_size" ] || return 0
+    dd if="$disk" of="$WORK/mbr.before" bs=512 count=1 2>/dev/null
+    printf 'start=%s, size=%s\n' "$start" "$new_size" |
+        sfdisk --no-reread --no-tell-kernel --wipe never --wipe-partitions never -N 2 "$disk" > "$WORK/partition.log" 2>&1 || {
+        error 'Partition expansion failed; filesystem was not resized'; return 1
+    }
+    sfdisk --json "$disk" > "$WORK/table.after.json"
+    jq -en --slurpfile a "$WORK/table.before.json" --slurpfile b "$WORK/table.after.json" --argjson size "$new_size" --argjson start "$start" '
+      ($a[0].partitiontable | .partitions |= map(if .start==$start then .size=$size else . end)) == $b[0].partitiontable
+    ' >/dev/null || { error 'Partition verification failed'; return 1; }
+    partx -u -n 2 "$disk" >> "$WORK/partition.log" 2>&1 || return 75
+    [ "$(blockdev --getsz "$root")" -ge "$new_size" ] || return 75
+    log "Expanded $root from $old_size to $new_size sectors"
+}
+
+grow_filesystem() {
+    local bytes offset blocks blocksize capacity old_uuid new_uuid source
+    source=$root
+    if [ "$root_type" = squashfs ]; then
+        bytes=$(u64 "$root" 40)
+        [ "$bytes" -gt 0 ] && [ "$bytes" -lt "$((new_size * 512))" ] || return 1
+        offset=$(( (bytes + 65535) / 65536 * 65536 ))
+        loop=$(losetup --find --show --offset "$offset" "$root")
+        source=$loop
+    fi
+    root_data_type=$(blkid -p -o value -s TYPE "$source" 2>/dev/null || true)
+    # Fresh SquashFS images contain the normal fstools initialization marker.
+    # fstools will format the newly expanded space after this hook returns.
+    [ -n "$root_data_type" ] || { log 'New rootfs_data will be initialized by fstools at full size'; return 0; }
+    old_uuid=$(blkid -p -o value -s UUID "$source")
+    capacity=$(blockdev --getsize64 "$source")
+    case "$root_data_type" in
+        f2fs)
+            blocks=$(u64 "$source" 1060)
+            blocksize=$((1 << $(u32 "$source" 1040)))
+            [ "$blocksize" = 4096 ] && [ "$blocks" -gt 0 ] || return 1
+            if [ "$((blocks * blocksize))" -lt "$capacity" ]; then
+                resize.f2fs "$source" > "$WORK/filesystem.log" 2>&1 || {
+                    error 'F2FS expansion failed; no format was attempted'; return 1
+                }
+                [ "$(( $(u64 "$source" 1060) * blocksize ))" -ge "$capacity" ] || {
+                    error 'F2FS did not expand to the device capacity'; return 1
+                }
+                log "Expanded existing F2FS to $capacity bytes"
+            fi
+            ;;
+        ext4)
+            blocks=$(u32 "$source" 1028)
+            blocksize=$((1024 << $(u32 "$source" 1048)))
+            if [ "$((blocks * blocksize))" -lt "$capacity" ]; then
+                resize2fs "$source" > "$WORK/filesystem.log" 2>&1 || { error 'ext4 expansion failed'; return 1; }
+                [ "$(( $(u32 "$source" 1028) * blocksize ))" -ge "$capacity" ] || return 1
+                log "Expanded existing ext4 to $capacity bytes"
+            fi
+            ;;
+        *) error "Unsupported existing filesystem $root_data_type; no format attempted"; return 1 ;;
+    esac
+    new_uuid=$(blkid -p -o value -s UUID "$source")
+    [ "$old_uuid" = "$new_uuid" ] || { error 'Filesystem UUID changed unexpectedly'; return 1; }
+}
+
+main() {
+    local mode="${1:-grow}"
+    mkdir -p "$WORK"
+    detect || { log 'Not a supported Photonicat 1 eMMC root'; return 0; }
+    plan
+    if [ "$mode" = plan ]; then cat "$WORK/plan.json"; return 0; fi
+    [ "$mode" = grow ] || return 1
+    if [ "$root_type" = squashfs ] && awk '$2=="/overlay" {found=1} END {exit !found}' "$MOUNTS"; then
+        error 'F2FS must be expanded during preinit, before overlay is mounted'; return 1
+    fi
+    grow_partition || return $?
+    grow_filesystem
+}
+main "$@"

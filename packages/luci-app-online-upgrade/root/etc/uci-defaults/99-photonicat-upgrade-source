@@ -1,0 +1,12 @@
+#!/bin/sh
+# Preserve existing updater settings and migrate its direct-download preference once.
+[ "$(uci -q get swrt_upgrade.main.migrated)" = 1 ] && exit 0
+if uci -q get online-upgrade.settings >/dev/null 2>&1; then
+    old_proxy="$(uci -q get online-upgrade.settings.proxy)"
+    [ -n "$old_proxy" ] || uci set swrt_upgrade.main.source='github'
+    old_keep="$(uci -q get online-upgrade.settings.keep_config)"
+    case "$old_keep" in 0|1) uci set "swrt_upgrade.main.keep_config=$old_keep" ;; esac
+fi
+uci set swrt_upgrade.main.migrated='1'
+uci commit swrt_upgrade
+exit 0

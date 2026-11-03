@@ -1,0 +1,8 @@
+{
+  "admin/system/swrt-disk-keepalive": {
+    "title": "硬盘保活",
+    "order": 57,
+    "action": { "type": "view", "path": "system/swrt-disk-keepalive" },
+    "depends": { "acl": [ "luci-app-swrt-disk-keepalive" ] }
+  }
+}

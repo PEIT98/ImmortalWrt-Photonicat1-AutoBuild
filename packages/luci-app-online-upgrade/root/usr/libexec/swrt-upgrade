@@ -1,0 +1,319 @@
+#!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only
+# Only the authenticated RPC wrapper exposes public methods. Download never flashes.
+set -eu
+umask 077
+ROOT="${SWRT_UPGRADE_ROOT:-}"
+SCRIPT="${SWRT_UPGRADE_SCRIPT:-/usr/libexec/swrt-upgrade}"
+DIR="$ROOT/tmp/swrt-upgrade"
+REPO='PEIT98/ImmortalWrt-Photonicat1-AutoBuild'
+API="https://api.github.com/repos/$REPO/releases"
+CONFIG_DIR="$ROOT/etc/config"
+SOURCE="$(uci -c "$CONFIG_DIR" -q get swrt_upgrade.main.source 2>/dev/null || true)"
+case "$SOURCE" in proxy|github) ;; *) SOURCE=proxy ;; esac
+CHANNEL="$(uci -c "$CONFIG_DIR" -q get swrt_upgrade.main.channel 2>/dev/null || true)"
+case "$CHANNEL" in stable|prerelease) ;; *) CHANNEL=prerelease ;; esac
+KEEP_DEFAULT="$(uci -c "$CONFIG_DIR" -q get swrt_upgrade.main.keep_config 2>/dev/null || true)"
+[ "$KEEP_DEFAULT" = 0 ] || KEEP_DEFAULT=1
+IMAGE="$DIR/firmware.img.gz"
+STATE="$DIR/state.json"
+RELEASE="$DIR/release.json"
+SYSUPGRADE="$ROOT/sbin/sysupgrade"
+MODE="${1:-status}"
+
+reply_error() { jq -nc --arg message "$1" '{ok:false,message:$message}'; }
+fail() {
+    jq -nc --arg message "$1" --argjson at "$(date +%s)" \
+        '{phase:"failed",message:$message,updated:$at}' > "$STATE.new"
+    mv "$STATE.new" "$STATE"
+    reply_error "$1"
+    exit 1
+}
+[ ! -L "$DIR" ] || { reply_error '升级临时目录无效'; exit 1; }
+mkdir -p "$DIR"
+[ "$(stat -c %u "$DIR")" = "$(id -u)" ] || { reply_error '升级临时目录所有者无效'; exit 1; }
+chmod 700 "$DIR"
+
+phase() {
+    jq -nc --arg phase "$1" --arg message "$2" --argjson at "$(date +%s)" \
+        '{phase:$phase,message:$message,updated:$at}' > "$STATE.new"
+    mv "$STATE.new" "$STATE"
+}
+lock() {
+    exec 9>"$DIR/lock"
+    flock -n 9 || { reply_error '已有检查、下载或升级任务正在运行'; exit 1; }
+}
+identity() {
+    BOARD="$(cat "$ROOT/tmp/sysinfo/board_name" 2>/dev/null || true)"
+    IDENTITY="$ROOT/etc/photonicat-release.json"
+    [ ! -f "$ROOT/rom/etc/photonicat-release.json" ] || IDENTITY="$ROOT/rom/etc/photonicat-release.json"
+    CURRENT="$(jq -er --arg repo "$REPO" '
+        select(.repository == $repo and .board == "ariaboard,photonicat") |
+        .version | select(type == "string" and test("^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$"))
+        ' "$IDENTITY" 2>/dev/null || true)"
+    if [ -z "$CURRENT" ]; then
+        # Parse older immutable identities as data, never as shell code.
+        LEGACY="$ROOT/etc/online-upgrade-device"
+        [ ! -f "$ROOT/rom/etc/online-upgrade-device" ] || LEGACY="$ROOT/rom/etc/online-upgrade-device"
+        CURRENT="$(sed -n "s/^BUILD_TAG='\(photonicat1-[0-9]*-[0-9]*-[0-9]*\)'$/\1/p" "$LEGACY" 2>/dev/null || true)"
+        printf '%s' "$CURRENT" | grep -Eq '^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$' || CURRENT=
+    fi
+    FS="$(awk '$2 == "/rom" && $3 == "squashfs" {s=1}
+        $2 == "/" && $3 == "squashfs" {s=1}
+        $2 == "/" && $3 == "ext4" {e=1}
+        END {if(s) print "squashfs"; else if(e) print "ext4"}' "$ROOT/proc/mounts")"
+}
+require_device() {
+    identity
+    [ "$BOARD" = 'ariaboard,photonicat' ] || fail '仅支持光影猫一代，已停止操作'
+    [ -n "$CURRENT" ] || fail '当前固件缺少版本标识，请先通过“备份与升级”手动安装本仓库固件'
+    [ "$FS" = squashfs ] || fail '本仓库仅提供 SquashFS 镜像，请使用相同系统类型或 USB 线刷'
+}
+fetch() {
+    curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+        --connect-timeout 5 --max-time 30 --max-filesize 8388608 \
+        -H 'Accept: application/vnd.github+json' -H 'User-Agent: Photonicat-Wrt-Online-Upgrade/2.0' \
+        -o "$2" "$(transport_url "$1")" 2>"$DIR/network.log"
+}
+transport_url() {
+    case "$SOURCE" in
+        proxy) printf 'https://gh-proxy.com/%s' "$1" ;;
+        github) printf '%s' "$1" ;;
+    esac
+}
+require_source() {
+    [ "$(jq -r '.source // ""' "$RELEASE")" = "$SOURCE" ] || fail '更新源已变化，请重新检查更新'
+    [ "$(jq -r '.channel // ""' "$RELEASE")" = "$CHANNEL" ] || fail '更新通道已变化，请重新检查更新'
+}
+select_release() {
+    jq -e --arg repo "$REPO" --arg fs "$FS" --arg source "$SOURCE" --arg channel "$CHANNEL" '
+        def tagkey: capture("^photonicat1-(?<day>[0-9]{8})-(?<clock>[0-9]{6})-(?<run>[0-9]+)$") |
+            [(.day|tonumber),(.clock|tonumber),(.run|tonumber)];
+        (if type == "array" then . else [.] end) |
+        [ .[] | select(.draft == false and (.prerelease == false or
+            ($channel == "prerelease" and .prerelease == true))) |
+        .tag_name as $tag |
+        select($tag | type == "string" and test("^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$")) |
+        ("^(photonicat-wrt|immortalwrt)(-[0-9][0-9A-Za-z._-]*)?-rockchip-armv8-ariaboard_photonicat-" +
+            $fs + "-sysupgrade_[0-9]{10}\\.img\\.gz$") as $pattern |
+        [.assets[] | select(.name | type == "string" and test($pattern))] as $images |
+        [.assets[] | select(.name == "SHA256SUMS.txt")] as $sums |
+        select(($images|length) == 1 and ($sums|length) == 1) |
+        $images[0] as $image | $image.name as $name |
+        ("https://github.com/" + $repo + "/releases/download/" + $tag + "/") as $base |
+        select($image.browser_download_url == ($base + $name)) |
+        select($sums[0].browser_download_url == ($base + "SHA256SUMS.txt")) |
+        select(($image.size|type) == "number" and $image.size > 0 and
+            $image.size <= 1073741824 and ($image.size|floor) == $image.size) |
+        select(($image.id|type) == "number") |
+        {version:$tag,tag:$tag,name:$name,size:$image.size,id:$image.id,source:$source,channel:$channel,
+         prerelease:.prerelease,
+         url:$image.browser_download_url,checksum_url:$sums[0].browser_download_url,
+         digest:($image.digest // ""),published_at:.published_at,
+         release_url:("https://github.com/"+$repo+"/releases/tag/"+$tag),notes:(.body // "")} ] |
+        sort_by(.tag|tagkey) | last | select(. != null)
+        ' "$1" > "$2"
+}
+newer() {
+    jq -ne --arg latest "$1" --arg current "$CURRENT" \
+        'def key: capture("^photonicat1-(?<day>[0-9]{8})-(?<clock>[0-9]{6})-(?<run>[0-9]+)$") |
+          [(.day|tonumber),(.clock|tonumber),(.run|tonumber)];
+         ($latest|key) > ($current|key)' >/dev/null
+}
+emit_status() {
+    identity
+    # A killed worker must not leave a permanent busy screen. A live worker holds lock 9.
+    if [ -s "$STATE" ]; then
+        case "$(jq -r '.phase' "$STATE")" in
+            checking|downloading|verifying|preparing)
+                exec 8>"$DIR/lock"
+                if flock -n 8; then phase failed '上次任务已中断，请重新检查更新'; fi
+                exec 8>&-
+                ;;
+        esac
+    fi
+    bytes=0
+    [ ! -f "$IMAGE.part" ] || bytes="$(stat -c %s "$IMAGE.part")"
+    [ ! -f "$IMAGE" ] || bytes="$(stat -c %s "$IMAGE")"
+    state='{"phase":"idle","message":"点击检查更新，获取本仓库匹配的固件"}'
+    [ ! -s "$STATE" ] || state="$(cat "$STATE")"
+    release='null'
+    [ ! -s "$RELEASE" ] || release="$(cat "$RELEASE")"
+    jq -nc --arg current "$CURRENT" --arg fs "$FS" --arg board "$BOARD" --arg source "$SOURCE" \
+        --arg channel "$CHANNEL" --argjson keep "$KEEP_DEFAULT" \
+        --arg repo "$REPO" --argjson state "$state" --argjson release "$release" \
+        --argjson bytes "$bytes" \
+        '{ok:true,current:$current,filesystem:$fs,repository:$repo,source:$source,channel:$channel,keep_default:($keep==1),
+          eligible:($board == "ariaboard,photonicat" and $current != "" and $fs == "squashfs"),
+          state:$state,release:$release,downloaded_bytes:$bytes}'
+}
+check_image() {
+    require_device
+    require_source
+    name="$(jq -r '.name' "$RELEASE")"
+    version="$(jq -r '.version' "$RELEASE")"
+    printf '%s' "$name" | grep -Eq "^(photonicat-wrt|immortalwrt)(-[0-9][0-9A-Za-z._-]*)?-rockchip-armv8-ariaboard_photonicat-$FS-sysupgrade_[0-9]{10}\.img\.gz$" || fail '文件系统或固件名称不匹配'
+    newer "$version" || fail '该固件不是更新版本，已阻止回刷'
+    expected="$(jq -er '.sha256 | select(test("^[0-9a-f]{64}$"))' "$RELEASE")" || fail '缺少有效校验值'
+    if [ ! -f "$IMAGE" ] || [ -L "$IMAGE" ]; then fail '固件文件不存在'; fi
+    [ "$(stat -c %s "$IMAGE")" = "$(jq -r '.size' "$RELEASE")" ] || fail '固件大小不一致'
+    actual="$(sha256sum "$IMAGE")"
+    [ "${actual%% *}" = "$expected" ] || fail '固件 SHA256 校验失败'
+    # fwtool appends metadata AFTER the gzip stream: gzip -t can reject valid images.
+    # Use the platform validator to check metadata and the gzip/boot image instead.
+    "$SYSUPGRADE" -T "$IMAGE" >"$DIR/validation.log" 2>&1 || fail '系统镜像兼容性校验失败，请改用手动升级排查'
+    if grep -qi 'Partition layout has changed' "$DIR/validation.log"; then
+        fail '分区布局发生变化，请备份数据后使用 USB 线刷'
+    fi
+    result="$(ubus -S call system validate_firmware_image "$(jq -nc --arg path "$IMAGE" '{path:$path}')")" || fail '无法读取系统镜像验证结果'
+    printf '%s' "$result" | jq -e '.valid == true' >/dev/null || fail '系统拒绝该镜像，禁止强制升级'
+    if [ "${KEEP:-0}" = 1 ]; then
+        printf '%s' "$result" | jq -e '.allow_backup == true' >/dev/null || fail '此镜像不允许保留配置'
+    fi
+}
+worker_exit() {
+    code=$?
+    trap - EXIT
+    if [ "$code" -ne 0 ]; then
+        if [ "$(jq -r '.phase' "$STATE" 2>/dev/null || true)" != failed ]; then
+            phase failed '任务中断或执行失败，请重新检查更新'
+        fi
+        rm -f "$IMAGE.part" "$IMAGE"
+    fi
+    exit "$code"
+}
+
+case "$MODE" in
+    status) emit_status ;;
+    set-source|set-channel)
+        lock
+        require_device
+        request="$(cat)"
+        if [ "$MODE" = set-source ]; then
+            key=source; previous="$SOURCE"
+            selected="$(printf '%s' "$request" | jq -er '.source | select(. == "proxy" or . == "github")')" || {
+                reply_error '请选择国内加速或 GitHub 官方源'; exit 1;
+            }
+        else
+            key=channel; previous="$CHANNEL"
+            selected="$(printf '%s' "$request" | jq -er '.channel | select(. == "stable" or . == "prerelease")')" || {
+                reply_error '请选择正式版或包含预发行版'; exit 1;
+            }
+        fi
+        case "$(jq -r '.phase // "idle"' "$STATE" 2>/dev/null || true)" in
+            preparing|installing) reply_error '正在准备或刷写固件，暂不能切换更新源'; exit 1 ;;
+        esac
+        mkdir -p "$CONFIG_DIR"
+        [ ! -L "$CONFIG_DIR/swrt_upgrade" ] || { reply_error '更新源配置文件无效'; exit 1; }
+        [ -e "$CONFIG_DIR/swrt_upgrade" ] || : > "$CONFIG_DIR/swrt_upgrade"
+        mkdir -p "$DIR/uci"
+        if ! uci -c "$CONFIG_DIR" -t "$DIR/uci" set swrt_upgrade.main=settings ||
+           ! uci -c "$CONFIG_DIR" -t "$DIR/uci" set "swrt_upgrade.main.$key=$selected" ||
+           ! uci -c "$CONFIG_DIR" -t "$DIR/uci" commit swrt_upgrade; then
+            rm -f "$DIR/uci/swrt_upgrade"
+            reply_error '更新源保存失败，请重试'; exit 1;
+        fi
+        if [ "$previous" != "$selected" ]; then
+            rm -f "$RELEASE" "$IMAGE" "$IMAGE.part"
+            phase idle '更新源已保存，请检查更新'
+        fi
+        if [ "$key" = source ]; then SOURCE="$selected"; else CHANNEL="$selected"; fi
+        emit_status
+        ;;
+    check)
+        lock
+        phase checking '正在连接所选更新源检查发布'
+        require_device
+        rm -f "$RELEASE" "$IMAGE" "$IMAGE.part"
+        endpoint="$API?per_page=100"
+        [ "$CHANNEL" != stable ] || endpoint="$API/latest"
+        fetch "$endpoint" "$DIR/api.json" || fail '更新源连接失败或该通道暂无发布，请切换更新源、版本通道后重试'
+        select_release "$DIR/api.json" "$DIR/release.new" || fail '发布中没有匹配当前系统的完整固件和校验清单'
+        mv "$DIR/release.new" "$RELEASE"
+        if newer "$(jq -r '.version' "$RELEASE")"; then
+            phase available '发现新版本，可下载并校验固件'
+        else
+            phase current '当前已是所选通道的最新版本，或当前构建更新'
+        fi
+        emit_status
+        ;;
+    download)
+        lock
+        require_device
+        [ -s "$RELEASE" ] || fail '请先检查更新'
+        require_source
+        newer "$(jq -r '.version' "$RELEASE")" || fail '没有可下载的新版本'
+        phase downloading '正在下载固件，下载完成后仍需确认升级'
+        setsid /bin/sh "$SCRIPT" _download </dev/null >"$DIR/worker.log" 2>&1 &
+        jq -nc '{ok:true}'
+        ;;
+    _download)
+        # Lock FD 9 is inherited from the authenticated start request.
+        flock -n 9 || exit 1
+        trap worker_exit EXIT
+        trap 'exit 1' HUP INT TERM
+        require_device
+        require_source
+        tag="$(jq -er '.tag | select(test("^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$"))' "$RELEASE")"
+        fetch "$API/tags/$tag" "$DIR/api.json" || fail '无法重新确认发布信息'
+        select_release "$DIR/api.json" "$DIR/release.new" || fail '发布附件已变化，请重新检查'
+        jq -e --slurpfile old "$RELEASE" '.id == $old[0].id and .url == $old[0].url and
+            .size == $old[0].size and .digest == $old[0].digest' "$DIR/release.new" >/dev/null || fail '发布附件已替换，请重新检查更新'
+        fetch "$(jq -r '.checksum_url' "$RELEASE")" "$DIR/sha256sums" || fail '无法获取 SHA256 校验清单'
+        name="$(jq -r '.name' "$RELEASE")"
+        sha="$(awk -v name="$name" 'NF == 2 {file=$2; sub(/^\*/, "", file); sub(/^\.\//, "", file); if(file == name) print $1}' "$DIR/sha256sums")"
+        [ "${#sha}" = 64 ] || fail '校验清单缺少唯一的固件摘要'
+        printf '%s\n' "$sha" | grep -Eq '^[0-9a-fA-F]{64}$' || fail '校验清单缺少唯一、有效的固件摘要'
+        sha="$(printf '%s' "$sha" | tr 'A-F' 'a-f')"
+        digest="$(jq -r '.digest' "$RELEASE")"
+        [ -z "$digest" ] || [ "$digest" = "sha256:$sha" ] || fail 'GitHub 附件摘要与校验清单不一致'
+        jq --arg sha "$sha" '. + {sha256:$sha}' "$RELEASE" > "$DIR/release.new"
+        mv "$DIR/release.new" "$RELEASE"
+        size="$(jq -r '.size' "$RELEASE")"
+        free="$(df -Pk "$ROOT/tmp" | awk 'NR == 2 {print $4}')"
+        case "$free" in ''|*[!0-9]*) fail '无法检查临时存储空间' ;; esac
+        [ "$free" -ge "$(( (size + 1023) / 1024 + 65536 ))" ] || fail '临时存储空间不足，请释放空间或改用手动升级'
+        rm -f "$IMAGE" "$IMAGE.part"
+        curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            --connect-timeout 8 --max-time 900 --speed-time 30 --speed-limit 1024 \
+            -H 'User-Agent: Photonicat-Wrt-Online-Upgrade/2.0' \
+            --max-filesize "$size" -o "$IMAGE.part" "$(transport_url "$(jq -r '.url' "$RELEASE")")" \
+            2>"$DIR/network.log" || fail '固件下载失败，请检查所选更新源或切换后重试'
+        mv "$IMAGE.part" "$IMAGE"
+        phase verifying '正在校验 SHA256、设备和分区兼容性'
+        check_image
+        phase ready '全部校验通过，请确认备份和配置保留方式后升级'
+        ;;
+    install)
+        lock
+        [ "$(jq -r '.phase' "$STATE" 2>/dev/null || true)" = ready ] || fail '固件尚未完成校验'
+        request="$(cat)"
+        KEEP="$(printf '%s' "$request" | jq -er '.keep | select(. == 0 or . == 1)')" || fail '保留配置参数无效'
+        token="$(printf '%s' "$request" | jq -er '.sha256 | select(type == "string")')" || fail '缺少已确认固件的校验值'
+        [ "$token" = "$(jq -r '.sha256' "$RELEASE")" ] || fail '固件已变化，请重新确认'
+        phase preparing '正在执行刷写前的最终校验'
+        setsid /bin/sh "$SCRIPT" _install "$KEEP" </dev/null >"$DIR/worker.log" 2>&1 &
+        jq -nc '{ok:true}'
+        ;;
+    _install)
+        flock -n 9 || exit 1
+        trap worker_exit EXIT
+        trap 'exit 1' HUP INT TERM
+        KEEP="${2:-0}"
+        case "$KEEP" in 0|1) ;; *) fail '保留配置参数无效' ;; esac
+        check_image
+        phase installing '正在刷写固件，请勿断电，等待设备重启'
+        sync
+        # OpenWrt stage2 terminates this worker before reading the image.
+        # After handoff, neither a shutdown signal nor EXIT may remove it.
+        trap - EXIT HUP INT TERM
+        if [ "$KEEP" = 1 ]; then
+            "$SYSUPGRADE" -k "$IMAGE" || fail '系统升级程序拒绝或中止请求，请查看升级日志后重试'
+        else
+            "$SYSUPGRADE" -n "$IMAGE" || fail '系统升级程序拒绝或中止请求，请查看升级日志后重试'
+        fi
+        # A successful real sysupgrade does not return to this shell.
+        fail '升级程序意外退出，请查看系统日志，设备尚未确认完成升级'
+        ;;
+    *) reply_error '不支持的操作'; exit 1 ;;
+esac

@@ -72,7 +72,8 @@ jobs:
             libmpc-dev libmpfr-dev libncurses-dev libreadline-dev libssl-dev libtool \
             lrzsz mkisofs msmtp musl-tools ninja-build patch pkgconf python3 python3-pyelftools \
             python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig \
-            texinfo unzip vim wget xmlto xxd zlib1g-dev zstd python3-ply python3-docutils re2c
+            texinfo unzip vim wget xmlto xxd zlib1g-dev zstd python3-ply python3-docutils re2c \
+            fdisk f2fs-tools bsdextrautils
           sudo apt-get clean
           df -h /
 
@@ -203,14 +204,30 @@ jobs:
         working-directory: immortalwrt
         run: |
           test -f package/luci-app-online-upgrade/Makefile
-          sh -n package/luci-app-online-upgrade/root/usr/bin/online-upgrade.sh
-          sh -n package/luci-app-online-upgrade/root/etc/uci-defaults/99-online-upgrade
-          test -x package/luci-app-online-upgrade/root/usr/bin/online-upgrade.sh
+          sh -n package/luci-app-online-upgrade/root/usr/libexec/swrt-upgrade
+          sh -n package/luci-app-online-upgrade/root/usr/libexec/rpcd/luci.swrt_upgrade
+          sh -n package/luci-app-online-upgrade/root/etc/uci-defaults/99-photonicat-upgrade-source
+          test -x package/luci-app-online-upgrade/root/usr/libexec/swrt-upgrade
           diff -r ../packages/luci-app-online-upgrade package/luci-app-online-upgrade
-          grep -Fq 'photonicat-online-upgrade-adapted' package/luci-app-online-upgrade/root/www/luci-static/resources/view/system/online-upgrade.js
-          ! grep -Fq '$(1)/www/cgi-bin/online-upgrade-restore' package/luci-app-online-upgrade/Makefile
-          test ! -e package/luci-app-online-upgrade/root/www/cgi-bin/online-upgrade-restore
           python3 ../scripts/tests/test_online_upgrade.py
+          node ../scripts/tests/test_online_upgrade_frontend.js
+
+      - name: 核对硬盘保活与 eMMC 自动扩容
+        working-directory: immortalwrt
+        run: |
+          diff -r ../packages/luci-app-swrt-disk-keepalive package/luci-app-swrt-disk-keepalive
+          sh -n files/usr/libexec/swrt-autogrow files/lib/preinit/79-swrt-autogrow
+          sh -n package/luci-app-swrt-disk-keepalive/root/usr/libexec/swrt-disk-keepalive
+          sh -n package/luci-app-swrt-disk-keepalive/root/usr/share/swrt-disk-keepalive/common.sh
+          python3 ../scripts/tests/test_autogrow.py
+          python3 ../scripts/tests/test_storage_integration.py
+          node ../scripts/tests/test_disk_keepalive_frontend.cjs
+          sudo env SWRT_DISK_QA_IDENTITY_ONLY=0 python3 ../scripts/tests/test_disk_keepalive.py
+          if ! sudo modprobe f2fs; then
+            sudo apt-get install -y "linux-modules-extra-$(uname -r)"
+            sudo modprobe f2fs
+          fi
+          sudo env SWRT_REQUIRE_AUTOGROW_TESTS=1 python3 ../scripts/tests/test_autogrow_real.py
 
       - name: Check Photonicat1 status and Docker storage diagnostics
         working-directory: immortalwrt
@@ -343,6 +360,7 @@ jobs:
           BUILD_TAG='$tag'
           BUILD_COMMIT='$GITHUB_SHA'
           EOF
+          python3 scripts/build/stamp-firmware.py immortalwrt "$tag" "$GITHUB_SHA"
 
       - name: 获取并验证最新 OpenClash Meta 内核
         shell: bash

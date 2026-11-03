@@ -1,27 +1,19 @@
-# 光影猫一代在线升级插件
+# 光影猫一代在线升级
 
-入口：**系统 → 在线升级**。完整源码放在本目录，构建时由 `scripts/build/prepare.sh` 复制到 ImmortalWrt 的 `package/luci-app-online-upgrade`。
+入口：**系统 → 在线升级**。基于 SlAlot 的 SWRT 更新器适配，只接收 `PEIT98/ImmortalWrt-Photonicat1-AutoBuild` 的光影猫一代 SquashFS 镜像。
 
-基于 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade/tree/6f587f19d7f884ca89e4bfa95bbb9a002a521477) 提交 `6f587f19d7f884ca89e4bfa95bbb9a002a521477`，保留上游许可证与源码，已将光影猫适配合入插件。以后直接修改此目录；构建使用本地版本，来源信息记录本项目提交号。
+操作顺序：**检查更新 → 下载配置备份 → 下载并校验 → 确认升级**。下载完成不会自动刷写。
 
-- `Makefile`：安装规则及 LuCI、curl、jq、SHA256、flock 等依赖。
-- `root/www/luci-static/resources/view/system/online-upgrade.js`：网页设置、版本检查、真实任务进度及升级入口。
-- `root/usr/bin/online-upgrade.sh`：发布识别、固件下载、完整性与机型校验、备份及升级。
-- `root/etc/config/online-upgrade`：默认仓库、下载加速、保留配置等设置。
-- `root/etc/uci-defaults/`：首次启动配置及旧默认设置迁移。
-- `root/usr/share/luci/menu.d/`、`root/usr/share/rpcd/acl.d/`：LuCI 菜单及权限。
-- `root/lib/upgrade/keep.d/online-upgrade`：保留插件配置。
-- `po/`：上游翻译源码；当前主页面直接使用中文。
+- 默认国内加速 `gh-proxy.com`，可切换 GitHub 官方源；版本查询、校验清单和固件统一使用所选源。
+- 默认查询正式版及预发行版，可切换为“仅正式版”。预发行固件在版本和确认窗口中明确标注。
+- 识别 `photonicat1-年月日-时分秒-构建号` 标签，按日期、时间和数字构建号比较；匹配本仓库的 `ariaboard_photonicat-squashfs-sysupgrade_年月日时.img.gz`。
+- 使用 `jq-full`，校验附件身份、大小、SHA256、系统镜像元数据和分区兼容性；不强制刷写、不跨机型或文件系统升级。
+- 优先读取 `/rom/etc/photonicat-release.json`，兼容旧 `/rom/etc/online-upgrade-device`。固件身份不会被保留的旧配置覆盖。
+- 默认保留配置，迁移旧更新器的配置保留和直连偏好。旧 `/etc/config/online-upgrade` 保留，新设置存入 `/etc/config/swrt_upgrade`。
+- 切换下载源或版本通道后，旧下载作废，需重新检查和校验。写操作通过 LuCI 会话和 rpcd ACL 授权。
+- 升级交接前解除文件清理钩子，避免系统停止后台进程时误删已接受的固件；原生升级拒绝或意外返回会显示失败。
+- 备份恢复使用系统原生页面。配置备份不包含容器镜像、数据卷及外盘数据。
 
-默认检查 `PEIT98/ImmortalWrt-Photonicat1-AutoBuild` 的最新正式发布，只匹配光影猫一代 squashfs sysupgrade 镜像。下载后依次检查文件大小、gzip 格式、SHA256 和 `sysupgrade -T`，默认备份并保留配置。下载加速失败或文件校验失败时回退 GitHub 原地址；加速地址可留空直连。
+如果旧版在线升级无法使用，第一次请通过 **系统 → 备份与升级** 手动上传包含本更新器的新固件；刷入后使用新的在线升级页面。
 
-只在手动确认后升级。恢复备份使用 LuCI 自带的“备份与升级”页面。固件身份由 Actions 写入 `/etc/online-upgrade-device`，检查时优先读取 `/rom` 中的本次固件身份。
-
-检查方式（在项目根目录执行）：
-
-```sh
-python3 scripts/tests/test_online_upgrade.py
-node scripts/tests/test_online_upgrade_frontend.js packages/luci-app-online-upgrade/root/www/luci-static/resources/view/system/online-upgrade.js
-```
-
-以上为隔离环境测试，实际升级流程仍需编译并刷入固件后在设备上验证。
+来源与许可见 [UPSTREAM.md](UPSTREAM.md)。隔离回归使用模拟升级程序，绝不调用开发机的真实刷写命令；真机升级仍需测试。

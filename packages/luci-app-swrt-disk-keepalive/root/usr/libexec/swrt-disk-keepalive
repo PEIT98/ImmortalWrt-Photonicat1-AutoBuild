@@ -1,0 +1,20 @@
+#!/bin/sh
+umask 077
+. /usr/share/swrt-disk-keepalive/common.sh
+mkdir -p "$STATE"
+case "$1" in
+    status) status ;;
+    configure)
+        flock -o -w 15 "$STATE/io.lock" "$SELF" configure-locked || fail '硬盘任务忙，请稍后重试'
+        ;;
+    configure-locked) configure ;;
+    test)
+        request=$(head -c 1024)
+        id=$(printf '%s' "$request" | jq -ser 'select(length==1)|.[0].id|select(type=="string")') || { fail '无效的硬盘标识'; exit; }
+        valid_id "$id" || { fail '无效的硬盘标识'; exit; }
+        flock -o -n "$STATE/io.lock" "$SELF" read "$id" || fail '硬盘任务忙，请稍后重试'
+        ;;
+    read) read_disk "$2" ;;
+    daemon) daemon_run ;;
+    *) fail '不支持的操作' ;;
+esac

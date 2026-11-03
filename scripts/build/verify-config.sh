@@ -20,10 +20,24 @@ need=(
   CONFIG_PACKAGE_qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
   CONFIG_PACKAGE_luci-app-online-upgrade
   CONFIG_PACKAGE_curl
-  CONFIG_PACKAGE_jq
+  CONFIG_PACKAGE_jq-full
+  CONFIG_PACKAGE_oniguruma
   CONFIG_PACKAGE_ca-bundle
   CONFIG_PACKAGE_flock
   CONFIG_PACKAGE_coreutils-sha256sum
+  CONFIG_PACKAGE_coreutils-stat
+  CONFIG_PACKAGE_coreutils-dd
+  CONFIG_PACKAGE_coreutils-timeout
+  CONFIG_PACKAGE_luci-app-swrt-disk-keepalive
+  CONFIG_PACKAGE_sfdisk
+  CONFIG_PACKAGE_partx-utils
+  CONFIG_PACKAGE_blockdev
+  CONFIG_PACKAGE_blkid
+  CONFIG_PACKAGE_losetup
+  CONFIG_PACKAGE_resize2fs
+  CONFIG_PACKAGE_f2fsck
+  CONFIG_PACKAGE_mkf2fs
+  CONFIG_BUSYBOX_CONFIG_HEXDUMP
   CONFIG_PACKAGE_luci-app-mwan3
   CONFIG_PACKAGE_mwan3
   CONFIG_PACKAGE_luci-app-openclash

@@ -1,0 +1,9 @@
+#!/bin/sh
+case "$1" in
+    list) echo '{"status":{},"configure":{"enabled":false,"interval":60,"usb_awake":true,"devices":[]},"test":{"id":""}}' ;;
+    call)
+        case "$2" in
+            status|configure|test) exec /usr/libexec/swrt-disk-keepalive "$2" ;;
+        esac
+        ;;
+esac

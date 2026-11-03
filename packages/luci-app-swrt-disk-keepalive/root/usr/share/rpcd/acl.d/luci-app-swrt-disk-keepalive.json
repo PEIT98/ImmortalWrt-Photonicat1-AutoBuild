@@ -1,0 +1,7 @@
+{
+  "luci-app-swrt-disk-keepalive": {
+    "description": "SWRT USB disk keepalive",
+    "read": { "ubus": { "luci.swrt_disk_keepalive": [ "status" ] } },
+    "write": { "ubus": { "luci.swrt_disk_keepalive": [ "configure", "test" ] } }
+  }
+}

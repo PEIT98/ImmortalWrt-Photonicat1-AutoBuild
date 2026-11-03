@@ -13,7 +13,7 @@
 | 5G / 网络 | QModem Next（含短信）、QModem Generic、mwan3、OpenClash、Travelmate 无线中继、SQM/CAKE 与 cake-autorate |
 | 系统界面 | Aurora 主题及设置、右上角模组/网口/无线/电池状态、光影猫一代管理（电源控制实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
-| 管理工具 | 文件管理、在线升级、DiskMan、Bandix Plus、定时重启、UPnP |
+| 管理工具 | 文件管理、在线升级、USB 硬盘保活、DiskMan、Bandix Plus、定时重启、UPnP |
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
 | 驱动支持 | USB QMI / MBIM / ECM / NCM / RNDIS、AT 串口、PCIe / SDIO 无线网卡 |
 
@@ -101,14 +101,18 @@ mwan3 status
 
 ## 在线升级
 
-入口：**系统 → 在线升级**。完整 [luci-app-online-upgrade](packages/luci-app-online-upgrade/) 插件存放在项目内，包含网页、升级后端、默认配置、菜单、权限及上游翻译。基于 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade) 适配光影猫一代，构建时直接复制本地插件，后续修改在插件目录内完成。
+入口：**系统 → 在线升级**。项目内的 [luci-app-online-upgrade](packages/luci-app-online-upgrade/) 使用 SlAlot SWRT 更新器适配本仓库，不读取他的固件。
 
-- 默认从本仓库查找最新正式固件，只选择光影猫一代 squashfs 升级镜像。
-- 与参考仓库使用相同下载加速地址，失败或文件校验不通过时回退 GitHub 原地址；加速地址留空即可直连。
-- 下载后检查文件大小、压缩格式、SHA256 和系统机型兼容性；默认保留配置并在升级前备份。
-- 页面进度来自实际任务状态。备份恢复使用 LuCI 自带页面，只在手动点击确认后执行固件升级。
+- 默认国内加速，可切换 GitHub 官方源；默认显示正式及预发行固件，也可选择仅正式版。
+- 按本仓库日期标签判断新旧，匹配光影猫一代 SquashFS 镜像和 SHA256 清单；下载与刷写分开，仅手动确认后升级。
+- 默认保留配置，兼容旧固件版本身份与设置；恢复配置使用系统原生页面。
+- 旧版更新器不能使用时，第一次通过“系统 → 备份与升级”手动上传包含新更新器的固件。
 
-需要重新编译并刷入包含此插件的固件，后续才可从页面在线更新。当前版本以固件内置标识为准，保留配置不会沿用旧的版本标识。
+## 存储与硬盘保活
+
+- **eMMC 自动扩容**：启动时在挂载 overlay 前扩展连续可用空间，支持 8/16/64GB，遇到额外数据分区即停止；不移动其他分区。后续同布局升级保留扩大的分区边界，详见 [存储说明](docs/STORAGE-RECOVERY.md)。
+- **系统 → 硬盘保活**：首次默认关闭，选择 USB 硬盘后开启。按稳定硬盘标识定时只读，可关闭所选硬盘的 USB 自动挂起，不操作 eMMC 或 TF 卡，详见 [插件说明](packages/luci-app-swrt-disk-keepalive/README.md)。
+- 自动扩容可能需要额外重启一次；上述功能不自动迁移 Docker 数据。
 
 ## 新增管理工具
 
@@ -123,7 +127,7 @@ mwan3 status
 2. 选择 **Run workflow**，分支选 `main`，点击运行。
 3. 编译完成后，从 [Releases](https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases) 下载固件；`publish=true` 时自动上传为 **预发布（Pre-release）**。
 
-测试确认正常后，在对应 Release 的编辑页面取消“预发布”标记，保存为正式版本。在线升级只识别正式版本，预发布固件可手动下载测试。
+测试确认正常后，在对应 Release 的编辑页面取消“预发布”标记，保存为正式版本。在线升级可选择正式版或包含预发行版，预发行固件会明确标注。
 
 **仅手动编译**，普通代码提交不会启动 Actions。构建使用源码下载缓存和 CCache；Release 附带 SHA256 校验、软件包清单和源码版本信息。sysupgrade 镜像文件名包含北京时间 `YYYYMMDDHH`。
 
@@ -139,5 +143,7 @@ mwan3 status
 - **2026-10-17**：QModem Generic（引用 PEIT98 自有复刻仓库 `main`，与官方 QModem Next 共存）。
 - **2026-10-17**：在线升级（完整本地插件，适配本仓库光影猫固件）。
 - **2026-10-17**：文件管理、Aurora 设置、Travelmate 无线中继、SQM/CAKE 与 cake-autorate。
+
+- **2026-11-03**：USB 硬盘保活（默认关闭，支持稳定标识和可选 USB 防挂起）。
 
 其余插件和驱动以 [独立选包配置](photonicat1.config) 为准。
