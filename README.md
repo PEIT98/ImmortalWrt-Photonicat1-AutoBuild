@@ -19,6 +19,8 @@
 
 无线驱动包括 Realtek RTL8922AE / RTL8852BE / RTL8852CE、MediaTek MT7921 / MT7925 / MT7916、Qualcomm ath10k / ath11k / ath12k。板载 QCA9377 系列使用 SDIO 驱动，是否可用取决于板子实际硬件和固件支持。内置 [TD-TECH 3466 USB 串口补丁](999-add-TD-TECH-option-id.patch)。
 
+内置 [NFA765 hw2.1 E108 专用固件](firmware/nfa765-e108/README.md)：仅 PCI 子设备 `105b:e108` 使用 NFA765 amss/m3 及已验证的 E108 板卡文件；普通 NFA765 保留原固件与板卡配置。固件随镜像提供，开机无需下载。
+
 **默认设置：** Bandix Plus 流量功能不开启；Docker 存储检测仅显示信息，不执行挂载、迁移或格式化。固件仅生成 **squashfs sysupgrade** 镜像，不生成 ext4 镜像；`kmod-fs-ext4` 仍保留，支持 ext4 硬盘或 U 盘。
 
 每次手动编译会从 OpenClash 官方 `core` 分支获取当时最新的稳定版 **Meta linux-arm64 内核**，按官方 SHA256 清单校验并内置。新固件首次启动（包括保留配置升级）会接入内置内核，无需在 OpenClash 页面另行下载；Smart、Oix、开发版以及手动启用的小闪存模式仍按 OpenClash 原流程处理。已运行的固件不会因此自动更新，需编译并刷入新固件。

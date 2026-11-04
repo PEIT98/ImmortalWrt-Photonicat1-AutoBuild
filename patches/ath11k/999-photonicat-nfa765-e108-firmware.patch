@@ -1,0 +1,22 @@
+--- a/drivers/net/wireless/ath/ath11k/core.h
++++ b/drivers/net/wireless/ath/ath11k/core.h
+@@ -1330,6 +1330,19 @@
+ 
+ 	of_property_read_string(ab->dev->of_node, "firmware-name", &fw_name);
+ 
++	/* Keep the standard WCN6855 firmware for every other subsystem. */
++	if (!fw_name && ab->hw_rev == ATH11K_HW_WCN6855_HW21 &&
++	    ab->id.vendor == 0x17cb && ab->id.device == 0x1103 &&
++	    ab->id.subsystem_vendor == 0x105b &&
++	    ab->id.subsystem_device == 0xe108 &&
++	    (!strcmp(filename, "amss.bin") || !strcmp(filename, "m3.bin") ||
++	     !strcmp(filename, "board-2.bin") ||
++	     !strcmp(filename, "firmware-2.bin"))) {
++		snprintf(buf, buf_len, "%s/%s/nfa765-e108/%s", ATH11K_FW_DIR,
++			 ab->hw_params.fw.dir, filename);
++		return;
++	}
++
+ 	if (!fw_name)
+ 		fw_name = ath11k_core_get_usecase_firmware(ab);
+ 

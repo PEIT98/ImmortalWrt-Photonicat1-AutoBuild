@@ -31,6 +31,7 @@ test -f "$dir/build-sources.txt"
   echo '- QModem：官方 FUjr/QModem main（Next 界面、短信后台）+ PEIT98/luci-app-qmodem-generic main（自有复刻），mwan3、OpenClash、CPU 调频、电池状态'
   echo '- 网页终端、Aurora 官方主题、多品牌 PCIe Wi-Fi 驱动、iStore、Docker/Compose 与 Dockerman' 
   echo '- 光影猫管理 → 软件包下载源：南京大学、中科大、上海交大、浙江大学、VSEAN 和官方源可选，默认南京大学'
+  echo '- NFA765 hw2.1：内置 E108 专用 amss/m3 与板卡修复文件，普通 NFA765 使用原固件'
   echo '- eMMC 自动扩容：利用连续可用空间，保留额外分区及后续升级边界'
   echo '- 系统 → 硬盘保活：默认关闭，仅定时只读选中的 USB 硬盘'
   echo '- 系统 → 在线升级：国内/GitHub 源与正式/预发行通道可选，默认保留配置，仅手动确认后升级'

@@ -379,11 +379,13 @@ jobs:
       - name: Download sources
         working-directory: immortalwrt
         run: |
+          bash ../scripts/build/bundle-nfa765-e108.sh .
           # 提前验证 ndisc6 源码校验和补丁应用，避免正式编译时才发现上游变动。
           make package/feeds/qmodem/ndisc6/download V=s
           make package/feeds/qmodem/ndisc6/prepare V=s
           bash ../scripts/tests/check_qmodem_ndisc6_build.sh feeds/qmodem/application/ndisc6 dl
           make download -j4
+          bash ../scripts/tests/test_nfa765_e108.sh .
 
       - name: Save source downloads
         if: steps.download_cache.outputs.cache-hit != 'true'
@@ -512,6 +514,7 @@ jobs:
             echo "Aurora config: $(git -C immortalwrt/package/luci-app-aurora-config rev-parse HEAD)"
             sed -n 's/^PKG_SOURCE_VERSION:=/cake-autorate stable source: /p' packages/cake-autorate/Makefile
             echo "Workflow repo commit: $GITHUB_SHA"
+            cat immortalwrt/files/lib/firmware/ath11k/WCN6855/hw2.0/nfa765-e108/build-info
             echo "Built at (Asia/Shanghai): $(date '+%Y-%m-%d %H:%M:%S %Z')"
           } > release/build-sources.txt
           git -C immortalwrt log -n 25 --format='%h %cs %s' > release/immortalwrt-recent-commits.txt

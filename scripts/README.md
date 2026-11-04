@@ -12,6 +12,7 @@
 | [select-packages.sh](build/select-packages.sh) | 在安装 Feeds 后读取独立配置，选择插件和驱动 |
 | [verify-config.sh](build/verify-config.sh) | 检查目标设备、插件、驱动和依赖；缺少必要配置则停止 |
 | [release-notes.sh](build/release-notes.sh) | 生成 GitHub Release 中文说明和编译来源信息 |
+| [bundle-nfa765-e108.sh](build/bundle-nfa765-e108.sh) | 校验并内置 hw2.1 E108 专用 amss/m3 和板卡文件，只对 `105b:e108` 选择私有目录，保留普通 NFA765 默认固件 |
 
 ## patches：兼容补丁
 
