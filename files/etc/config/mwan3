@@ -46,7 +46,8 @@ config member 'wwan_priority2'
 config policy 'failover'
 	list use_member 'wan_priority1'
 	list use_member 'wwan_priority2'
-	option last_resort 'unreachable'
+	# 暂无健康成员时回到主路由，避免已有默认路由仍被策略拦截。
+	option last_resort 'default'
 
 config rule 'default_rule_v4'
 	option family 'ipv4'

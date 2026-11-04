@@ -18,6 +18,7 @@
 | [enable-qca9377-ath10k-sdio.py](patches/enable-qca9377-ath10k-sdio.py) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
 | [fix-qmodem-usb-net-filter.py](patches/fix-qmodem-usb-net-filter.py) | 将 USB 网卡识别前置，收集后跳过端口限制，再按原规则处理 AT 串口和语音端口；无需逐型号补接口 |
+| [fix-qmodem-netifd-owner.py](patches/fix-qmodem-netifd-owner.py) | 通用 USB QMI 默认由 netifd 接管 IPv4，并按协商结果同步数据格式；保留其他拨号路径及显式设置 |
 | [fix-qmodem-boot-scan.py](patches/fix-qmodem-boot-scan.py) | 使官方延时补扫遵从 USB/PCIe 开关，关闭自动扫描时不额外扫描 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz，按网卡频段能力回退；统一 SSID Photonicat-Wrt，WPA2-PSK，密码 photonicat |
 

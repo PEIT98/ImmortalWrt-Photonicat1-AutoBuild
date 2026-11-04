@@ -82,6 +82,8 @@ QModem 全新配置默认开启 **USB 开机扫描**，关闭 QModem 的 PCIe �
 
 USB 扫描先按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动收集网卡，匹配后直接跳过后面的端口限制，再按原规则筛选 AT 串口和语音端口。构建时应用[通用兼容补丁](scripts/patches/fix-qmodem-usb-net-filter.py)，并执行真实扫描函数的回归检查；不按型号、USB ID 或接口编号逐个补白名单。网卡能被收集后，完整识别和拨号仍需要有效 AT 口、型号支持及正常网络配置。
 
+通用 USB `qmi_wwan` 路由拨号默认使用官方 `qmodem_runtime` 将 IPv4 地址、路由和 DNS 交给 netifd，避免拨号程序已有 IP、系统接口仍等待 DHCP。发布上线事件前，拨号程序按模块实际协商结果同步 `raw_ip`，切换失败时不上报上线。保留 ECM、RNDIS、NCM、MBIM、厂商驱动、QMAP、PCIe 和桥接的原有路径；显式 `host_ipv4_owner` 设置及上游可选管理器继续生效。新配置的 mwan3 默认回到主路由兜底，保留配置升级不覆盖已有策略。构建前执行[接管及数据格式回归](scripts/tests/test_qmodem_netifd_owner.py)，上游关键结构变化时停止并提示核对；仍需 RM520N 真机冷启动、重拨及多线路切换验收。
+
 QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`qmodem-smsd` 和 `sms-forwarder-next` 是新版 Next 的短信依赖。
 
 Generic 位于 **移动网络 → 模组管理**，与官方 **QModem** 页面并列，共用同一套模组配置和拨号后台。先用官方页面完成扫描与拨号，避免同时从两个页面修改模组。Generic 原版自带缓存、流量采集、MT5700 SIM 初始化和支持库同步服务，也会随上游一并启用。
