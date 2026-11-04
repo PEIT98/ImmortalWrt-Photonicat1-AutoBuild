@@ -1,42 +1,30 @@
 #!/bin/sh
-# 功能：板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz，并按实际能力回退。
-# 使用本次编译的上游检测脚本；已有无线配置不会被覆盖，新装网卡也使用这些默认值。
+# 构建主机脚本：先校验，再提交全部文本修改。
 set -eu
-SRC="${1:?需要 ImmortalWrt 根目录}"
-FROM="$SRC/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc"
-TO="$SRC/files/lib/wifi/mac80211.uc"
-[ -f "$FROM" ] || { echo '::error::找不到 mac80211.uc，无法设置 Wi-Fi 默认名称和密码' >&2; exit 1; }
-mkdir -p "$(dirname "$TO")"
-python3 - "$FROM" "$TO" <<'PY'
-from pathlib import Path
-import re, sys
-src, dest = map(Path, sys.argv[1:3])
-data = src.read_text()
-pattern = r'^const bands_order\s*=\s*\[[^\n]*\];'
-match = re.search(pattern, data, re.M)
-if not match:
-    raise SystemExit('::error::上游 mac80211.uc 的频段定义已变更，请检查 Wi-Fi 默认配置')
-updated = data[:match.start()] + '''const bands_order = [ "5G", "2G", "6G", "60G" ];
+. "$(dirname "$0")/../lib/patch.sh"
+root=${1:?需要 ImmortalWrt 根目录}
+from="$root/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc"
+to="$root/files/lib/wifi/mac80211.uc"
+pc_init
+pc_load "$from"
+PC_BANDS='const bands_order = [ "5G", "2G", "6G", "60G" ];
 const onboard_sdio_bands_order = [ "2G", "5G", "6G", "60G" ];
 const photonicat_defaults = {
 	"5g": { ssid: "Photonicat-Wrt", encryption: "psk2", key: "photonicat" },
 	"2g": { ssid: "Photonicat-Wrt", encryption: "psk2", key: "photonicat" }
-};''' + data[match.end():]
-replacements = {
-    'let band_name = filter(bands_order, (b) => radio.bands[b])[0];': '''let onboard_sdio = phy.path && (match(phy.path, /(^|\\/)mmc_host\\//) || match(phy.path, /\\.mmc\\//));
+};' pc_awk '
+match($0,/^const bands_order[[:space:]]*=[[:space:]]*\[[^\n]*\];/) { n++; print ENVIRON["PC_BANDS"] substr($0,RSTART+RLENGTH); next }
+{print}
+END {if(n!=1) exit 1}'
+pc_replace 'let band_name = filter(bands_order, (b) => radio.bands[b])[0];' 'let onboard_sdio = phy.path && (match(phy.path, /(^|\/)mmc_host\//) || match(phy.path, /\.mmc\//));
 		let preferred_bands = onboard_sdio ? onboard_sdio_bands_order : bands_order;
-		let band_name = filter(preferred_bands, (b) => radio.bands[b])[0];''',
-    'let channel = rband.default_channel ?? "auto";': 'let channel = band_name == "5G" ? 36 : (rband.default_channel ?? "auto");',
-    # 上游已按 max_width 限制到最多 80MHz；AX 网卡使用 HE，AC/N 网卡保留能力检测。
-    'let htmode = filter(htmode_order, (m) => band[lc(m)])[0];': 'let htmode = band_name == "5G" && band.he ? "HE" : filter(htmode_order, (m) => band[lc(m)])[0];',
-    '${defaults?.ssid || "ImmortalWrt"}': '${photonicat_defaults[band_name]?.ssid || defaults?.ssid || "Photonicat-Wrt"}',
-    '${defaults?.encryption || encryption}': '${photonicat_defaults[band_name]?.encryption || defaults?.encryption || encryption}',
-    '${defaults?.key || ""}': '${photonicat_defaults[band_name]?.key || defaults?.key || ""}',
-}
-for old, new in replacements.items():
-    if updated.count(old) != 1:
-        raise SystemExit(f'::error::上游 Wi-Fi 配置格式已变更，无法应用默认设置：{old}')
-    updated = updated.replace(old, new)
-dest.write_text(updated)
-print('Wi-Fi 默认值：板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz；按网卡支持的频段回退，5GHz 支持 AX 时使用 HE80、信道 36；统一 SSID Photonicat-Wrt，WPA2-PSK，密码 photonicat')
-PY
+		let band_name = filter(preferred_bands, (b) => radio.bands[b])[0];' 'Wi-Fi 默认配置'
+pc_replace 'let channel = rband.default_channel ?? "auto";' 'let channel = band_name == "5G" ? 36 : (rband.default_channel ?? "auto");' 'Wi-Fi 默认配置'
+pc_replace 'let htmode = filter(htmode_order, (m) => band[lc(m)])[0];' 'let htmode = band_name == "5G" && band.he ? "HE" : filter(htmode_order, (m) => band[lc(m)])[0];' 'Wi-Fi 默认配置'
+pc_replace '${defaults?.ssid || "ImmortalWrt"}' '${photonicat_defaults[band_name]?.ssid || defaults?.ssid || "Photonicat-Wrt"}' 'Wi-Fi 默认配置'
+pc_replace '${defaults?.encryption || encryption}' '${photonicat_defaults[band_name]?.encryption || defaults?.encryption || encryption}' 'Wi-Fi 默认配置'
+pc_replace '${defaults?.key || ""}' '${photonicat_defaults[band_name]?.key || defaults?.key || ""}' 'Wi-Fi 默认配置'
+mkdir -p "$(dirname "$to")"
+# 上游文件保持不变，生成默认值覆盖文件。
+cat "$PC_WORK" > "$to"
+echo "Wi-Fi 默认值：板载 SDIO 优先 2.4GHz，其他网卡优先 5GHz，保留能力回退。"

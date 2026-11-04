@@ -61,6 +61,7 @@ jobs:
           df -h
           free -h
 
+      # ImmortalWrt 上游仍需 Python；项目自有脚本与回归均使用 Shell。
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -87,7 +88,7 @@ jobs:
 
       - name: 启用板载 QCA9377 SDIO 并保留 PCIe
         run: |
-          python3 scripts/patches/enable-qca9377-ath10k-sdio.py "$GITHUB_WORKSPACE/immortalwrt"
+          sh scripts/patches/enable-qca9377-ath10k-sdio.sh "$GITHUB_WORKSPACE/immortalwrt"
           grep -Fq 'ATH10K ATH10K_PCI ATH10K_SDIO' immortalwrt/package/kernel/mac80211/ath.mk
           grep -Fq 'ath10k/ath10k_sdio.ko' immortalwrt/package/kernel/mac80211/ath.mk
 
@@ -95,9 +96,10 @@ jobs:
         working-directory: immortalwrt
         run: |
           ./scripts/feeds update -a
-          python3 ../scripts/patches/fix-qmodem-ndisc6-source.py feeds/qmodem/application/ndisc6/Makefile
-          python3 ../scripts/patches/fix-weechat-provider.py .
-          python3 ../scripts/tests/test_build_dependencies.py
+          sh ../scripts/patches/fix-qmodem-ndisc6-source.sh feeds/qmodem/application/ndisc6/Makefile
+          sh ../scripts/patches/fix-weechat-provider.sh .
+          bash ../scripts/tests/test_build_dependencies.sh
+          bash ../scripts/tests/test_build_scripts.sh
           ./scripts/feeds update -i luci
           ./scripts/feeds install -a
           ./scripts/feeds install -a -f -p qmodem
@@ -109,20 +111,7 @@ jobs:
           test -f feeds/qmodem/application/sms_forwarder_next/Makefile
           test -f feeds/qmodem_generic/luci-app-qmodem-generic/Makefile
           test -L package/feeds/qmodem_generic/luci-app-qmodem-generic
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-          next_make = Path('feeds/qmodem/luci/luci-app-qmodem-next/Makefile').read_text()
-          generic_make = Path('feeds/qmodem_generic/luci-app-qmodem-generic/Makefile').read_text()
-          def dependencies(text):
-              line = re.search(r'^LUCI_DEPENDS\s*:?=([^\n]+)', text, re.M)
-              assert line, '上游 LUCI_DEPENDS 定义变化，请检查插件依赖'
-              return set(re.findall(r'\+([\w+.-]+)', line.group(1)))
-          assert {'qmodem', 'qmodem-smsd', 'sms-forwarder-next', 'luci-base'} <= dependencies(next_make)
-          assert {'qmodem', 'luci-base'} <= dependencies(generic_make)
-          version = re.search(r'^QMODEM_VERSION\s*:?=\s*(\S+)', Path('feeds/qmodem/version.mk').read_text(), re.M)
-          assert version and re.fullmatch(r'[0-9]+(?:\.[0-9]+)*(?:_(?:alpha|beta|pre|rc)[0-9]*)?', version.group(1)), 'QModem 版本格式不适用于 APK，请检查上游 version.mk'
-          PY
+          bash ../scripts/build/verify-qmodem-feeds.sh dependencies .
           # Feeds 保留 Generic 当前流量统计与模组支持组件的执行权限，供 rpcd/procd 调用。
           generic_root=feeds/qmodem_generic/luci-app-qmodem-generic/root
           for component in \
@@ -171,28 +160,28 @@ jobs:
 
       - name: 前置 QModem USB 网卡识别并保留 AT 端口规则
         run: |
-          python3 scripts/patches/fix-qmodem-usb-net-filter.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
-          python3 scripts/tests/test_qmodem_usb_net_filter.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
+          sh scripts/patches/fix-qmodem-usb-net-filter.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
+          bash scripts/tests/test_qmodem_usb_net_filter.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
 
       - name: 修复通用 USB QMI 地址接管并核对数据格式
         run: |
-          python3 scripts/patches/fix-qmodem-netifd-owner.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
+          sh scripts/patches/fix-qmodem-netifd-owner.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
           sh -n immortalwrt/feeds/qmodem/application/qmodem/files/usr/share/qmodem/modem_dial.sh
           test -x immortalwrt/feeds/qmodem/application/qmodem/files/usr/libexec/qmodem-ipv4-event
           test -f immortalwrt/feeds/qmodem/application/qmodem/files/lib/netifd/proto/qmodem_runtime.sh
           grep -Fq "case 'E':" immortalwrt/feeds/qmodem/application/quectel_CM_5G_M/src/main.c
-          python3 scripts/tests/test_qmodem_netifd_owner.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
+          bash scripts/tests/test_qmodem_netifd_owner.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
 
       - name: 检查 QModem 开机就绪与限次恢复
         run: |
-          python3 scripts/patches/fix-qmodem-boot-scan.py "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
+          sh scripts/patches/fix-qmodem-boot-scan.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
           sh -n immortalwrt/feeds/qmodem/application/qmodem/files/etc/init.d/qmodem_init
           sh -n files/usr/bin/photonicat-qmodem-scan
           sh -n files/etc/init.d/photonicat-qmodem-scan
           sh -n files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan
           test -x immortalwrt/files/usr/bin/photonicat-qmodem-scan
           test -x immortalwrt/files/etc/init.d/photonicat-qmodem-scan
-          python3 scripts/tests/test_qmodem_boot_scan.py
+          bash scripts/tests/test_qmodem_boot_scan.sh
 
       - name: 修复 iStore 软件包名称
         run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
@@ -210,7 +199,7 @@ jobs:
           sh -n package/cake-autorate/files/cake-autorate.init
           sh -n package/cake-autorate/files/cake-autorate-prepare
           sh -n package/cake-autorate/files/98-cake-autorate
-          python3 ../scripts/tests/test_cake_autorate.py
+          bash ../scripts/tests/test_cake_autorate.sh
 
       - name: 核对光影猫在线升级
         working-directory: immortalwrt
@@ -221,7 +210,7 @@ jobs:
           sh -n package/luci-app-online-upgrade/root/etc/uci-defaults/99-photonicat-upgrade-source
           test -x package/luci-app-online-upgrade/root/usr/libexec/swrt-upgrade
           diff -r ../packages/luci-app-online-upgrade package/luci-app-online-upgrade
-          python3 ../scripts/tests/test_online_upgrade.py
+          bash ../scripts/tests/test_online_upgrade.sh
           node ../scripts/tests/test_online_upgrade_frontend.js
 
       - name: 核对硬盘保活与 eMMC 自动扩容
@@ -231,15 +220,15 @@ jobs:
           sh -n files/usr/libexec/swrt-autogrow files/lib/preinit/79-swrt-autogrow
           sh -n package/luci-app-swrt-disk-keepalive/root/usr/libexec/swrt-disk-keepalive
           sh -n package/luci-app-swrt-disk-keepalive/root/usr/share/swrt-disk-keepalive/common.sh
-          python3 ../scripts/tests/test_autogrow.py
-          python3 ../scripts/tests/test_storage_integration.py
+          bash ../scripts/tests/test_autogrow.sh
+          bash ../scripts/tests/test_storage_integration.sh
           node ../scripts/tests/test_disk_keepalive_frontend.cjs
-          sudo env SWRT_DISK_QA_IDENTITY_ONLY=0 python3 ../scripts/tests/test_disk_keepalive.py
+          sudo env SWRT_DISK_QA_IDENTITY_ONLY=0 bash ../scripts/tests/test_disk_keepalive.sh
           if ! sudo modprobe f2fs; then
             sudo apt-get install -y "linux-modules-extra-$(uname -r)"
             sudo modprobe f2fs
           fi
-          sudo env SWRT_REQUIRE_AUTOGROW_TESTS=1 python3 ../scripts/tests/test_autogrow_real.py
+          sudo env SWRT_REQUIRE_AUTOGROW_TESTS=1 bash ../scripts/tests/test_autogrow_real.sh
 
       - name: Check Photonicat1 status and Docker storage diagnostics
         working-directory: immortalwrt
@@ -248,7 +237,7 @@ jobs:
           set -euo pipefail
           sh -n files/usr/libexec/rpcd/luci.photonicat1
           sh -n files/usr/bin/photonicat-docker-storage-check
-          python3 -m json.tool files/usr/share/rpcd/acl.d/luci-photonicat1-info.json >/dev/null
+          jq -e -s 'length == 1 and (.[0]|type) == "object"' files/usr/share/rpcd/acl.d/luci-photonicat1-info.json >/dev/null
           test -x files/usr/libexec/rpcd/luci.photonicat1
           test -x files/usr/bin/photonicat-docker-storage-check
           test -f files/www/luci-static/resources/view/status/include/99_photonicat1_info.js
@@ -266,7 +255,7 @@ jobs:
           grep -Fq "poll.add(L.bind(this.updateIndicator, this), 5)" "$batt_js"
           node ../scripts/tests/test_photonicat_header.js
           node ../scripts/tests/test_photonicat_header_backend.js
-          python3 ../scripts/tests/test_package_sources.py
+          bash ../scripts/tests/test_package_sources.sh
           node ../scripts/tests/test_package_sources_frontend.js
           test -s "$power_pkg/htdocs/luci-static/resources/photonicat-header.css"
           test -x "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_header"
@@ -276,34 +265,15 @@ jobs:
           grep -Fq '"setSettings"' "$power_pkg/root/usr/libexec/rpcd/luci.battstatus"
           sh -n "$power_pkg/root/usr/libexec/rpcd/luci.battstatus" "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_power" "$power_pkg/root/usr/libexec/rpcd/luci.photonicat_header"
           sh -n "$power_pkg/files/pcat-manager.init" "$power_pkg/files/98-photonicat-battery-language"
-          python3 -m json.tool "$power_pkg/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          acl = json.loads(Path('package/luci-app-photonicat-power/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json').read_text())['luci-app-photonicat-power']
-          assert {'getBatteryStatus', 'getSettings'} <= set(acl['read']['ubus']['luci.battstatus'])
-          assert {'status'} <= set(acl['read']['ubus']['luci.photonicat_header'])
-          assert {'setSettings'} <= set(acl['write']['ubus']['luci.battstatus'])
-          assert {'getSettings'} <= set(acl['read']['ubus']['luci.photonicat_packages'])
-          assert {'setSettings'} <= set(acl['write']['ubus']['luci.photonicat_packages'])
-          PY
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          upstream = json.loads(Path('feeds/qmodem/luci/luci-app-qmodem-next/root/usr/share/luci/menu.d/luci-app-qmodem-next.json').read_text())
-          generic_root = Path('feeds/qmodem_generic/luci-app-qmodem-generic/root')
-          generic = json.loads((generic_root / 'usr/share/luci/menu.d/luci-app-qmodem-generic.json').read_text())
-          override = json.loads(Path('files/usr/share/luci/menu.d/zz-photonicat-modem-title.json').read_text())
-          assert 'admin/modem' in upstream, 'QModem 菜单路径已变更，请检查名称覆盖'
-          assert override == {'admin/modem': {'title': '移动网络'}}, '名称覆盖不得更改菜单权限或动作'
-          assert 'admin/modem/qmodem' in upstream and 'admin/modem/qmodem-generic' in generic
-          assert set(upstream) & set(generic) == {'admin/modem'}, '两套界面的子菜单发生冲突'
-          assert upstream['admin/modem']['action'] == generic['admin/modem']['action'], '父菜单动作不一致'
-          generic_files = {p.relative_to(generic_root) for p in generic_root.rglob('*') if p.is_file()}
-          for root in (Path('feeds/qmodem/application/qmodem/files'), Path('feeds/qmodem/luci/luci-app-qmodem-next/root')):
-              shared = generic_files & {p.relative_to(root) for p in root.rglob('*') if p.is_file()}
-              assert not shared, f'上游插件安装文件重名：{sorted(map(str, shared))}'
-          PY
+          jq -e -s 'length == 1 and (.[0]|type) == "object"' "$power_pkg/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
+          jq -e '.["luci-app-photonicat-power"] |
+            (.read.ubus["luci.battstatus"] | contains(["getBatteryStatus", "getSettings"])) and
+            (.read.ubus["luci.photonicat_header"] | contains(["status"])) and
+            (.write.ubus["luci.battstatus"] | contains(["setSettings"])) and
+            (.read.ubus["luci.photonicat_packages"] | contains(["getSettings"])) and
+            (.write.ubus["luci.photonicat_packages"] | contains(["setSettings"]))' \
+            "$power_pkg/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
+          bash ../scripts/build/verify-qmodem-feeds.sh menus .
           test -f "$power_pkg/po/zh_Hans/battstatus.po"
           grep -Fq 'po2lmo ./po/zh_Hans/battstatus.po' "$power_pkg/Makefile"
           grep -Fq 'pcat-manager' "$power_pkg/Makefile"
@@ -326,7 +296,7 @@ jobs:
           # 修改过 iStore Makefile 后，强制重新扫描包定义，避免复用旧缓存。
           rm -f tmp/.packageinfo tmp/.config-package.in
           # feeds install -a 会重置 .config，因此必须在安装完成后再应用选项
-          python3 ../scripts/build/select-packages.py .config
+          sh ../scripts/build/select-packages.sh .config
           cp .config .config.before-defconfig
           echo '===== defconfig 前核心插件 ====='
           grep -E '^CONFIG_PACKAGE_(qmodem|luci-app-qmodem-next|luci-app-qmodem-generic|qmodem-smsd|sms-forwarder-next|mwan3|luci-app-mwan3|luci-app-openclash|luci-app-photonicat-power|luci-app-ttyd|luci-theme-aurora|luci-app-store|luci-app-dockerman|docker|dockerd|docker-compose|luci-app-bandix-plus|bandix-plus|kmod-rtw89-8922ae|kmod-mt7925e|kmod-ath12k)=' .config.before-defconfig || true
@@ -382,7 +352,7 @@ jobs:
           BUILD_TAG='$tag'
           BUILD_COMMIT='$GITHUB_SHA'
           EOF
-          python3 scripts/build/stamp-firmware.py immortalwrt "$tag" "$GITHUB_SHA"
+          sh scripts/build/stamp-firmware.sh immortalwrt "$tag" "$GITHUB_SHA"
 
       - name: 获取并验证最新 OpenClash Meta 内核
         shell: bash
@@ -427,7 +397,7 @@ jobs:
           # 提前验证 ndisc6 源码校验和补丁应用，避免正式编译时才发现上游变动。
           make package/feeds/qmodem/ndisc6/download V=s
           make package/feeds/qmodem/ndisc6/prepare V=s
-          python3 ../scripts/tests/check_qmodem_ndisc6_build.py feeds/qmodem/application/ndisc6 dl
+          bash ../scripts/tests/check_qmodem_ndisc6_build.sh feeds/qmodem/application/ndisc6 dl
           make download -j4
 
       - name: Save source downloads

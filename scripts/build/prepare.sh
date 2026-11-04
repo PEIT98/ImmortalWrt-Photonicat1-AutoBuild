@@ -85,25 +85,28 @@ POWER_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-photon
 POWER_PACKAGE_DST="$SRC/package/luci-app-photonicat-power"
 test -f "$POWER_PACKAGE_SRC/Makefile" || { echo "::error::缺少 luci-app-photonicat-power 本地源码" >&2; exit 1; }
 test ! -e "$POWER_PACKAGE_DST" || { echo "::error::电源管理目标路径被上游占用，禁止覆盖" >&2; exit 1; }
-python3 "$(dirname "$0")/switch-pcat-manager.py" "$SRC/target/linux/rockchip/image/armv8.mk"
+sh "$(dirname "$0")/switch-pcat-manager.sh" "$SRC/target/linux/rockchip/image/armv8.mk"
 mkdir -p "$POWER_PACKAGE_DST"
 cp -a "$POWER_PACKAGE_SRC/." "$POWER_PACKAGE_DST/"
 test -x "$POWER_PACKAGE_DST/files/pcat-manager.init"
 test -f "$POWER_PACKAGE_DST/files/pcat-manager.conf"
 test -f "$POWER_PACKAGE_DST/files/modem-manager-noop.c"
-test -f "$POWER_PACKAGE_DST/files/patch-main.py"
-test -f "$POWER_PACKAGE_DST/files/patch-photonicat-ups.py"
+test -f "$POWER_PACKAGE_DST/files/patch-main.sh"
+test -f "$POWER_PACKAGE_DST/files/patch-common.sh"
+test -f "$POWER_PACKAGE_DST/files/patch-photonicat-ups.sh"
 test -x "$POWER_PACKAGE_DST/files/98-photonicat-battery-language"
 sh -n "$POWER_PACKAGE_DST/files/pcat-manager.init" "$POWER_PACKAGE_DST/files/98-photonicat-battery-language"
-python3 -c 'import ast,sys; [ast.parse(open(p).read()) for p in sys.argv[1:]]' "$POWER_PACKAGE_DST/files/patch-main.py" "$POWER_PACKAGE_DST/files/patch-photonicat-ups.py"
-grep -Fq 'patch-photonicat-ups.py' "$POWER_PACKAGE_DST/Makefile"
+for patch in patch-common.sh patch-main.sh patch-photonicat-ups.sh; do
+    sh -n "$POWER_PACKAGE_DST/files/$patch"
+done
+grep -Fq 'patch-photonicat-ups.sh' "$POWER_PACKAGE_DST/Makefile"
 POWER_RPC="$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_power"
 test -x "$POWER_RPC" || exit 1
 test -x "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus" || exit 1
 test -x "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_header" || exit 1
 sh -n "$POWER_RPC" "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.battstatus" "$POWER_PACKAGE_DST/root/usr/libexec/rpcd/luci.photonicat_header"
-python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/luci/menu.d/luci-app-photonicat-power.json" >/dev/null
-python3 -m json.tool "$POWER_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
+jq -e -s 'length == 1 and (.[0]|type) == "object"' "$POWER_PACKAGE_DST/root/usr/share/luci/menu.d/luci-app-photonicat-power.json" >/dev/null
+jq -e -s 'length == 1 and (.[0]|type) == "object"' "$POWER_PACKAGE_DST/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" >/dev/null
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/view/photonicat-power.js"
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/preload/battstatus.js"
 test -f "$POWER_PACKAGE_DST/htdocs/luci-static/resources/photonicat-header.css"
@@ -128,7 +131,7 @@ cp -a "$OVERLAY/." "$SRC/files/"
 AUTOGROW="$SRC/files/usr/libexec/swrt-autogrow"
 test -x "$AUTOGROW"
 sh -n "$AUTOGROW" "$SRC/files/lib/preinit/79-swrt-autogrow"
-python3 "$(dirname "$0")/../patches/enable-emmc-autogrow.py" "$SRC"
+sh "$(dirname "$0")/../patches/enable-emmc-autogrow.sh" "$SRC"
 
 # Aurora 使用系统主机名显示品牌；默认配置在首启生成后应用。
 BRAND_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-brand"
@@ -147,7 +150,7 @@ sh -n "$TIME_INIT"
 
 # 独立 LuCI 菜单覆盖：只改显示名称，不修改每次拉取的 QModem Feed。
 MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
-python3 -m json.tool "$MODEM_MENU" >/dev/null
+jq -e -s 'length == 1 and (.[0]|type) == "object"' "$MODEM_MENU" >/dev/null
 grep -Fq '"title": "移动网络"' "$MODEM_MENU"
 
 # 与 QModem 的动态接口命名解耦：不预设固定模组别名，只同步 mwan3 第三级 WAN。
@@ -178,7 +181,7 @@ echo 'QModem：等待 USB 网卡和串口就绪后补扫；持续未识别时限
 # rpcd 启动时会读取 acl.d，无须额外设置首启重启。
 TOM_ACL="$SRC/files/usr/share/rpcd/acl.d/tom_modem.json"
 test -f "$TOM_ACL" || { echo "::error::缺少 MyOpenWrt tom_modem ACL 文件" >&2; exit 1; }
-python3 -m json.tool "$TOM_ACL" >/dev/null
+jq -e -s 'length == 1 and (.[0]|type) == "object"' "$TOM_ACL" >/dev/null
 echo "MyOpenWrt ACL 已内置并通过 JSON 校验：/usr/share/rpcd/acl.d/tom_modem.json"
 
 # Aurora 官方源码根目录直接包含 Makefile，直接作为 OpenWrt 本地软件包编译。
@@ -222,7 +225,7 @@ test -f "$INFO_RPC" && test -f "$DISK_CHECK" || { echo "::error::光影猫信息
 chmod 755 "$INFO_RPC" "$DISK_CHECK"
 sh -n "$INFO_RPC"
 sh -n "$DISK_CHECK"
-python3 -m json.tool "$SRC/files/usr/share/rpcd/acl.d/luci-photonicat1-info.json" >/dev/null
+jq -e -s 'length == 1 and (.[0]|type) == "object"' "$SRC/files/usr/share/rpcd/acl.d/luci-photonicat1-info.json" >/dev/null
 test -f "$SRC/files/www/luci-static/resources/view/status/include/99_photonicat1_info.js" || exit 1
 
 # Bandix Plus 是多接口版本。只从上游源码提取两个 OpenWrt 包，
@@ -255,7 +258,7 @@ grep -Fq "option enable_traffic '0'" "$BANDIX_CONFIG" || exit 1
 echo 'Bandix Plus 前/后端已加入：首次默认不启用流量挂钩和限速。'
 
 # 西瓜皮原版 TD-TECH (3466) USB option 串口内核补丁（保持原内容不修改）。
-# kmod-usb-serial-option 由 select-packages.py 选择；此处仅安装内核补丁源码。
+# kmod-usb-serial-option 由 select-packages.sh 选择；此处仅安装内核补丁源码。
 # 必须确保 Rockchip 目标仍使用 Linux 6.12；如升级到新内核则明确报错，
 # 避免补丁被放进错误目录而悄然失效。
 TD_PATCH_SRC="$(dirname "$0")/../../999-add-TD-TECH-option-id.patch"

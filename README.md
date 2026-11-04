@@ -68,7 +68,7 @@ Wi-Fi 按设备总线路径识别板载 SDIO 网卡，优先为它生成 2.4GHz�
 
 - [`photonicat1.config`](photonicat1.config)：集中维护所有强制启用及明确禁用的插件、驱动和编译开关（不是完整的 OpenWrt `.config`）。
 - [`scripts/build/prepare.sh`](scripts/build/prepare.sh)：继承原光影猫参考配置，准备 Feeds、补丁和系统文件；不覆盖现有网络设计。
-- [`scripts/build/select-packages.py`](scripts/build/select-packages.py)：在 Feeds 安装后应用上述配置，继承未明确修改的选项。
+- [`scripts/build/select-packages.sh`](scripts/build/select-packages.sh)：在 Feeds 安装后应用上述配置，继承未明确修改的选项。
 - [`scripts/build/verify-config.sh`](scripts/build/verify-config.sh)：在 `make defconfig` 后校验必需插件和依赖；缺失则停止编译，防止静默丢包。
 - 编译并行度最多 3 线程且不超过实际 CPU 数；保留源码下载缓存、1.5GB CCache 和失败时单线程诊断机制。
 
@@ -76,13 +76,13 @@ Wi-Fi 按设备总线路径识别板载 SDIO 网卡，优先为它生成 2.4GHz�
 
 QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称。每次构建通过 Feeds 拉取官方 QModem `main` 和 [PEIT98/Generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main`。Generic 已原样复刻，后续 WebUI 修复在自有仓库维护。
 
-QModem 全新配置默认开启 **USB 开机扫描**，关闭 QModem 的 PCIe 自动扫描及 PCIe 预设探测，并保留 **15 秒追加扫描**。通过[独立首启配置](files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan)应用一次；[启动补扫兼容修复](scripts/patches/fix-qmodem-boot-scan.py)让官方延时扫描遵从 USB/PCIe 开关，两个开关均关闭时不追加扫描。之后可在 **移动网络 → QModem → QModem 设置** 调整，保留配置升级时不会重置已有扫描选项。不固定 USB 槽位或模组别名，继续动态识别接口。
+QModem 全新配置默认开启 **USB 开机扫描**，关闭 QModem 的 PCIe 自动扫描及 PCIe 预设探测，并保留 **15 秒追加扫描**。通过[独立首启配置](files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan)应用一次；[启动补扫兼容修复](scripts/patches/fix-qmodem-boot-scan.sh)让官方延时扫描遵从 USB/PCIe 开关，两个开关均关闭时不追加扫描。之后可在 **移动网络 → QModem → QModem 设置** 调整，保留配置升级时不会重置已有扫描选项。不固定 USB 槽位或模组别名，继续动态识别接口。
 
 [开机识别检查](files/usr/bin/photonicat-qmodem-scan)最多检查 36 轮，轮间等待 5 秒：只有同一 USB 设备的网卡和串口均已出现、但 QModem 尚未生成有效配置时，才按实际槽位补充扫描；扫描队列忙碌时继续等待，不重复提交正在处理的任务，识别完成后退出。持续约 90 秒未识别且没有其他已识别模组在用时，最多重启一次官方扫描服务，恢复前重新检查配置。该检查不发送 AT 命令、不改写模组配置，遵从关闭扫描、禁止自动探测及固定设备设置；现有依赖即可运行，无需 `timeout` 命令。升级旧固件会单独启用检查服务，之后手动禁用该服务的选择会保留。查看日志：`logread -e photonicat-qmodem-scan`。启动恢复尚需 FM160-EAU 真机重启复测，脚本回归通过不等于已完成硬件验收。
 
-USB 扫描先按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动收集网卡，匹配后直接跳过后面的端口限制，再按原规则筛选 AT 串口和语音端口。构建时应用[通用兼容补丁](scripts/patches/fix-qmodem-usb-net-filter.py)，并执行真实扫描函数的回归检查；不按型号、USB ID 或接口编号逐个补白名单。网卡能被收集后，完整识别和拨号仍需要有效 AT 口、型号支持及正常网络配置。
+USB 扫描先按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动收集网卡，匹配后直接跳过后面的端口限制，再按原规则筛选 AT 串口和语音端口。构建时应用[通用兼容补丁](scripts/patches/fix-qmodem-usb-net-filter.sh)，并执行真实扫描函数的回归检查；不按型号、USB ID 或接口编号逐个补白名单。网卡能被收集后，完整识别和拨号仍需要有效 AT 口、型号支持及正常网络配置。
 
-通用 USB `qmi_wwan` 路由拨号默认使用官方 `qmodem_runtime` 将 IPv4 地址、路由和 DNS 交给 netifd，避免拨号程序已有 IP、系统接口仍等待 DHCP。发布上线事件前，拨号程序按模块实际协商结果同步 `raw_ip`，切换失败时不上报上线。保留 ECM、RNDIS、NCM、MBIM、厂商驱动、QMAP、PCIe 和桥接的原有路径；显式 `host_ipv4_owner` 设置及上游可选管理器继续生效。新配置的 mwan3 默认回到主路由兜底，保留配置升级不覆盖已有策略。构建前执行[接管及数据格式回归](scripts/tests/test_qmodem_netifd_owner.py)，上游关键结构变化时停止并提示核对；仍需 RM520N 真机冷启动、重拨及多线路切换验收。
+通用 USB `qmi_wwan` 路由拨号默认使用官方 `qmodem_runtime` 将 IPv4 地址、路由和 DNS 交给 netifd，避免拨号程序已有 IP、系统接口仍等待 DHCP。发布上线事件前，拨号程序按模块实际协商结果同步 `raw_ip`，切换失败时不上报上线。保留 ECM、RNDIS、NCM、MBIM、厂商驱动、QMAP、PCIe 和桥接的原有路径；显式 `host_ipv4_owner` 设置及上游可选管理器继续生效。新配置的 mwan3 默认回到主路由兜底，保留配置升级不覆盖已有策略。构建前执行[接管及数据格式回归](scripts/tests/test_qmodem_netifd_owner.sh)，上游关键结构变化时停止并提示核对；仍需 RM520N 真机冷启动、重拨及多线路切换验收。
 
 QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`qmodem-smsd` 和 `sms-forwarder-next` 是新版 Next 的短信依赖。
 

@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-photonicat-power
 PKG_VERSION:=1.0.17
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/photonicat/rockchip_rk3568_pcat_manager.git
 PKG_SOURCE_DATE:=2025-08-18
@@ -42,8 +42,8 @@ define Build/Prepare
 	$(CP) ./files/modem-manager-noop.c $(PKG_BUILD_DIR)/src/modem-manager.c
 	$(CP) ./files/meson-root.build $(PKG_BUILD_DIR)/meson.build
 	$(CP) ./files/meson-src.build $(PKG_BUILD_DIR)/src/meson.build
-	python3 ./files/patch-main.py $(PKG_BUILD_DIR)/src/main.c
-	python3 ./files/patch-photonicat-ups.py $(PKG_BUILD_DIR)/src/pmu-manager.c
+	sh ./files/patch-main.sh $(PKG_BUILD_DIR)/src/main.c
+	sh ./files/patch-photonicat-ups.sh $(PKG_BUILD_DIR)/src/pmu-manager.c
 endef
 
 define Package/luci-app-photonicat-power/install
