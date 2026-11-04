@@ -13,5 +13,23 @@ time=${stamp#*-}; time=${time%%-*}
 # GNU date validates calendar dates, hour/minute/second ranges and leap years.
 formatted=$(printf '%s-%s-%s %s:%s:%s' "$(printf %.4s "$day")" "$(printf %s "$day" | cut -c5-6)" "$(printf %s "$day" | cut -c7-8)" "$(printf %.2s "$time")" "$(printf %s "$time" | cut -c3-4)" "$(printf %s "$time" | cut -c5-6)")
 [ "$(TZ=UTC0 date -d "$formatted" +%Y%m%d%H%M%S)" = "$day$time" ] || { echo 'Invalid firmware date' >&2; exit 1; }
-mkdir -p "$root/files/etc"
-jq -n --arg version "$version" --arg commit "$commit" '{repository:"PEIT98/ImmortalWrt-Photonicat1-AutoBuild",board:"ariaboard,photonicat",version:$version,commit:$commit}' > "$root/files/etc/photonicat-release.json"
+board='ariaboard,photonicat'
+repository='PEIT98/ImmortalWrt-Photonicat1-AutoBuild'
+dest="$root/files/etc"
+mkdir -p "$dest"
+tmp=$(mktemp -d "$dest/.photonicat-identity.XXXXXX")
+trap 'rm -rf "$tmp"' EXIT
+trap 'exit 1' HUP INT TERM
+
+# 两种格式先在临时目录中生成；生成失败时保留原有版本身份。
+jq -n --arg repository "$repository" --arg board "$board" --arg version "$version" --arg commit "$commit" \
+    '{repository:$repository,board:$board,version:$version,commit:$commit}' > "$tmp/photonicat-release.json"
+cat > "$tmp/online-upgrade-device" <<EOF
+# 本次固件的只读版本身份，发布任务使用同一个标签。
+DEVICE_BOARD='$board'
+BUILD_TAG='$version'
+BUILD_COMMIT='$commit'
+EOF
+chmod 644 "$tmp/photonicat-release.json" "$tmp/online-upgrade-device"
+mv -f "$tmp/photonicat-release.json" "$dest/photonicat-release.json"
+mv -f "$tmp/online-upgrade-device" "$dest/online-upgrade-device"

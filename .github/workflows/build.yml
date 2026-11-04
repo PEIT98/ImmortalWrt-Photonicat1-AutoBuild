@@ -180,7 +180,7 @@ jobs:
           bash scripts/tests/test_qmodem_defaults.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
 
       - name: 修复 iStore 软件包名称
-        run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
+        run: sh scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 
       - name: 核对新增管理插件与 CAKE 接入
         working-directory: immortalwrt
@@ -336,16 +336,8 @@ jobs:
         run: |
           set -euo pipefail
           tag="photonicat1-$(date +%Y%m%d-%H%M%S)-${GITHUB_RUN_NUMBER}"
-          [[ "$tag" =~ ^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$ ]]
-          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
-          mkdir -p immortalwrt/files/etc
-          cat > immortalwrt/files/etc/online-upgrade-device <<EOF
-          # 本次固件的只读版本身份，发布任务使用同一个标签。
-          DEVICE_BOARD='ariaboard,photonicat'
-          BUILD_TAG='$tag'
-          BUILD_COMMIT='$GITHUB_SHA'
-          EOF
           sh scripts/build/stamp-firmware.sh immortalwrt "$tag" "$GITHUB_SHA"
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: 获取并验证最新 OpenClash Meta 内核
         shell: bash

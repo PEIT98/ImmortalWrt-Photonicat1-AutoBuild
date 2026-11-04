@@ -1,8 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # 功能：兼容 iStore 在 ImmortalWrt 25.12 中的包名和依赖。
 # 修正官方 LinkEase iStore 在 ImmortalWrt 25.12 中的软件包名称。
 # 在安装 Feeds 后执行；仅修改编译机的临时源码。
-set -euo pipefail
+set -eu
+. "$(dirname "$0")/../lib/patch.sh"
 SRC="${1:?用法: fix-istore-25.12.sh IMMORTALWRT_SRC}"
 APP="$SRC/package/feeds/istore/luci-app-store/Makefile"
 for pkg in luci-app-store luci-lib-taskd luci-lib-xterm taskd; do
@@ -11,18 +12,30 @@ for pkg in luci-app-store luci-lib-taskd luci-lib-xterm taskd; do
     exit 1
   }
 done
-grep -Fq '# call BuildPackage' "$APP" || {
-  echo '::error::iStore Makefile 缺少 OpenWrt package 扫描标记' >&2
-  exit 1
-}
+pc_init
+pc_load "$APP"
+pc_require '# call BuildPackage' 1 'iStore Makefile 缺少或重复 OpenWrt package 扫描标记'
 # luci.mk uses $(notdir $(CURDIR)) unless LUCI_NAME is set. Avoid feed-layout
 # dependent package identity, so CONFIG_PACKAGE_luci-app-store is generated.
-if ! grep -Eq '^LUCI_NAME[[:space:]]*[:?+]?=[[:space:]]*luci-app-store([[:space:]]|$)' "$APP"; then
-  sed -i '/^include $(TOPDIR)\/rules.mk$/a LUCI_NAME:=luci-app-store' "$APP"
-fi
-if ! grep -Eq '^PKG_NAME[[:space:]]*[:?+]?=[[:space:]]*luci-app-store([[:space:]]|$)' "$APP"; then
-  sed -i '/^LUCI_NAME:=luci-app-store$/a PKG_NAME:=luci-app-store' "$APP"
-fi
-grep -Fxq 'LUCI_NAME:=luci-app-store' "$APP"
-grep -Fxq 'PKG_NAME:=luci-app-store' "$APP"
+pc_awk '
+/^[[:space:]]*(LUCI_NAME|PKG_NAME)[[:space:]]*[:?+]?=/ {
+  key=$0; sub(/^[[:space:]]*/,"",key); sub(/[[:space:]]*[:?+]?=.*/,"",key)
+  value=$0; sub(/^[^=]*=[[:space:]]*/,"",value)
+  sub(/[[:space:]]+#.*$/,"",value); sub(/[[:space:]]*$/,"",value)
+  if(++names[key]!=1 || value!="luci-app-store") bad=1
+  next
+}
+/^include[[:space:]]+\$\(TOPDIR\)\/rules\.mk[[:space:]]*(#.*)?$/ {
+  includes++; print; print "LUCI_NAME:=luci-app-store"; print "PKG_NAME:=luci-app-store"; next
+}
+{print}
+END {
+  if(includes!=1 || bad) {
+    print "iStore 包名定义冲突或上游结构变化" > "/dev/stderr"
+    exit 1
+  }
+}'
+grep -Fxq 'LUCI_NAME:=luci-app-store' "$PC_WORK"
+grep -Fxq 'PKG_NAME:=luci-app-store' "$PC_WORK"
+pc_commit
 echo 'iStore 官方来源保持不变；已显式修正 LuCI app 包名并确认 taskd 相关文件。'

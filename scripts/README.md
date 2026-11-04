@@ -8,7 +8,7 @@
 
 | 脚本 | 作用 |
 | --- | --- |
-| [prepare.sh](build/prepare.sh) | 继承光影猫参考配置，准备软件源、内核补丁和覆盖文件 |
+| [prepare.sh](build/prepare.sh) | 继承光影猫参考配置，准备软件源、内核补丁和覆盖文件；内部函数负责替换默认 MCU 包，并隔离临时文件清理 |
 | [select-packages.sh](build/select-packages.sh) | 在安装 Feeds 后读取独立配置，选择插件和驱动 |
 | [verify-config.sh](build/verify-config.sh) | 检查目标设备、插件、驱动和依赖；缺少必要配置则停止 |
 | [release-notes.sh](build/release-notes.sh) | 生成 GitHub Release 中文说明和编译来源信息 |
@@ -18,7 +18,7 @@
 | 脚本 | 作用 |
 | --- | --- |
 | [enable-qca9377-ath10k-sdio.sh](patches/enable-qca9377-ath10k-sdio.sh) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
-| [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
+| [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 检查 taskd 等依赖，在临时副本中校验并固定 iStore 包名，通过后写回 |
 | [fix-qmodem-netifd-owner.sh](patches/fix-qmodem-netifd-owner.sh) | 通用 USB QMI 默认由 netifd 接管 IPv4，并按协商结果同步数据格式；保留其他拨号路径及显式设置 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz，按网卡频段能力回退；统一 SSID Photonicat-Wrt，WPA2-PSK，密码 photonicat |
 
@@ -66,7 +66,7 @@
 
 - `patches/enable-emmc-autogrow.sh`：检查 Rockchip 的镜像校验及刷写流程，保留扩大的根分区；上游无关注释变化不阻断构建，受影响逻辑变化时停止并提示核对。
 - `files/usr/libexec/swrt-autogrow` 与 `files/lib/preinit/79-swrt-autogrow`：在 overlay 挂载前扩展 eMMC 的连续可用空间。
-- `build/stamp-firmware.sh`：验证并写入在线更新使用的不可变版本身份。
+- `build/stamp-firmware.sh`：统一校验并生成 `photonicat-release.json` 和 `online-upgrade-device`，两种版本身份共用同一设备、标签和提交号。
 - `packages/luci-app-swrt-disk-keepalive`：完整本地 USB 硬盘保活插件，默认关闭。
 - `tests/test_autogrow.sh`、`tests/test_storage_integration.sh`：验证分区比较、生产扩容计划、额外分区保护和依赖。
 - `tests/test_autogrow_real.sh`：在临时稀疏磁盘与 loop 设备上验证 F2FS/ext4 扩容；需要 Linux root、相关工具和内核支持。

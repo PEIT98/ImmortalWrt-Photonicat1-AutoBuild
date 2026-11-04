@@ -1,6 +1,28 @@
 #!/usr/bin/env bash
 # 功能：准备参考硬件配置、官方软件源、固件覆盖文件和内核补丁。
 set -euo pipefail
+
+# 子进程隔离补丁临时目录和退出清理，保留 prepare 自身的清理逻辑。
+switch_pcat_manager() (
+  . "$(dirname "$0")/../lib/patch.sh"
+  pc_init
+  pc_load "${1:?需要 armv8.mk 路径}"
+  pc_awk '
+/^define Device\/ariaboard_photonicat$/ { n++; inside=1 }
+inside {
+ line=$0
+ if(index(line,"pcat-mgr")) { while((p=index(line,"pcat-mgr"))) { old++; line=substr(line,1,p-1) "luci-app-photonicat-power" substr(line,p+8) } }
+ else if(index(line,"luci-app-photonicat-power")) new++
+ print line
+ if($0 ~ /^endef[[:space:]]*$/) { inside=0; closed++ }
+ next
+}
+{print}
+END { if(n!=1 || closed!=1 || !((old==1 && new==0) || (old==0 && new==1))) exit 1 }'
+  pc_commit
+  echo 'Photonicat1 默认 MCU 守护进程已并入 luci-app-photonicat-power'
+)
+
 REF="${1:?缺少光影猫参考仓库路径}"
 SRC="${2:?缺少 ImmortalWrt 源码路径}"
 OVERLAY="${3:?缺少项目 files 覆盖目录}"
@@ -85,7 +107,7 @@ POWER_PACKAGE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-photon
 POWER_PACKAGE_DST="$SRC/package/luci-app-photonicat-power"
 test -f "$POWER_PACKAGE_SRC/Makefile" || { echo "::error::缺少 luci-app-photonicat-power 本地源码" >&2; exit 1; }
 test ! -e "$POWER_PACKAGE_DST" || { echo "::error::电源管理目标路径被上游占用，禁止覆盖" >&2; exit 1; }
-sh "$(dirname "$0")/switch-pcat-manager.sh" "$SRC/target/linux/rockchip/image/armv8.mk"
+switch_pcat_manager "$SRC/target/linux/rockchip/image/armv8.mk"
 mkdir -p "$POWER_PACKAGE_DST"
 cp -a "$POWER_PACKAGE_SRC/." "$POWER_PACKAGE_DST/"
 test -x "$POWER_PACKAGE_DST/files/pcat-manager.init"
