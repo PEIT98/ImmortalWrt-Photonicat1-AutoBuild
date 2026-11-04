@@ -158,9 +158,8 @@ jobs:
           grep -Fxq 'PKG_BUILD_DEPENDS:=luci-base/host' package/luci-app-photonicat-power/Makefile
           echo '单一光影猫电源包将提供 MCU 服务、页面、电池状态和中文翻译。'
 
-      - name: 前置 QModem USB 网卡识别并保留 AT 端口规则
+      - name: 验证官方 QModem USB 网卡与 AT 端口规则
         run: |
-          sh scripts/patches/fix-qmodem-usb-net-filter.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
           bash scripts/tests/test_qmodem_usb_net_filter.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
 
       - name: 修复通用 USB QMI 地址接管并核对数据格式
@@ -172,10 +171,10 @@ jobs:
           grep -Fq "case 'E':" immortalwrt/feeds/qmodem/application/quectel_CM_5G_M/src/main.c
           bash scripts/tests/test_qmodem_netifd_owner.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
 
-      - name: 检查 QModem 固定接口与单一扫描
+      - name: 检查首启网络配置与 QModem 单一扫描
         run: |
-          sh -n files/etc/uci-defaults/99-photonicat-qmodem
-          test -x immortalwrt/files/etc/uci-defaults/99-photonicat-qmodem
+          sh -n files/etc/uci-defaults/99-photonicat-network
+          test -x immortalwrt/files/etc/uci-defaults/99-photonicat-network
           test ! -e immortalwrt/files/usr/bin/photonicat-qmodem-mwan3-sync
           test ! -e immortalwrt/files/usr/bin/photonicat-qmodem-scan
           bash scripts/tests/test_qmodem_defaults.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
@@ -192,7 +191,6 @@ jobs:
           test -x package/luci-app-aurora-config/root/usr/libexec/rpcd/luci.aurora
           grep -Fxq 'LUCI_MINIFY_JS:=0' package/luci-app-aurora-config/Makefile
           diff -r ../packages/cake-autorate package/cake-autorate
-          sh -n files/etc/uci-defaults/92-photonicat-network-tools
           sh -n package/cake-autorate/files/cake-autorate.init
           sh -n package/cake-autorate/files/cake-autorate-prepare
           sh -n package/cake-autorate/files/98-cake-autorate
@@ -227,16 +225,14 @@ jobs:
           fi
           sudo env SWRT_REQUIRE_AUTOGROW_TESTS=1 bash ../scripts/tests/test_autogrow_real.sh
 
-      - name: Check Photonicat1 status and Docker storage diagnostics
+      - name: 核对光影猫状态卡片
         working-directory: immortalwrt
         shell: bash
         run: |
           set -euo pipefail
           sh -n files/usr/libexec/rpcd/luci.photonicat1
-          sh -n files/usr/bin/photonicat-docker-storage-check
           jq -e -s 'length == 1 and (.[0]|type) == "object"' files/usr/share/rpcd/acl.d/luci-photonicat1-info.json >/dev/null
           test -x files/usr/libexec/rpcd/luci.photonicat1
-          test -x files/usr/bin/photonicat-docker-storage-check
           test -f files/www/luci-static/resources/view/status/include/99_photonicat1_info.js
           # 一个软件包安装 MCU 后台、管理页面、顶部设备状态与中文翻译。
           power_pkg=package/luci-app-photonicat-power

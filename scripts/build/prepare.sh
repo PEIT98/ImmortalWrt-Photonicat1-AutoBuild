@@ -153,11 +153,11 @@ MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
 jq -e -s 'length == 1 and (.[0]|type) == "object"' "$MODEM_MENU" >/dev/null
 grep -Fq '"title": "移动网络"' "$MODEM_MENU"
 
-# 固定逻辑接口 wwan_5g；由一次性 UCI 默认配置设置官方槽位别名和单一扫描。
-QMODEM_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-qmodem"
-test -f "$QMODEM_DEFAULT" || { echo '::error::缺少 QModem 固定接口配置' >&2; exit 1; }
-chmod 755 "$QMODEM_DEFAULT"
-sh -n "$QMODEM_DEFAULT"
+# 首启统一配置 WAN 区域、网络工具和 QModem 固定接口，各部分独立重试。
+NETWORK_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-network"
+test -f "$NETWORK_DEFAULT" || { echo '::error::缺少光影猫首启网络配置' >&2; exit 1; }
+chmod 755 "$NETWORK_DEFAULT"
+sh -n "$NETWORK_DEFAULT"
 test ! -e "$SRC/files/usr/bin/photonicat-qmodem-mwan3-sync"
 test ! -e "$SRC/files/usr/bin/photonicat-qmodem-scan"
 echo 'QModem：固定别名 wwan_5g，仅使用官方 USB 扫描服务。'
@@ -199,17 +199,13 @@ test -x "$CAKE_DST/files/cake-autorate.init"
 test -x "$CAKE_DST/files/cake-autorate-prepare"
 test -x "$CAKE_DST/files/98-cake-autorate"
 sh -n "$CAKE_DST/files/cake-autorate.init" "$CAKE_DST/files/cake-autorate-prepare" "$CAKE_DST/files/98-cake-autorate"
-test -x "$SRC/files/etc/uci-defaults/92-photonicat-network-tools"
-sh -n "$SRC/files/etc/uci-defaults/92-photonicat-network-tools"
 echo '文件管理和 Travelmate 使用官方包；Aurora 设置及 cake-autorate 已准备。'
 
 # 固件版本/存储卡片只使用 rootfs 覆盖文件；不能修改 Aurora 主题。
 INFO_RPC="$SRC/files/usr/libexec/rpcd/luci.photonicat1"
-DISK_CHECK="$SRC/files/usr/bin/photonicat-docker-storage-check"
-test -f "$INFO_RPC" && test -f "$DISK_CHECK" || { echo "::error::光影猫信息卡片脚本缺失"; exit 1; }
-chmod 755 "$INFO_RPC" "$DISK_CHECK"
+test -f "$INFO_RPC" || { echo "::error::光影猫信息卡片脚本缺失"; exit 1; }
+chmod 755 "$INFO_RPC"
 sh -n "$INFO_RPC"
-sh -n "$DISK_CHECK"
 jq -e -s 'length == 1 and (.[0]|type) == "object"' "$SRC/files/usr/share/rpcd/acl.d/luci-photonicat1-info.json" >/dev/null
 test -f "$SRC/files/www/luci-static/resources/view/status/include/99_photonicat1_info.js" || exit 1
 

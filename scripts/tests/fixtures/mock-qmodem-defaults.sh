@@ -8,6 +8,7 @@ action=$1; key=$2
 mutate() { jq "$@" "$state" > "$state.next"; mv "$state.next" "$state"; }
 case "$action" in
 get) jq -er --arg key "$key" '.uci[$key] // empty | if type=="array" then join(" ") else . end' "$state" ;;
+show) jq -r --arg key "$key" '.uci|to_entries[]|select(.key==$key or (.key|startswith($key+".")))|"\(.key)=\(.value)"' "$state" ;;
 set)
     name=${key%%=*}; value=${key#*=}
     mutate --arg key "$name" --arg value "$value" '.uci[$key]=$value'
@@ -32,6 +33,12 @@ rename)
     old=${key%%=*}; new="${old%%.*}.${key#*=}"
     mutate --arg old "$old" --arg new "$new" '.uci|=with_entries(if .key==$old or (.key|startswith($old+".")) then .key=($new+(.key|ltrimstr($old))) else . end)'
     ;;
-commit) [ "$(jq -r '.fail_commit//false' "$state")" != true ] ;;
+commit)
+    jq -e --arg package "$key" '(.fail_commit!=true) and (.fail_commit_package!=$package) and ((.fail_commit_when//"") as $marker|.uci[$marker]!="1")' "$state" >/dev/null
+    ;;
+revert)
+    # 失败的完成标记尚未提交，模拟撤销这个新选项。
+    mutate --arg key "$key" 'del(.uci[$key])'
+    ;;
 *) exit 1 ;;
 esac

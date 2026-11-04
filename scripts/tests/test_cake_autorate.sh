@@ -44,21 +44,26 @@ del(.uci["mwan3.qmodem_priority3.interface"])	尚未发现
 CASES
 }
 integration() {
-    mkdir -p "$TEST_TMP/etc/config" "$TEST_TMP/rom/etc/config"
+    mkdir -p "$TEST_TMP/etc/config" "$TEST_TMP/etc/init.d" "$TEST_TMP/rom/etc/config"
     for relative in etc/config/travelmate etc/config/sqm rom/etc/config/sqm; do printf '# default configuration\n' > "$TEST_TMP/$relative"; done
     if [[ ${2:-} == custom ]]; then printf '# user sqm\n' > "$TEST_TMP/etc/config/sqm"; fi
     if [[ $1 == defaults ]]; then
-        cp "$ROOT/files/etc/uci-defaults/92-photonicat-network-tools" "$TEST_TMP/integration.sh"
+        # 完整首启编排由 test_qmodem_defaults.sh 验证；这里聚焦工具配置。
+        sed '$d' "$ROOT/files/etc/uci-defaults/99-photonicat-network" > "$TEST_TMP/integration.sh"
+        printf 'configure_network_tools\n' >> "$TEST_TMP/integration.sh"
+        printf '#!/bin/sh\nexec "%s" "$@"\n' "$bin/cake-service" > "$TEST_TMP/etc/init.d/cake-autorate"
+        chmod +x "$TEST_TMP/etc/init.d/cake-autorate"
+        export PHOTONICAT_DEFAULTS_ROOT="$TEST_TMP"
         export CAKE_TEST_WRITABLE=1
     else
         cp "$ROOT/packages/cake-autorate/files/98-cake-autorate" "$TEST_TMP/integration.sh"
         export CAKE_TEST_WRITABLE=0
+        rewrite "$TEST_TMP/integration.sh" /rom/ @QA_ROM@
+        rewrite "$TEST_TMP/integration.sh" /etc/config/ "$TEST_TMP/etc/config/"
+        rewrite "$TEST_TMP/integration.sh" @QA_ROM@ "$TEST_TMP/rom/"
+        rewrite "$TEST_TMP/integration.sh" /etc/init.d/cake-autorate "$bin/cake-service"
+        rewrite "$TEST_TMP/integration.sh" /var/run/photonicat-cake-autorate/ "$TEST_TMP/runtime/"
     fi
-    rewrite "$TEST_TMP/integration.sh" /rom/ @QA_ROM@
-    rewrite "$TEST_TMP/integration.sh" /etc/config/ "$TEST_TMP/etc/config/"
-    rewrite "$TEST_TMP/integration.sh" @QA_ROM@ "$TEST_TMP/rom/"
-    rewrite "$TEST_TMP/integration.sh" /etc/init.d/cake-autorate "$bin/cake-service"
-    rewrite "$TEST_TMP/integration.sh" /var/run/photonicat-cake-autorate/ "$TEST_TMP/runtime/"
     ok env ACTION=ifup INTERFACE=wwan_5g sh "$TEST_TMP/integration.sh"
     jq -s . "$TEST_TMP/calls" > "$TEST_TMP/calls.json"
 }

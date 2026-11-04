@@ -3,9 +3,11 @@ source "$(dirname "$0")/common.sh"
 FEED=${1:-}
 setup() {
     root="$TEST_TMP/root"; state="$TEST_TMP/state.json"
-    mkdir -p "$root"/{bin,lib,etc/config,etc/rc.d,etc/init.d,usr/bin,etc/hotplug.d/iface}
+    mkdir -p "$root"/{bin,lib,etc/config,etc/rc.d,etc/init.d,usr/bin,etc/hotplug.d/iface,rom/etc/config}
     touch "$root/etc/config/mwan3"
+    touch "$root/etc/config/travelmate" "$root/etc/config/sqm" "$root/rom/etc/config/sqm"
     printf '%s\n' '{"uci":{"qmodem.main":"main","qmodem.main.enable_dial":"1","network.lan":"interface","network.lan.ipaddr":"172.16.0.1","mwan3.failover":"policy","mwan3.failover.use_member":["wan_priority1","wwan_priority2"],"firewall.wan":"zone","firewall.wan.name":"wan","firewall.wan.network":["wan","wwan"]}}' > "$state"
+    update_json "$state" '.uci+={"travelmate.global":"travelmate","sqm.example":"queue","sqm.example.enabled":"1"}'
     cp "$ROOT/scripts/tests/fixtures/mock-qmodem-defaults.sh" "$root/bin/uci"
     chmod +x "$root/bin/uci"
     cat > "$root/lib/functions.sh" <<'LIB'
@@ -22,9 +24,19 @@ config_get() {
 LIB
     export QMODEM_DEFAULTS_STATE="$state" QMODEM_DEFAULTS_CALLS="$TEST_TMP/calls"
     export PHOTONICAT_DEFAULTS_ROOT="$root" IPKG_INSTROOT="$root" PATH="$root/bin:$PATH"
-    defaults="$ROOT/files/etc/uci-defaults/99-photonicat-qmodem"
+    defaults="$ROOT/files/etc/uci-defaults/99-photonicat-network"
 }
 apply_defaults() { ok sh "$defaults"; }
+snapshot_qmodem() {
+    jq -S '.uci|with_entries(select(.key|test("^(qmodem|mwan3|dhcp)\\.|^network\\.(6_2|wwan_5g)(v6)?(\\.|$)")))' "$state" > "$1"
+}
+reject_qmodem_without_touching_its_config() {
+    snapshot_qmodem "$TEST_TMP/before"
+    reject sh "$defaults"
+    snapshot_qmodem "$TEST_TMP/after"
+    assert_same "$TEST_TMP/before" "$TEST_TMP/after"
+    assert_json "$state" '.uci["network.globals.photonicat_tools_v1"]=="1" and .uci["network.globals.photonicat_wan_v1"]=="1" and (.uci|has("qmodem.main.photonicat_fixed_5g_v1")|not)'
+}
 modem() {
     update_json "$state" '.uci+={"qmodem.6_2":"modem-device","qmodem.6_2.data_interface":"usb","qmodem.6_2.path":"/sys/bus/usb/devices/6-2/","qmodem.6_2.apn":"custom-apn","qmodem.6_2.at_port":"/dev/ttyUSB4","qmodem.6_2.metric":"11"}'
 }
@@ -63,7 +75,7 @@ test_unrelated_policy_and_user_tracking_are_preserved() {
 }
 test_fixed_dhcp_conflict_is_rejected_before_write() {
     update_json "$state" '.uci+={"dhcp.wwan_5gv6":"dhcp","dhcp.wwan_5gv6.interface":"other"}'
-    cp "$state" "$TEST_TMP/before"; reject sh "$defaults"; assert_same "$state" "$TEST_TMP/before"
+    reject_qmodem_without_touching_its_config
 }
 test_other_modem_and_disabled_dial_preserved() {
     modem
@@ -73,12 +85,12 @@ test_other_modem_and_disabled_dial_preserved() {
 }
 test_user_interface_conflict_is_rejected_before_write() {
     modem; update_json "$state" '.uci+={"network.wwan_5g":"interface","network.wwan_5g.proto":"dhcp"}'
-    cp "$state" "$TEST_TMP/before"
-    reject sh "$defaults"; assert_same "$state" "$TEST_TMP/before"
+    reject_qmodem_without_touching_its_config
+    assert_json "$state" '.uci["travelmate.global.trm_iface"]=="wwan" and .uci["sqm.example.enabled"]=="0" and (.uci["firewall.wan.network"]|contains(["wwan","wwan_5g","wwan_5gv6"]))'
 }
 test_mwan_section_conflict_is_rejected() {
-    update_json "$state" '.uci["mwan3.wwan_5g"]="rule"'; cp "$state" "$TEST_TMP/before"
-    reject sh "$defaults"; assert_same "$state" "$TEST_TMP/before"
+    update_json "$state" '.uci["mwan3.wwan_5g"]="rule"'
+    reject_qmodem_without_touching_its_config
 }
 test_migration_runs_once_and_preserves_later_changes() {
     apply_defaults
@@ -91,6 +103,46 @@ test_commit_failure_does_not_mark_a_sourced_migration_complete() {
     assert_json "$state" '(.uci|has("qmodem.main.photonicat_fixed_5g_v1")|not)'
     assert_not_has "$OUT" unexpected-success
     assert_has "$ERR" 'UCI commit 失败'
+}
+test_tools_failure_does_not_block_other_defaults_or_reset_them_on_retry() {
+    update_json "$state" '.uci["network.wwan"]="device"'
+    reject sh "$defaults"
+    assert_json "$state" '(.uci|has("network.globals.photonicat_tools_v1")|not) and .uci["network.globals.photonicat_wan_v1"]=="1" and .uci["qmodem.main.photonicat_fixed_5g_v1"]=="1" and .uci["network.wwan"]=="device"'
+    update_json "$state" '.uci+={"network.wwan":"interface","network.wwan.proto":"static","network.wwan.metric":"55","qmodem.main.enable_usb_scan":"0"}|.uci["firewall.wan.network"]=["wan","custom"]'
+    apply_defaults
+    assert_json "$state" '.uci["network.globals.photonicat_tools_v1"]=="1" and .uci["travelmate.global.trm_iface"]=="wwan" and .uci["network.wwan.proto"]=="static" and .uci["network.wwan.metric"]=="55" and .uci["qmodem.main.enable_usb_scan"]=="0" and .uci["firewall.wan.network"]==["wan","custom"]'
+}
+test_missing_firewall_zone_retries_without_resetting_completed_defaults() {
+    update_json "$state" 'del(.uci["firewall.wan"],.uci["firewall.wan.name"],.uci["firewall.wan.network"])'
+    reject sh "$defaults"; assert_has "$ERR" '未发现 WAN 防火墙区域'
+    assert_json "$state" '.uci["network.globals.photonicat_tools_v1"]=="1" and (.uci|has("network.globals.photonicat_wan_v1")|not) and .uci["qmodem.main.photonicat_fixed_5g_v1"]=="1"'
+    update_json "$state" '.uci+={"firewall.wan":"zone","firewall.wan.name":"wan","firewall.wan.network":["wan"],"travelmate.global.trm_iface":"custom","qmodem.main.scan_delay":"29"}'
+    apply_defaults
+    assert_json "$state" '.uci["network.globals.photonicat_wan_v1"]=="1" and (.uci["firewall.wan.network"]|contains(["wwan","wwan_5g","wwan_5gv6"])) and .uci["travelmate.global.trm_iface"]=="custom" and .uci["qmodem.main.scan_delay"]=="29"'
+}
+test_missing_qmodem_does_not_block_network_defaults() {
+    update_json "$state" 'del(.uci["qmodem.main"])'
+    reject sh "$defaults"
+    assert_json "$state" '.uci["network.globals.photonicat_tools_v1"]=="1" and .uci["network.globals.photonicat_wan_v1"]=="1" and .uci["travelmate.global.trm_iface"]=="wwan"'
+    update_json "$state" '.uci+={"qmodem.main":"main","travelmate.global.trm_iface":"custom","sqm.example.enabled":"1"}'
+    apply_defaults
+    assert_json "$state" '.uci["qmodem.main.photonicat_fixed_5g_v1"]=="1" and .uci["travelmate.global.trm_iface"]=="custom" and .uci["sqm.example.enabled"]=="1"'
+}
+test_failed_tools_marker_commit_is_reverted_and_retried() {
+    update_json "$state" '.fail_commit_when="network.globals.photonicat_tools_v1"'
+    reject sh "$defaults"
+    assert_json "$state" '(.uci|has("network.globals.photonicat_tools_v1")|not) and .uci["network.globals.photonicat_wan_v1"]=="1" and .uci["qmodem.main.photonicat_fixed_5g_v1"]=="1"'
+    update_json "$state" 'del(.fail_commit_when)'
+    apply_defaults
+    assert_json "$state" '.uci["network.globals.photonicat_tools_v1"]=="1"'
+}
+test_failed_qmodem_marker_commit_is_reverted_and_retried() {
+    update_json "$state" '.fail_commit_when="qmodem.main.photonicat_fixed_5g_v1"'
+    reject sh "$defaults"
+    assert_json "$state" '(.uci|has("qmodem.main.photonicat_fixed_5g_v1")|not) and .uci["network.globals.photonicat_tools_v1"]=="1" and .uci["network.globals.photonicat_wan_v1"]=="1"'
+    update_json "$state" 'del(.fail_commit_when)|.uci["travelmate.global.trm_iface"]="custom"'
+    apply_defaults
+    assert_json "$state" '.uci["qmodem.main.photonicat_fixed_5g_v1"]=="1" and .uci["travelmate.global.trm_iface"]=="custom"'
 }
 test_old_services_and_hooks_are_removed() {
     for name in photonicat-qmodem-mwan3 photonicat-qmodem-scan; do
@@ -134,7 +186,8 @@ BOOT
 test_fixed_member_and_firewall_are_in_image_defaults() {
     awk '/^config member '\''qmodem_priority3'\''$/ {inside=1;next} /^config / {inside=0} inside && /option interface '\''wwan_5g'\''/ {found=1} END {exit !found}' "$ROOT/files/etc/config/mwan3"
     assert_has "$ROOT/files/etc/config/mwan3" "list use_member 'qmodem_priority3'"
-    assert_has "$ROOT/files/etc/uci-defaults/90-photonicat-wan-firewall" 'for iface in wwan wwan_5g wwan_5gv6; do'
+    assert_has "$defaults" 'for name in wwan wwan_5g wwan_5gv6; do'
+    for old in 90-photonicat-wan-firewall 92-photonicat-network-tools 99-photonicat-qmodem; do assert_absent "$ROOT/files/etc/uci-defaults/$old"; done
     assert_not_has "$ROOT/files/etc/config/network" "config interface 'wwan_5g'"
     for path in etc/init.d/photonicat-qmodem-scan etc/init.d/photonicat-qmodem-mwan3 usr/bin/photonicat-qmodem-scan usr/bin/photonicat-qmodem-mwan3-sync etc/hotplug.d/iface/95-photonicat-qmodem-mwan3; do assert_absent "$ROOT/files/$path"; done
 }

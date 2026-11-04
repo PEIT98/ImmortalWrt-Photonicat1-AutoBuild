@@ -1,0 +1,258 @@
+#!/bin/sh
+# 首启网络配置；各部分独立完成、独立重试，扫描和拨号交给官方 QModem。
+set -eu
+die() { echo "photonicat-network: $*" >&2; exit 1; }
+# uci-defaults 会被放在条件命令中 source，不能只依赖 set -e。
+uci() {
+    local action="$1"
+    if command uci "$@"; then return 0; fi
+    [ "$action" != -q ] || action="$2"
+    case "$action" in
+        get) return 1 ;;
+        delete|del_list) [ "$1" != -q ] || return 1 ;;
+    esac
+    die "UCI $action 失败，保留配置任务供下次启动重试"
+}
+get() { uci -q get "$1" 2>/dev/null || true; }
+
+mark_complete() {
+    local key="$1" package="${1%%.*}"
+    uci set "$key=1"
+    if ! command uci commit "$package"; then
+        # 提交失败时撤销暂存标记，当前启动期间再次运行也能重试。
+        command uci -q revert "$key" >/dev/null 2>&1 || true
+        die "UCI commit 失败，保留配置任务供下次启动重试"
+    fi
+}
+check_network_globals() {
+    local type
+    type=$(get network.globals)
+    [ -z "$type" ] || [ "$type" = globals ] || die 'network.globals 配置类型冲突'
+}
+mark_network_complete() {
+    [ -n "$(get network.globals)" ] || uci set network.globals=globals
+    mark_complete "network.globals.$1"
+}
+
+configure_network_tools() (
+    base=${PHOTONICAT_DEFAULTS_ROOT:-}
+    [ "$(get network.globals.photonicat_tools_v1)" != 1 ] || exit 0
+    check_network_globals
+    if [ -f "$base/etc/config/travelmate" ] && [ -z "$(get travelmate.global.trm_iface)" ]; then
+        type=$(get network.wwan)
+        if [ -z "$type" ]; then
+            uci set network.wwan=interface
+            uci set network.wwan.proto=dhcp
+            uci set network.wwan.metric=20
+            uci commit network
+        elif [ "$type" != interface ]; then
+            die 'network.wwan 已被其他类型配置占用，请手动配置 Travelmate'
+        fi
+        uci set travelmate.global.trm_iface=wwan
+        uci set travelmate.global.trm_enabled=0
+        uci commit travelmate
+    fi
+
+    # 仅关闭未修改的 SQM 默认示例，保留用户配置及已启用的 autorate。
+    if [ -f "$base/rom/etc/config/sqm" ] && cmp -s "$base/etc/config/sqm" "$base/rom/etc/config/sqm"; then
+        queues=$(uci -q show sqm) || die '无法读取 SQM 配置'
+        for section in $(printf '%s\n' "$queues" | sed -n 's/^sqm\.\([^.=]*\)=queue$/\1/p'); do
+            uci set "sqm.$section.enabled=0"
+        done
+        uci commit sqm
+    fi
+    if [ -x "$base/etc/init.d/cake-autorate" ] && [ "$(get cake-autorate.main.enabled)" != 1 ]; then
+        "$base/etc/init.d/cake-autorate" disable || die '无法关闭 cake-autorate 默认启动'
+    fi
+    mark_network_complete photonicat_tools_v1
+)
+
+configure_wan_firewall() (
+    [ "$(get network.globals.photonicat_wan_v1)" != 1 ] || exit 0
+    check_network_globals
+    . "${PHOTONICAT_DEFAULTS_ROOT:-}/lib/functions.sh" || die '无法载入 UCI 配置函数'
+    found=0
+    configure_wan() {
+        [ "$(get "firewall.$1.name")" = wan ] || return 0
+        for name in wwan wwan_5g wwan_5gv6; do
+            case " $(get "firewall.$1.network") " in *" $name "*) ;; *) uci add_list "firewall.$1.network=$name" ;; esac
+        done
+        found=1
+    }
+    config_load firewall || die '无法读取防火墙配置'
+    config_foreach configure_wan zone || die '无法配置 WAN 防火墙区域'
+    [ "$found" -eq 1 ] || die '未发现 WAN 防火墙区域，保留任务供下次启动重试'
+    uci commit firewall
+    mark_network_complete photonicat_wan_v1
+)
+
+configure_qmodem() (
+    [ "$(get qmodem.main)" = main ] || exit 1
+    [ "$(get qmodem.main.photonicat_fixed_5g_v1)" != 1 ] || exit 0
+    [ -f "${PHOTONICAT_DEFAULTS_ROOT:-}/etc/config/mwan3" ] || exit 1
+    . "${PHOTONICAT_DEFAULTS_ROOT:-}/lib/functions.sh" || die '无法载入 UCI 配置函数'
+
+    # 升级时优先迁移旧策略使用的 USB 模组；全新配置默认内置 USB 槽位 6-1。
+    previous=$(get mwan3.qmodem_priority3.interface)
+    primary=; best=99; count=0; first=; slot=6-1
+    choose_modem() {
+        local section="$1" alias path rank=99
+        [ "$(get "qmodem.$section.data_interface")" = usb ] || return 0
+        count=$((count + 1)); first=$section
+        alias=$(get "qmodem.$section.alias")
+        path=$(get "qmodem.$section.path"); path=${path%/}
+        if [ "$alias" = wwan_5g ]; then rank=1
+        elif [ -n "$previous" ] && { [ "$previous" = "$section" ] || [ "$previous" = "$alias" ]; }; then rank=2
+        elif [ "${path##*/}" = 6-1 ]; then rank=3
+        fi
+        if [ "$rank" -lt "$best" ]; then primary=$section; best=$rank; fi
+    }
+    config_load qmodem
+    config_foreach choose_modem modem-device
+    if [ -z "$primary" ] && [ "$count" -eq 1 ]; then primary=$first; fi
+    old_name=
+    if [ -n "$primary" ]; then
+        old_name=$(get "qmodem.$primary.alias")
+        case "$old_name" in ''|-) old_name=$primary ;; esac
+        case "$old_name" in wan|wwan|lan|loopback|wan6|*[!A-Za-z0-9_]*) die '现有模组别名与系统接口冲突' ;; esac
+        path=$(get "qmodem.$primary.path"); path=${path%/}
+        candidate=${path##*/}
+        case "$candidate" in ''|*[!0-9.-]*) ;; *) slot=$candidate ;; esac
+    fi
+
+    # 先核对固定名称的所有权，避免接管用户自己的接口或配置节。
+    for name in wwan_5g wwan_5gv6; do
+        if [ -n "$(get "network.$name")" ]; then
+            [ -n "$primary" ] && [ "$(get "network.$name.modem_config")" = "$primary" ] || die "$name 已被其他配置占用"
+        fi
+    done
+    if [ -n "$(get dhcp.wwan_5gv6)" ]; then
+        [ "$(get dhcp.wwan_5gv6)" = dhcp ] && [ "$(get dhcp.wwan_5gv6.interface)" = wwan_5gv6 ] || die 'wwan_5gv6 DHCP 配置已被其他接口占用'
+    fi
+    for entry in 'wwan_5g interface' 'qmodem_priority3 member' 'failover policy'; do
+        set -- $entry
+        existing=$(get "mwan3.$1")
+        [ -z "$existing" ] || [ "$existing" = "$2" ] || die "mwan3.$1 配置类型冲突"
+    done
+
+    # 用官方槽位预设给以后扫描到的模组赋别名，不增加扫描或热插拔脚本。
+    slot_found=0
+    configure_slot() {
+        [ "$(get "qmodem.$1.slot")" = "$slot" ] || return 0
+        uci set "qmodem.$1.type=usb"
+        uci set "qmodem.$1.alias=wwan_5g"
+        uci set "qmodem.$1.default_metric=30"
+        slot_found=1
+    }
+    config_foreach configure_slot modem-slot
+    if [ "$slot_found" -eq 0 ]; then
+        section=$(uci add qmodem modem-slot) || exit 1
+        uci set "qmodem.$section.slot=$slot"
+        configure_slot "$section"
+    fi
+    if [ -n "$primary" ]; then
+        uci set "qmodem.$primary.alias=wwan_5g"
+        uci set "qmodem.$primary.metric=30"
+    fi
+
+    # 迁移属于同一模组的旧逻辑接口；保留 APN、串口、拨号协议和其他模组。
+    network_changed=0; dhcp_changed=0; migrated=' '
+    if [ -n "$primary" ] && [ "$old_name" != wwan_5g ]; then
+        for suffix in '' v6; do
+            old="$old_name$suffix"; new="wwan_5g$suffix"
+            [ "$(get "network.$old.modem_config")" = "$primary" ] || continue
+            if [ -n "$(get "network.$new")" ]; then uci delete "network.$old"
+            else uci rename "network.$old=$new"
+            fi
+            migrated="$migrated$old "
+            network_changed=1
+        done
+    fi
+    case "$migrated" in
+        *" ${old_name}v6 "*)
+            if [ "$(get "dhcp.${old_name}v6.interface")" = "${old_name}v6" ]; then
+                if [ -n "$(get dhcp.wwan_5gv6)" ]; then uci delete "dhcp.${old_name}v6"
+                else uci rename "dhcp.${old_name}v6=wwan_5gv6"
+                fi
+                uci set dhcp.wwan_5gv6.interface=wwan_5gv6
+                dhcp_changed=1
+            fi
+            ;;
+    esac
+    if [ -n "$primary" ]; then
+        for name in wwan_5g wwan_5gv6; do
+            [ "$(get "network.$name.modem_config")" = "$primary" ] || continue
+            uci set "network.$name.metric=30"; network_changed=1
+        done
+        for option in device ifname; do
+            [ "$(get "network.wwan_5gv6.$option")" != "@$old_name" ] || uci set "network.wwan_5gv6.$option=@wwan_5g"
+        done
+    fi
+
+    # 固定的第三级 mwan3 成员；不再运行接口动态同步服务。
+    case "$migrated" in *" $previous "*) [ -z "$previous" ] || uci -q delete "mwan3.$previous" || true ;; esac
+    if [ -z "$(get mwan3.wwan_5g)" ]; then
+        uci set mwan3.wwan_5g=interface
+        for setting in enabled=1 family=ipv4 track_method=ping reliability=2 count=1 timeout=3 interval=5 down=3 up=3; do uci set "mwan3.wwan_5g.$setting"; done
+        for ip in 223.5.5.5 119.29.29.29 1.1.1.1; do uci add_list "mwan3.wwan_5g.track_ip=$ip"; done
+        uci add_list mwan3.wwan_5g.flush_conntrack=disconnected
+    fi
+    uci set mwan3.wwan_5g.family=ipv4
+    uci set mwan3.qmodem_priority3=member
+    uci set mwan3.qmodem_priority3.interface=wwan_5g
+    uci set mwan3.qmodem_priority3.metric=3
+    uci set mwan3.qmodem_priority3.weight=1
+    if [ -z "$(get mwan3.failover)" ]; then
+        uci set mwan3.failover=policy
+        uci add_list mwan3.failover.use_member=wan_priority1
+        uci add_list mwan3.failover.use_member=wwan_priority2
+        uci set mwan3.failover.last_resort=default
+    fi
+    uci -q del_list mwan3.failover.use_member=wwan5g_priority3 || true
+    if [ "$(get mwan3.wwan5g_priority3)" = member ]; then uci delete mwan3.wwan5g_priority3; fi
+    case " $(get mwan3.failover.use_member) " in *' qmodem_priority3 '*) ;; *) uci add_list mwan3.failover.use_member=qmodem_priority3 ;; esac
+
+    config_load firewall
+    configure_wan() {
+        [ "$(get "firewall.$1.name")" = wan ] || return 0
+        for old in $migrated; do uci -q del_list "firewall.$1.network=$old" || true; done
+    }
+    config_foreach configure_wan zone
+
+    uci set qmodem.main.enable_usb_scan=1
+    uci set qmodem.main.enable_pcie_scan=0
+    uci set qmodem.main.try_preset_usb=0
+    uci set qmodem.main.try_preset_pcie=0
+    uci set qmodem.main.start_delay=0
+    uci set qmodem.main.scan_delay=15
+    uci -q delete qmodem.main.photonicat_usb_scan_defaults || true
+    uci -q delete qmodem.main.photonicat_usb_scan_guard_defaults || true
+    [ "$network_changed" -eq 0 ] || uci commit network
+    [ "$dhcp_changed" -eq 0 ] || uci commit dhcp
+    uci commit mwan3
+    uci commit firewall
+
+    # 清理保留配置升级可能带回的旧服务、启动链接和热插拔入口。
+    base=${PHOTONICAT_DEFAULTS_ROOT:-}
+    for service in photonicat-qmodem-mwan3 photonicat-qmodem-scan; do
+        if [ -x "$base/etc/init.d/$service" ]; then
+            "$base/etc/init.d/$service" stop >/dev/null 2>&1 || true
+            "$base/etc/init.d/$service" disable >/dev/null 2>&1 || true
+        fi
+        for link in "$base"/etc/rc.d/[SK][0-9][0-9]"$service"; do [ ! -L "$link" ] || unlink "$link"; done
+        for file in "$base/etc/init.d/$service" "$base/usr/bin/$service"; do [ ! -f "$file" ] || unlink "$file"; done
+    done
+    for file in etc/hotplug.d/iface/95-photonicat-qmodem-mwan3 usr/bin/photonicat-qmodem-mwan3-sync; do
+        [ ! -f "$base/$file" ] || unlink "$base/$file"
+    done
+    mark_complete qmodem.main.photonicat_fixed_5g_v1
+)
+
+main() {
+    local result=0
+    configure_network_tools || result=1
+    configure_wan_firewall || result=1
+    configure_qmodem || result=1
+    return "$result"
+}
+main "$@"

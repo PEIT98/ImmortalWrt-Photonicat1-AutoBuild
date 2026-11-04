@@ -76,11 +76,11 @@ Wi-Fi 按设备总线路径识别板载 SDIO 网卡，优先为它生成 2.4GHz�
 
 QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称。每次构建通过 Feeds 拉取官方 QModem `main` 和 [PEIT98/Generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main`。Generic 已原样复刻，后续 WebUI 修复在自有仓库维护。
 
-QModem 固定使用逻辑接口 **`wwan_5g`**，由[一次性默认配置](files/etc/uci-defaults/99-photonicat-qmodem)设置官方槽位默认别名和路由 metric 30。全新配置默认内置 USB 槽位 `6-1`；保留配置升级时，优先迁移此前主模组的别名、已有逻辑接口和实际槽位，保留 APN、串口及拨号参数。其他槽位的模组可在官方 QModem 页面将别名设为 `wwan_5g`；该固定出口同时对应一个主模组。
+QModem 固定使用逻辑接口 **`wwan_5g`**，由[一次性网络配置](files/etc/uci-defaults/99-photonicat-network)设置官方槽位默认别名和路由 metric 30。该脚本统一处理 WAN 防火墙区域、Travelmate/SQM 初始状态和 QModem；各部分独立记录完成状态，失败可重试，已完成的配置不重复覆盖。全新配置默认内置 USB 槽位 `6-1`；保留配置升级时，优先迁移此前主模组的别名、已有逻辑接口和实际槽位，保留 APN、串口及拨号参数。其他槽位的模组可在官方 QModem 页面将别名设为 `wwan_5g`；该固定出口同时对应一个主模组。
 
 扫描只使用**官方 QModem 服务**：USB 扫描开启、PCIe 扫描关闭，`scan_delay=15`、`start_delay=0`，关闭厂家预扫描。开机仅排队一次 USB 扫描，热插拔与任务重试由官方服务处理。后台仍可修改扫描选项；项目不再附加补扫、恢复服务或 mwan3 动态同步任务。升级迁移只执行一次，此后保留用户修改。
 
-USB 扫描先按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动收集网卡，匹配后直接跳过后面的端口限制，再按原规则筛选 AT 串口和语音端口。构建时应用[通用兼容补丁](scripts/patches/fix-qmodem-usb-net-filter.sh)，并执行真实扫描函数的回归检查；不按型号、USB ID 或接口编号逐个补白名单。网卡能被收集后，完整识别和拨号仍需要有效 AT 口、型号支持及正常网络配置。
+官方 USB 扫描先按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动收集网卡，再按原规则筛选 AT 串口和语音端口。构建时直接执行[真实扫描函数回归检查](scripts/tests/test_qmodem_usb_net_filter.sh)，验证网卡不受 AT 白名单限制，不再额外改写官方扫描源码。网卡能被收集后，完整识别和拨号仍需要有效 AT 口、型号支持及正常网络配置。
 
 通用 USB `qmi_wwan` 路由拨号默认使用官方 `qmodem_runtime` 将 IPv4 地址、路由和 DNS 交给 netifd，避免拨号程序已有 IP、系统接口仍等待 DHCP。发布上线事件前，拨号程序按模块实际协商结果同步 `raw_ip`，切换失败时不上报上线。保留 ECM、RNDIS、NCM、MBIM、厂商驱动、QMAP、PCIe 和桥接的原有路径；显式 `host_ipv4_owner` 设置及上游可选管理器继续生效。新配置的 mwan3 默认回到主路由兜底，保留配置升级不覆盖已有策略。构建前执行[接管及数据格式回归](scripts/tests/test_qmodem_netifd_owner.sh)，上游关键结构变化时停止并提示核对；仍需 RM520N 真机冷启动、重拨及多线路切换验收。
 
