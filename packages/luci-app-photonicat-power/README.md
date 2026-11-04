@@ -36,12 +36,24 @@ MCU 服务使用 [photonicat/rockchip_rk3568_pcat_manager](https://github.com/ph
 
 ### 软件包下载源
 
-“系统 → 光影猫管理 → 软件包下载源”默认使用 **南京大学加速镜像**，可切换回 **ImmortalWrt 官方源**。保存后到软件包管理刷新列表，列表和软件包下载使用所选地址。
+“系统 → 光影猫管理 → 软件包下载源”默认使用 **南京大学加速镜像**，支持以下选择。保存后到软件包管理刷新列表，列表和软件包下载使用所选地址。
 
-- 只替换已识别的 ImmortalWrt 官方/NJU 地址前缀，保留版本、架构、目标、内核 ABI、仓库路径、标签和注释；第三方仓库保持原样。
+| 软件源 | 地址 |
+| --- | --- |
+| 南京大学（默认） | `https://mirror.nju.edu.cn/immortalwrt` |
+| 中国科学技术大学 | `https://mirrors.ustc.edu.cn/immortalwrt` |
+| 上海交通大学 | `https://mirror.sjtu.edu.cn/immortalwrt` |
+| 浙江大学 | `https://mirrors.zju.edu.cn/immortalwrt` |
+| VSEAN 国内镜像 | `https://mirrors.vsean.net/openwrt` |
+| ImmortalWrt 官方源 | `https://downloads.immortalwrt.org` |
+
+- 识别上述软件源及 NJU、USTC、SJTU 的常见域名别名，保留版本、架构、目标、内核 ABI、仓库路径、标签和注释；第三方仓库保持原样。
 - 读取实际 APK 源配置，兼容主列表、`repositories.d` 与已有 OPKG 兼容源。不关闭签名或 HTTPS 校验，也不自动安装或升级软件包。
-- 选择存入 `/etc/config/photonicat_packages`，保留配置升级后重新应用到生成的软件源列表；自定义源未识别时提示手动检查。
+- ImmortalWrt 中文首启配置会使用 VSEAN；旧版仅识别官方/NJU，导致误判为自定义源并禁用选择。现在可直接识别、切换；读取失败可点击“刷新状态”重试，下拉列表仍可浏览。只有未识别的自定义源会禁止保存，避免覆盖用户配置。
+- 选择存入 `/etc/config/photonicat_packages`，保留配置升级后重新应用到生成的软件源列表；刷新软件源状态与电源轮询均保留未保存的选择。
 - 保存使用互斥锁、同目录临时文件和失败恢复，不提交其他 LuCI 页面尚未保存的修改。
 - 独立 RPC `luci.photonicat_packages getSettings/setSettings` 不依赖 MCU，读取权限与修改权限分开。
 
 软件包镜像与“在线升级”中的 GitHub 固件下载源分别保存。
+
+镜像地址参见 [ImmortalWrt 官方镜像列表](https://downloads.immortalwrt.org/acknowledgements.html)；系统中文默认值参见 [99-default-settings-chinese](https://github.com/immortalwrt/immortalwrt/blob/openwrt-25.12/package/emortal/default-settings/files/99-default-settings-chinese)。本功能只切换下载地址，各镜像提供的软件包范围与上游同步情况有关。

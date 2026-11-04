@@ -19,7 +19,7 @@ class Element {
 }
 function walk(node) { return node instanceof Element ? [node, ...node.children.flatMap(walk)] : []; }
 function harness(readonly = false, offline = false) {
-    const h = { calls: [], polls: [], timers: [], notifications: [],
+    const h = { calls: [], polls: [], timers: [], notifications: [], offline,
         settings: { ok: true, source: 'nju', actual: 'nju', supported: true, repositories: 6, pending: false } };
     const context = {
         view: { extend: value => value }, E: (tag, attrs, children) => new Element(tag, attrs, children),
@@ -27,7 +27,7 @@ function harness(readonly = false, offline = false) {
         rpc: { declare: spec => (...args) => {
             h.calls.push([spec.object, spec.method, args]);
             if (spec.object === 'luci.photonicat_packages') {
-                if (spec.method === 'getSettings') return offline ?
+                if (spec.method === 'getSettings') return h.offline ?
                     Promise.reject(new Error('软件源服务未启动')) : Promise.resolve(h.settings);
                 if (h.saveError) return Promise.resolve({ ok: false, error: h.saveError });
                 h.settings = { ...h.settings, source: args[0], actual: args[0], pending: false };
@@ -54,6 +54,8 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     const h = harness();
     assert.equal(h.writes().length, 0, 'Rendering must not change repositories');
     h.start(); await flush();
+    const expectedSources = ['nju', 'ustc', 'sjtu', 'zju', 'vsean', 'official'];
+    assert.deepEqual(walk(h.root).filter(n => n.tag === 'option' && expectedSources.includes(n.value)).map(n => n.value), expectedSources);
     assert.equal(h.get('pcat-package-source').value, 'nju');
     assert.equal(h.get('pcat-package-save').disabled, false, 'Package settings work while the MCU is offline');
     assert.equal(walk(h.root).find(n => n.textContent === '保存电源模式').disabled, true);
@@ -66,12 +68,36 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     assert.equal(h.settings.source, 'official');
     assert.equal(h.get('pcat-package-save').disabled, false);
     assert.equal(h.calls.filter(c => c[1] === 'set_mode' || c[1] === 'set_daily').length, 0);
+    for (const name of expectedSources) {
+        h.get('pcat-package-source').value = name;
+        await h.get('pcat-package-refresh').fire('click');
+        assert.equal(h.get('pcat-package-source').value, name, 'Refreshing preserves the pending selection');
+        await h.get('pcat-package-save').fire('click');
+        assert.equal(h.settings.source, name, 'Every displayed source can be saved');
+    }
+    h.get('pcat-package-source').value = 'zju';
+    h.offline = true;
+    await h.get('pcat-package-refresh').fire('click');
+    assert.equal(h.get('pcat-package-save').disabled, true, 'A failed refresh invalidates stale availability');
+    h.offline = false;
+    await h.get('pcat-package-refresh').fire('click');
+    assert.equal(h.get('pcat-package-source').value, 'zju', 'A failed refresh and retry preserve the unsaved selection');
+    assert.equal(h.get('pcat-package-save').disabled, false);
+
+    const vsean = harness();
+    vsean.settings = { ...vsean.settings, source: 'nju', actual: 'vsean', pending: true };
+    vsean.start(); await flush();
+    assert.equal(vsean.get('pcat-package-source').disabled, false, 'The distribution Chinese default must not lock the selector');
+    assert.equal(vsean.get('pcat-package-save').disabled, false);
+    assert.ok(walk(vsean.root).some(n => n.textContent.includes('VSEAN')));
 
     const read = harness(true);
     read.start(); await flush();
     assert.equal(read.get('pcat-package-source').disabled, true);
     await read.get('pcat-package-save').fire('click');
     assert.equal(read.writes().length, 0, 'Read-only sessions cannot change repositories');
+    await read.get('pcat-package-refresh').fire('click');
+    assert.equal(read.get('pcat-package-source').disabled, true);
 
     const failed = harness();
     failed.start(); await flush();
@@ -85,6 +111,27 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     const offline = harness(false, true);
     offline.start(); await flush();
     assert.equal(offline.get('pcat-package-save').disabled, true);
-    assert.ok(walk(offline.root).some(n => n.textContent === '软件源服务未启动'));
-    console.log('Package source UI: default mirror, MCU independence, permissions, persistence and failure handling passed');
+    assert.equal(offline.get('pcat-package-source').disabled, false, 'The list remains available when reading fails');
+    assert.equal(offline.get('pcat-package-refresh').disabled, false);
+    assert.ok(walk(offline.root).some(n => n.textContent.includes('软件源服务未启动')));
+    await offline.get('pcat-package-save').fire('click');
+    assert.equal(offline.writes().length, 0);
+    offline.offline = false;
+    await offline.get('pcat-package-refresh').fire('click');
+    assert.equal(offline.get('pcat-package-save').disabled, false, 'A recovered RPC can be retried without reloading the page');
+
+    const custom = harness();
+    custom.settings = { ...custom.settings, actual: 'custom', supported: false };
+    custom.start(); await flush();
+    assert.equal(custom.get('pcat-package-source').disabled, false);
+    assert.equal(custom.get('pcat-package-save').disabled, true, 'Unknown custom sources must not be overwritten');
+    custom.get('pcat-package-source').value = 'ustc';
+    await custom.get('pcat-package-save').fire('click');
+    assert.equal(custom.writes().length, 0);
+    custom.settings = { ...custom.settings, actual: 'vsean', supported: true };
+    await custom.get('pcat-package-refresh').fire('click');
+    assert.equal(custom.get('pcat-package-source').value, 'ustc');
+    await custom.get('pcat-package-save').fire('click');
+    assert.equal(custom.settings.source, 'ustc');
+    console.log('Package source UI: six sources, VSEAN default, retry, MCU independence, permissions and persistence passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

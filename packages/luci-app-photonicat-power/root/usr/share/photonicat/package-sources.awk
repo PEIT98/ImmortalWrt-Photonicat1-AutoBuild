@@ -1,16 +1,24 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Rewrite recognized URL origins only. Preserve paths, tags, whitespace and comments.
-function rewrite(token,    result) {
+BEGIN {
+    origins["official"] = "^https?://downloads[.]immortalwrt[.]org"
+    origins["nju"] = "^https?://mirrors?[.]nju[.]edu[.]cn/immortalwrt"
+    origins["ustc"] = "^https?://((cmcc|chinanet|cernet)[.])?mirrors[.]ustc[.]edu[.]cn/immortalwrt"
+    origins["sjtu"] = "^https?://(mirrors?[.]sjtu[.]edu[.]cn|mirrors[.]sjtug[.]sjtu[.]edu[.]cn)/immortalwrt"
+    origins["zju"] = "^https?://mirrors[.]zju[.]edu[.]cn/immortalwrt"
+    origins["vsean"] = "^https?://mirrors[.]vsean[.]net/openwrt"
+}
+function rewrite(token,    result, kind, recognized) {
     result = token
-    if (token ~ /^https?:\/\/downloads[.]immortalwrt[.]org(\/|$)/) {
-        official++
-        sub(/^https?:\/\/downloads[.]immortalwrt[.]org/, destination, result)
-    } else if (token ~ /^https?:\/\/mirrors?[.]nju[.]edu[.]cn\/immortalwrt(\/|$)/) {
-        nju++
-        sub(/^https?:\/\/mirrors?[.]nju[.]edu[.]cn\/immortalwrt/, destination, result)
-    } else if (token ~ /^https?:\/\//) {
-        other++
+    for (kind in origins) {
+        if (token ~ (origins[kind] "(/|$)")) {
+            counts[kind]++
+            sub(origins[kind], destination, result)
+            recognized = 1
+            break
+        }
     }
+    if (!recognized && token ~ /^https?:\/\//) other++
     if (result != token) changed++
     return result
 }
@@ -32,5 +40,7 @@ function rewrite(token,    result) {
     if (mode == "rewrite") print output rest
 }
 END {
-    if (mode != "rewrite") print official + 0, nju + 0, other + 0, changed + 0
+    if (mode != "rewrite")
+        print counts["official"] + 0, counts["nju"] + 0, counts["ustc"] + 0,
+            counts["sjtu"] + 0, counts["zju"] + 0, counts["vsean"] + 0, other + 0, changed + 0
 }

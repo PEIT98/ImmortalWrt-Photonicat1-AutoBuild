@@ -58,33 +58,51 @@ return view.extend({
         var threshold = E('input', { type: 'number', min: '5', max: '50', step: '1', value: '20', 'class': 'cbi-input-text', disabled: '', 'aria-label': '低电量提醒阈值百分比' });
         var settingsNote = E('p', { 'class': 'pcat-muted' }, '正在读取显示设置……');
         var settingsButton = E('button', { 'class': 'btn cbi-button cbi-button-apply', disabled: '' }, '保存显示设置');
-        var packageReady = false, packageAvailable = false, packageBusy = false;
-        var packageSource = E('select', { id: 'pcat-package-source', 'class': 'cbi-input-select', disabled: '', 'aria-label': '软件包下载源' }, [
-            E('option', { value: 'nju' }, '加速镜像（南京大学）'),
-            E('option', { value: 'official' }, 'ImmortalWrt 官方源')
-        ]);
+        var packageReady = false, packageLoaded = false, packageAvailable = false, packageBusy = false;
+        var packageNames = {
+            nju: '南京大学', ustc: '中国科学技术大学', sjtu: '上海交通大学',
+            zju: '浙江大学', vsean: 'VSEAN 国内镜像', official: 'ImmortalWrt 官方源'
+        };
+        var packageSources = [ 'nju', 'ustc', 'sjtu', 'zju', 'vsean', 'official' ];
+        var packageSource = E('select', { id: 'pcat-package-source', 'class': 'cbi-input-select', disabled: '', 'aria-label': '软件包下载源' },
+            packageSources.map(function(key) { return E('option', { value: key }, packageNames[key]); }));
         var packageNote = E('p', { 'class': 'pcat-muted', role: 'status' }, '正在读取软件源设置……');
         var packageButton = E('button', { id: 'pcat-package-save', 'class': 'btn cbi-button cbi-button-apply', disabled: '' }, '保存软件源');
+        var packageRefresh = E('button', { id: 'pcat-package-refresh', 'class': 'btn cbi-button' }, '刷新状态');
 
         function packageControls() {
-            packageSource.disabled = !writable || !packageReady || packageBusy || !packageAvailable;
-            packageButton.disabled = packageSource.disabled;
+            packageSource.disabled = !writable || packageBusy;
+            packageButton.disabled = packageSource.disabled || !packageReady || !packageAvailable;
+            packageRefresh.disabled = packageBusy;
         }
-        function updatePackageSettings(data) {
-            if (!data || !data.ok || [ 'nju', 'official' ].indexOf(data.source) < 0)
+        function updatePackageSettings(data, keepSelection) {
+            if (!data || !data.ok || packageSources.indexOf(data.source) < 0)
                 throw new Error(data && data.error || '读取软件源设置失败');
-            packageReady = true;
+            packageReady = packageLoaded = true;
             packageAvailable = data.supported === true;
-            packageSource.value = data.source;
-            var actual = { nju: '南京大学加速镜像', official: 'ImmortalWrt 官方源', mixed: '混合软件源', custom: '自定义软件源' };
+            if (!keepSelection) packageSource.value = data.source;
+            var actual = Object.assign({ mixed: '混合软件源', custom: '自定义软件源' }, packageNames);
             packageNote.textContent = '当前：' + (actual[data.actual] || '未识别') + '。';
-            if (!packageAvailable) packageNote.textContent += '请在软件包管理中检查系统软件源地址。';
+            if (!packageAvailable) packageNote.textContent += '未找到可切换的系统源，请到软件包管理检查地址后刷新状态。';
             else packageNote.textContent += data.pending ? '保存后应用所选镜像。' : '更新列表及下载软件包均使用此源。';
             packageControls();
         }
+        function loadPackageSettings() {
+            if (packageBusy) return Promise.resolve();
+            var keepSelection = packageLoaded;
+            packageBusy = true;
+            packageControls();
+            return packageSettingsCall().then(function(result) {
+                updatePackageSettings(result, keepSelection);
+            }).catch(function(err) {
+                packageReady = false;
+                packageNote.textContent = String(err.message || err) + '，请点击刷新状态重试。';
+            }).finally(function() { packageBusy = false; packageControls(); });
+        }
+        packageRefresh.addEventListener('click', loadPackageSettings);
         packageButton.addEventListener('click', function() {
             if (!writable || !packageReady || !packageAvailable || packageBusy) return;
-            if ([ 'nju', 'official' ].indexOf(packageSource.value) < 0) return;
+            if (packageSources.indexOf(packageSource.value) < 0) return;
             packageBusy = true;
             packageControls();
             return savePackageSettingsCall(packageSource.value).then(function(result) {
@@ -305,8 +323,8 @@ return view.extend({
                 E('h3', {}, '软件包下载源'),
                 E('label', { 'class': 'pcat-row', 'for': 'pcat-package-source' }, [ E('span', {}, '系统软件源'), packageSource ]),
                 packageNote,
-                E('p', { 'class': 'pcat-muted' }, '默认使用加速镜像。保存后到软件包管理刷新列表，即可安装或更新软件包。'),
-                E('div', { 'class': 'pcat-actions' }, [ packageButton,
+                E('p', { 'class': 'pcat-muted' }, '默认南京大学，可选择其他国内镜像。保存后到软件包管理刷新列表，再安装或更新软件包。'),
+                E('div', { 'class': 'pcat-actions' }, [ packageButton, packageRefresh,
                     E('a', { 'class': 'btn cbi-button', href: L.url('admin/system/package-manager') }, '软件包管理') ])
             ])
         ]);
@@ -316,7 +334,7 @@ return view.extend({
         window.setTimeout(function() {
             fetchStatus(true);
             settingsCall().then(updatePreferences).catch(function(err) { settingsNote.textContent = String(err); });
-            packageSettingsCall().then(updatePackageSettings).catch(function(err) { packageNote.textContent = String(err.message || err); });
+            loadPackageSettings();
         }, 0);
         poll.add(function() {
             if (readBusy || saving) return Promise.resolve();

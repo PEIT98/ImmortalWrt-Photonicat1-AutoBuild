@@ -34,6 +34,67 @@ test_readonly_status() {
     assert_same "$config" "$TEST_TMP/config.before"; assert_same "$feed" "$TEST_TMP/original"
     assert_absent "$PHOTONICAT_PACKAGE_ROOT/unexpected-package-action"
 }
+test_chinese_default_vsean() {
+    # The real 99-default-settings-chinese rewrites the distribution to VSEAN first.
+    sed '2,4s|https://downloads.immortalwrt.org|https://mirrors.vsean.net/openwrt|' "$TEST_TMP/original" > "$feed"
+    engine_ok
+    assert_json "$OUT" '.actual=="vsean" and .supported and .pending and .repositories==3'
+    engine_ok apply
+    assert_json "$OUT" '.source=="nju" and .actual=="nju" and .changed==3 and (.pending|not)'
+    engine_ok set '{"source":"ustc"}'
+    assert_json "$OUT" '.source=="ustc" and .actual=="ustc" and .supported'
+    engine_ok apply
+    assert_json "$OUT" '.changed==0 and .actual=="ustc"'
+}
+test_all_mirror_switches_and_preserved_paths() {
+    local name destination
+    while read -r name destination; do
+        engine_ok set "{\"source\":\"$name\"}"
+        assert_json "$OUT" ".source==\"$name\" and .actual==\"$name\" and .mirror==\"$destination\" and (.pending|not)"
+        sed "2,4s|https://downloads.immortalwrt.org|$destination|" "$TEST_TMP/original" > "$TEST_TMP/expected"
+        assert_same "$feed" "$TEST_TMP/expected"
+        engine_ok apply
+        assert_json "$OUT" '.changed==0'
+    done <<'MIRRORS'
+nju https://mirror.nju.edu.cn/immortalwrt
+ustc https://mirrors.ustc.edu.cn/immortalwrt
+sjtu https://mirror.sjtu.edu.cn/immortalwrt
+zju https://mirrors.zju.edu.cn/immortalwrt
+vsean https://mirrors.vsean.net/openwrt
+official https://downloads.immortalwrt.org
+MIRRORS
+}
+test_mixed_mirrors_and_aliases() {
+    cat > "$feed" <<'FEEDS'
+@base https://mirrors.nju.edu.cn/immortalwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/base/packages.adb
+https://chinanet.mirrors.ustc.edu.cn/immortalwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/luci/packages.adb
+https://mirrors.sjtug.sjtu.edu.cn/immortalwrt/releases/25.12-SNAPSHOT/targets/rockchip/armv8/packages/packages.adb
+https://mirrors.zju.edu.cn/immortalwrt/releases/25.12-SNAPSHOT/targets/rockchip/armv8/kmods/6.12.112-1-abcdef/packages.adb
+http://mirrors.vsean.net/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/packages/packages.adb
+https://downloads.immortalwrt.org/releases/25.12-SNAPSHOT/packages/aarch64_generic/routing/packages.adb
+FEEDS
+    engine_ok
+    assert_json "$OUT" '.actual=="mixed" and .repositories==6 and .custom_repositories==0'
+    engine_ok set '{"source":"zju"}'
+    assert_json "$OUT" '.actual=="zju" and .repositories==6 and .changed==5'
+    engine_ok set '{"source":"official"}'
+    assert_json "$OUT" '.actual=="official" and .repositories==6 and .changed==6'
+    assert_has "$feed" '/kmods/6.12.112-1-abcdef/packages.adb'
+}
+test_unrecognized_and_similar_mirror_urls() {
+    cat >> "$feed" <<'FEEDS'
+https://mirrors.vsean.net/openwrt-extra/releases/custom/packages.adb
+https://mirror.nju.edu.cn/immortalwrt-thirdparty/packages.adb
+https://mirrors.ustc.edu.cn/immortalwrt.evil.invalid/packages.adb
+https://mirrors.zju.edu.cn.evil.invalid/immortalwrt/packages.adb
+https://mirror.sjtu.edu.cn/other-repo/packages.adb
+FEEDS
+    tail -n 5 "$feed" > "$TEST_TMP/custom-urls"
+    engine_ok set '{"source":"sjtu"}'
+    assert_json "$OUT" '.repositories==3 and .custom_repositories==7'
+    tail -n 5 "$feed" > "$TEST_TMP/custom-after"
+    assert_same "$TEST_TMP/custom-urls" "$TEST_TMP/custom-after"
+}
 test_factory_accelerator_paths_and_mode() {
     engine_ok apply
     assert_json "$OUT" '.changed==3 and .actual=="nju"'
@@ -81,6 +142,8 @@ test_malformed_input() {
 test_custom_only() {
     printf 'https://my-custom.invalid/immortalwrt/packages.adb\n' > "$feed"
     cp "$feed" "$TEST_TMP/custom"
+    engine_ok
+    assert_json "$OUT" '.actual=="custom" and (.supported|not) and .repositories==0'
     engine_reject set '{"source":"official"}'
     assert_same "$feed" "$TEST_TMP/custom"; assert_same "$config" "$TEST_TMP/config.before"
 }
@@ -89,7 +152,7 @@ test_commit_rollback() {
     printf 'https://downloads.immortalwrt.org/snapshots/packages/aarch64_generic/luci\n' > "$other"
     cp "$other" "$TEST_TMP/second"
     touch "$PHOTONICAT_PACKAGE_ROOT/uci-fail"
-    engine_reject set '{"source":"nju"}'
+    engine_reject set '{"source":"zju"}'
     assert_same "$other" "$TEST_TMP/second"; assert_same "$feed" "$TEST_TMP/original"; assert_same "$config" "$TEST_TMP/config.before"
 }
 test_concurrent_write() {

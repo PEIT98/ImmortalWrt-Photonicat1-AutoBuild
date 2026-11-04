@@ -74,6 +74,6 @@
 
 存储组件来源：SlAlot/ImmortalWrt_Photonicat1 `ae655185`，AGPL-3.0-only。移植保持现有网络、电源与 Docker 配置。
 
-**软件包镜像设置：** `luci-app-photonicat-power` 内置 `photonicat-package-source` 与 `package-sources.awk`，由同页独立 RPC 管理。首启脚本 `99-photonicat-package-source` 默认应用南京大学镜像，并在保留配置升级后重用用户选择。`tests/test_package_sources.sh` 与前端测试覆盖源路径保留、权限、失败恢复和 MCU 离线场景。
+**软件包镜像设置：** `luci-app-photonicat-power` 内置 `photonicat-package-source` 与 `package-sources.awk`，由同页独立 RPC 管理，支持南京大学、中科大、上海交大、浙江大学、VSEAN 和官方源。识别系统中文默认的 VSEAN，读取失败可在页面刷新重试；未知自定义源仅禁止保存，不锁住下拉列表。首启脚本 `99-photonicat-package-source` 默认应用南京大学镜像，并在保留配置升级后重用用户选择。`tests/test_package_sources.sh` 与前端测试覆盖镜像轮换、域名别名、路径保留、权限、失败恢复、状态重试和 MCU 离线场景。
 
 **构建依赖兼容：** `patches/fix-weechat-provider.sh` 将 WeeChat 的虚拟依赖落实为已有的默认 `weechat-minimal` 提供者，避免 Kconfig 自递归，不额外启用该插件。自动扩容使用明确选中的 `coreutils-od` 读取文件系统头，不依赖默认配置中隐藏的 BusyBox 选项。配置解析日志保存在 `photonicat-defconfig.log`，发现递归错误时立即停止。
