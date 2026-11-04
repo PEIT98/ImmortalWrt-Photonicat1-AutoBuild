@@ -172,16 +172,13 @@ jobs:
           grep -Fq "case 'E':" immortalwrt/feeds/qmodem/application/quectel_CM_5G_M/src/main.c
           bash scripts/tests/test_qmodem_netifd_owner.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
 
-      - name: 检查 QModem 开机就绪与限次恢复
+      - name: 检查 QModem 固定接口与单一扫描
         run: |
-          sh scripts/patches/fix-qmodem-boot-scan.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
-          sh -n immortalwrt/feeds/qmodem/application/qmodem/files/etc/init.d/qmodem_init
-          sh -n files/usr/bin/photonicat-qmodem-scan
-          sh -n files/etc/init.d/photonicat-qmodem-scan
-          sh -n files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan
-          test -x immortalwrt/files/usr/bin/photonicat-qmodem-scan
-          test -x immortalwrt/files/etc/init.d/photonicat-qmodem-scan
-          bash scripts/tests/test_qmodem_boot_scan.sh
+          sh -n files/etc/uci-defaults/99-photonicat-qmodem
+          test -x immortalwrt/files/etc/uci-defaults/99-photonicat-qmodem
+          test ! -e immortalwrt/files/usr/bin/photonicat-qmodem-mwan3-sync
+          test ! -e immortalwrt/files/usr/bin/photonicat-qmodem-scan
+          bash scripts/tests/test_qmodem_defaults.sh "$GITHUB_WORKSPACE/immortalwrt/feeds/qmodem"
 
       - name: 修复 iStore 软件包名称
         run: bash scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"

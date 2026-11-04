@@ -39,7 +39,7 @@ test -f "$dir/build-sources.txt"
   echo '- 新增固件版本与 Docker 存储状态卡片、Bandix Plus 多接口流量统计（首次默认关闭）' 
   echo '- Docker 存储仅检测提示，不会自动挂载、迁移、格式化或修改防火墙' 
   echo '- 优先级：WAN > Wi-Fi 中继 > 5G/LTE'
-  echo '- 首次配置 Wi-Fi STA/wwan 和 QModem APN；5G 拨号接口自动识别，无需固定别名'
+  echo '- 首次配置 Wi-Fi STA/wwan 和 QModem APN；5G 别名预设为 wwan_5g，mwan3 固定绑定'
   echo
   echo '<details><summary>源码版本</summary>'
   echo

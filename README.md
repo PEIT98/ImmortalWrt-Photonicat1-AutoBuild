@@ -76,9 +76,9 @@ Wi-Fi 按设备总线路径识别板载 SDIO 网卡，优先为它生成 2.4GHz�
 
 QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称。每次构建通过 Feeds 拉取官方 QModem `main` 和 [PEIT98/Generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main`。Generic 已原样复刻，后续 WebUI 修复在自有仓库维护。
 
-QModem 全新配置默认开启 **USB 开机扫描**，关闭 QModem 的 PCIe 自动扫描及 PCIe 预设探测，并保留 **15 秒追加扫描**。通过[独立首启配置](files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan)应用一次；[启动补扫兼容修复](scripts/patches/fix-qmodem-boot-scan.sh)让官方延时扫描遵从 USB/PCIe 开关，两个开关均关闭时不追加扫描。之后可在 **移动网络 → QModem → QModem 设置** 调整，保留配置升级时不会重置已有扫描选项。不固定 USB 槽位或模组别名，继续动态识别接口。
+QModem 固定使用逻辑接口 **`wwan_5g`**，由[一次性默认配置](files/etc/uci-defaults/99-photonicat-qmodem)设置官方槽位默认别名和路由 metric 30。全新配置默认内置 USB 槽位 `6-1`；保留配置升级时，优先迁移此前主模组的别名、已有逻辑接口和实际槽位，保留 APN、串口及拨号参数。其他槽位的模组可在官方 QModem 页面将别名设为 `wwan_5g`；该固定出口同时对应一个主模组。
 
-[开机识别检查](files/usr/bin/photonicat-qmodem-scan)最多检查 36 轮，轮间等待 5 秒：只有同一 USB 设备的网卡和串口均已出现、但 QModem 尚未生成有效配置时，才按实际槽位补充扫描；扫描队列忙碌时继续等待，不重复提交正在处理的任务，识别完成后退出。持续约 90 秒未识别且没有其他已识别模组在用时，最多重启一次官方扫描服务，恢复前重新检查配置。该检查不发送 AT 命令、不改写模组配置，遵从关闭扫描、禁止自动探测及固定设备设置；现有依赖即可运行，无需 `timeout` 命令。升级旧固件会单独启用检查服务，之后手动禁用该服务的选择会保留。查看日志：`logread -e photonicat-qmodem-scan`。启动恢复尚需 FM160-EAU 真机重启复测，脚本回归通过不等于已完成硬件验收。
+扫描只使用**官方 QModem 服务**：USB 扫描开启、PCIe 扫描关闭，`scan_delay=15`、`start_delay=0`，关闭厂家预扫描。开机仅排队一次 USB 扫描，热插拔与任务重试由官方服务处理。后台仍可修改扫描选项；项目不再附加补扫、恢复服务或 mwan3 动态同步任务。升级迁移只执行一次，此后保留用户修改。
 
 USB 扫描先按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动收集网卡，匹配后直接跳过后面的端口限制，再按原规则筛选 AT 串口和语音端口。构建时应用[通用兼容补丁](scripts/patches/fix-qmodem-usb-net-filter.sh)，并执行真实扫描函数的回归检查；不按型号、USB ID 或接口编号逐个补白名单。网卡能被收集后，完整识别和拨号仍需要有效 AT 口、型号支持及正常网络配置。
 
@@ -92,11 +92,11 @@ Generic 位于 **移动网络 → 模组管理**，与官方 **QModem** 页面�
 
 ## 多 WAN 优先级
 
-**主备优先级（从高到低）：第一，有线 WAN（`wan`）；第二，Wi-Fi 中继（`wwan`）；第三，QModem 5G/LTE（动态接口）。**
+**主备优先级（从高到低）：有线 WAN（`wan`）→ Wi-Fi 中继（`wwan`）→ QModem 5G/LTE（`wwan_5g`）。**
 
-mwan3 使用数值越小优先级越高的 `metric`。QModem 的 IPv4 拨号接口由同步脚本自动识别，可能是 `6_1`、`6_2` 或自定义别名；更换模组、接口变化及重启后会尝试自动同步。无需手动设置固定接口名。
+mwan3 三个成员的优先级 metric 分别为 1、2、3；第三级固定绑定 `wwan_5g`。QModem 负责创建和维护该逻辑接口，不预设 `usb0`、`wwan0` 或串口，不再运行动态同步脚本。内核网卡名与模组配置节名称仍由 QModem 识别。
 
-Wi-Fi 中继使用 `wwan` 接口；QModem 拨号接口由系统自动识别，无需手动指定接口名称。mwan3 自动按照有线 WAN、Wi-Fi、5G 的顺序进行故障切换。查看当前动态绑定和在线状态：
+查看固定绑定及在线状态：
 
 ```sh
 uci -q get mwan3.qmodem_priority3.interface

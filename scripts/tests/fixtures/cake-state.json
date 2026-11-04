@@ -1,11 +1,11 @@
 {
   "uci": {
     "cake-autorate.main.interface": "auto",
-    "mwan3.qmodem_priority3.interface": "6_2",
-    "network.6_2": "interface",
-    "network.6_2.modem_config": "modem2",
+    "mwan3.qmodem_priority3.interface": "wwan_5g",
+    "network.wwan_5g": "interface",
+    "network.wwan_5g.modem_config": "modem2",
     "qmodem.modem2": "modem-device",
-    "mwan3.6_2.family": "ipv4",
+    "mwan3.wwan_5g.family": "ipv4",
     "sqm.mobile.enabled": "1",
     "sqm.mobile.interface": "wwan0_2",
     "sqm.mobile.qdisc": "cake",

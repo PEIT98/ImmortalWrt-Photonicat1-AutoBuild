@@ -21,7 +21,6 @@
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 修复 iStore 包名与 taskd 依赖检查 |
 | [fix-qmodem-usb-net-filter.sh](patches/fix-qmodem-usb-net-filter.sh) | 将 USB 网卡识别前置，收集后跳过端口限制，再按原规则处理 AT 串口和语音端口；无需逐型号补接口 |
 | [fix-qmodem-netifd-owner.sh](patches/fix-qmodem-netifd-owner.sh) | 通用 USB QMI 默认由 netifd 接管 IPv4，并按协商结果同步数据格式；保留其他拨号路径及显式设置 |
-| [fix-qmodem-boot-scan.sh](patches/fix-qmodem-boot-scan.sh) | 使官方延时补扫遵从 USB/PCIe 开关，关闭自动扫描时不额外扫描 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz，按网卡频段能力回退；统一 SSID Photonicat-Wrt，WPA2-PSK，密码 photonicat |
 
 ## 光影猫电池与电源插件
@@ -56,7 +55,7 @@
 
 **QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [PEIT98/luci-app-qmodem-generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装。Generic 原样复刻自 LianXia233，后续 WebUI 修复直接在自有仓库维护。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
 
-**QModem 开机识别：** [有限启动检查](../files/usr/bin/photonicat-qmodem-scan)在实际 USB 网卡和同设备串口出现后补充扫描，最多检查 36 轮；识别成功即退出，持续失败且没有已识别模组时最多恢复一次扫描服务。已有配置及关闭扫描的选择保留，不写死槽位、AT 口和网卡名，不要求安装 `timeout`。独立的首启迁移标记使旧固件升级也能启用此服务。执行 `bash scripts/tests/test_qmodem_boot_scan.sh` 验证晚到端口、异步去重、恢复边界、单次恢复、并发锁及旧配置迁移；Actions 在固件编译前执行同一测试。
+**QModem 固定接口：** [一次性配置](../files/etc/uci-defaults/99-photonicat-qmodem)将主 USB 模组的官方别名设置为 `wwan_5g`、路由 metric 设置为 30，并配置对应槽位的默认别名；mwan3 第三级成员固定使用该接口。全新配置使用槽位 `6-1`，升级时迁移现有主模组的实际槽位和接口，保留 APN、串口和拨号协议。这里只修改逻辑接口名，不固定内核网卡或 AT 口。扫描只使用官方服务：USB 开启、PCIe 关闭，`scan_delay=15`、`start_delay=0`、厂家预扫描关闭；项目不再另设补扫或动态接口同步服务。`tests/test_qmodem_defaults.sh` 验证配置迁移及官方启动时仅排队一次扫描。
 
 **在线升级：** `build/prepare.sh` 将项目内完整 [luci-app-online-upgrade](../packages/luci-app-online-upgrade/) 复制到 `package/luci-app-online-upgrade`，光影猫适配直接在插件源码中维护。Actions 核对整套源码复制一致，并将同一个 Release 标签写进固件身份和发布任务；检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。固件及 Release 的来源信息记录本项目提交号。
 

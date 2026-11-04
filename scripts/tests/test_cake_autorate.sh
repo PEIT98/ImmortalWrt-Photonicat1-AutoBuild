@@ -9,14 +9,14 @@ setup() {
     prepare="$ROOT/packages/cake-autorate/files/cake-autorate-prepare"
 }
 test_check_readonly() {
-    ok sh "$prepare" check; assert_has "$OUT" 6_2; assert_has "$OUT" ifb-real2
+    ok sh "$prepare" check; assert_has "$OUT" wwan_5g; assert_has "$OUT" ifb-real2
     assert_absent "$TEST_TMP/runtime"
 }
 test_generate_configuration() {
     ok sh "$prepare" config
     local config; config=$(cat "$OUT")
     assert_eq 600 "$(stat -c %a "$config")"; ok bash -n "$config"
-    for value in 'dl_if="ifb-real2"' 'ul_if="wwan0_2"' 'mwan3 use 6_2 exec' '-4 -I wwan0_2' log_to_file=0; do assert_has "$config" "$value"; done
+    for value in 'dl_if="ifb-real2"' 'ul_if="wwan0_2"' 'mwan3 use wwan_5g exec' '-4 -I wwan0_2' log_to_file=0; do assert_has "$config" "$value"; done
 }
 test_rejection_matrix() {
     while IFS=$'\t' read -r expr message; do
@@ -26,7 +26,7 @@ test_rejection_matrix() {
 del(.uci["mwan3.qmodem_priority3.interface"])	尚未发现
 .uci["qmodem.modem2"]="other"	不是有效的 QModem
 .status.up=false	未连接
-.uci["mwan3.6_2.family"]="ipv6"	IPv4
+.uci["mwan3.wwan_5g.family"]="ipv6"	IPv4
 .uci["firewall.@defaults[0].flow_offloading_hw"]="1"	流量分载
 .queues=[]	唯一的 CAKE
 .queues+=["duplicate"]|.uci+={"sqm.duplicate.enabled":"1","sqm.duplicate.interface":"wwan0_2","sqm.duplicate.qdisc":"cake"}	唯一的 CAKE
@@ -59,7 +59,7 @@ integration() {
     rewrite "$TEST_TMP/integration.sh" @QA_ROM@ "$TEST_TMP/rom/"
     rewrite "$TEST_TMP/integration.sh" /etc/init.d/cake-autorate "$bin/cake-service"
     rewrite "$TEST_TMP/integration.sh" /var/run/photonicat-cake-autorate/ "$TEST_TMP/runtime/"
-    ok env ACTION=ifup INTERFACE=6_2 sh "$TEST_TMP/integration.sh"
+    ok env ACTION=ifup INTERFACE=wwan_5g sh "$TEST_TMP/integration.sh"
     jq -s . "$TEST_TMP/calls" > "$TEST_TMP/calls.json"
 }
 test_first_boot_defaults() {
@@ -91,7 +91,7 @@ test_enabled_hotplug() {
     assert_json "$TEST_TMP/calls.json" 'any(.[];.==["cake-service","restart"])'
 }
 test_unrelated_hotplug() {
-    update_json "$state" '.uci["cake-autorate.main.enabled"]="1"|.uci["mwan3.qmodem_priority3.interface"]="other"|del(.uci["network.6_2.modem_config"])'; integration hotplug
+    update_json "$state" '.uci["cake-autorate.main.enabled"]="1"|.uci["mwan3.qmodem_priority3.interface"]="other"|del(.uci["network.wwan_5g.modem_config"])'; integration hotplug
     assert_json "$TEST_TMP/calls.json" 'all(.[];.[0]!="cake-service")'
 }
 run_tests "$@"

@@ -6,7 +6,7 @@
 
 ## 配置和启用
 
-1. 在官方 QModem 页面完成拨号。`auto` 从 `mwan3.qmodem_priority3.interface` 读取实际接口，不固定为 `6_1` 或 `6_2`。
+1. 在官方 QModem 页面完成拨号。`auto` 从 `mwan3.qmodem_priority3.interface` 读取出口；本固件默认固定为 `wwan_5g`。
 2. 查询实际设备（在 LuCI 网页终端执行）：
 
    ```sh

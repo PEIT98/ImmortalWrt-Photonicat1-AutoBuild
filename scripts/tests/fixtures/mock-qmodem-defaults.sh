@@ -1,0 +1,37 @@
+#!/bin/sh
+# Private UCI state for first-boot migration; never accesses host configuration.
+set -eu
+state=$QMODEM_DEFAULTS_STATE
+jq -cn --args '$ARGS.positional' -- "$@" >> "$QMODEM_DEFAULTS_CALLS"
+while [ "${1:-}" = -q ]; do shift; done
+action=$1; key=$2
+mutate() { jq "$@" "$state" > "$state.next"; mv "$state.next" "$state"; }
+case "$action" in
+get) jq -er --arg key "$key" '.uci[$key] // empty | if type=="array" then join(" ") else . end' "$state" ;;
+set)
+    name=${key%%=*}; value=${key#*=}
+    mutate --arg key "$name" --arg value "$value" '.uci[$key]=$value'
+    ;;
+add)
+    index=$(jq -r '(.next//0)+1' "$state")
+    section=$(printf 'cfg%03d' "$index")
+    mutate --arg key "$key.$section" --arg value "$3" --argjson next "$index" '.uci[$key]=$value|.next=$next'
+    printf '%s\n' "$section"
+    ;;
+add_list|del_list)
+    name=${key%%=*}; value=${key#*=}
+    mutate --arg key "$name" --arg value "$value" --arg action "$action" '
+      (.uci[$key]//[]) as $old |
+      (if ($old|type)=="array" then $old else ($old|split(" ")) end) as $list |
+      .uci[$key]=(if $action=="add_list" then $list+[$value] else $list-[$value] end)'
+    ;;
+delete)
+    mutate --arg key "$key" '.uci|=with_entries(select(.key!=$key and (.key|startswith($key+".")|not)))'
+    ;;
+rename)
+    old=${key%%=*}; new="${old%%.*}.${key#*=}"
+    mutate --arg old "$old" --arg new "$new" '.uci|=with_entries(if .key==$old or (.key|startswith($old+".")) then .key=($new+(.key|ltrimstr($old))) else . end)'
+    ;;
+commit) [ "$(jq -r '.fail_commit//false' "$state")" != true ] ;;
+*) exit 1 ;;
+esac

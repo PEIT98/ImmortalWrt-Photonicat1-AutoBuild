@@ -31,4 +31,4 @@ config interface 'wwan'
 	option metric '10'
 	option peerdns '1'
 
-# QModem 根据模块/插槽动态创建逻辑接口，例如 6_1、6_2；mwan3 自动识别 modem_config。
+# QModem 使用固定别名 wwan_5g 创建实际拨号接口；不预设设备名或 DHCP 接口。

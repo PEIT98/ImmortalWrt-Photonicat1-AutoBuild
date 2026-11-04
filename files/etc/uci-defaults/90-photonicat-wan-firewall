@@ -1,11 +1,11 @@
 #!/bin/sh
-# 首次开机把 Wi-Fi 中继接口加入 WAN 区域；QModem 接口由动态同步脚本更新。
+# 首次开机把无线中继与固定 QModem 接口加入 WAN 区域。
 # 不修改密码、APN、LAN 地址，不覆盖其余防火墙配置。
 changed=0
 for section in $(uci -q show firewall | awk -F= '$2=="zone" {sub(/^firewall\./,"",$1); print $1}'); do
     [ "$(uci -q get "firewall.$section.name")" = 'wan' ] || continue
     current=" $(uci -q get "firewall.$section.network") "
-    for iface in wwan; do
+    for iface in wwan wwan_5g wwan_5gv6; do
         case "$current" in
             *" $iface "*) ;;
             *) uci -q add_list "firewall.$section.network=$iface" || exit 1; changed=1 ;;
@@ -14,5 +14,5 @@ for section in $(uci -q show firewall | awk -F= '$2=="zone" {sub(/^firewall\./,"
     [ "$changed" -eq 0 ] || uci commit firewall
     exit 0
 done
-echo 'warning: 未发现 WAN 防火墙区域，请自行添加 wwan（QModem 由动态脚本管理）' >&2
+echo 'warning: 未发现 WAN 防火墙区域，请自行添加 wwan、wwan_5g、wwan_5gv6' >&2
 exit 0

@@ -153,29 +153,14 @@ MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
 jq -e -s 'length == 1 and (.[0]|type) == "object"' "$MODEM_MENU" >/dev/null
 grep -Fq '"title": "移动网络"' "$MODEM_MENU"
 
-# 与 QModem 的动态接口命名解耦：不预设固定模组别名，只同步 mwan3 第三级 WAN。
-QMODEM_MWAN_SYNC="$SRC/files/usr/bin/photonicat-qmodem-mwan3-sync"
-QMODEM_MWAN_INIT="$SRC/files/etc/init.d/photonicat-qmodem-mwan3"
-QMODEM_MWAN_HOTPLUG="$SRC/files/etc/hotplug.d/iface/95-photonicat-qmodem-mwan3"
-QMODEM_MWAN_DEFAULT="$SRC/files/etc/uci-defaults/95-photonicat-qmodem-mwan3"
-for file in "$QMODEM_MWAN_SYNC" "$QMODEM_MWAN_INIT" "$QMODEM_MWAN_HOTPLUG" "$QMODEM_MWAN_DEFAULT"; do
-  test -f "$file" || { echo "::error::缺少 QModem 动态 mwan3 文件 $file" >&2; exit 1; }
-  chmod 755 "$file"
-  sh -n "$file"
-done
-grep -Fq 'modem_config' "$QMODEM_MWAN_SYNC" || exit 1
-grep -Fq 'qmodem_priority3' "$QMODEM_MWAN_SYNC" || exit 1
-
-# 首启配置与有限开机检查，不固定 USB 槽位、网卡名或 AT 端口。
-QMODEM_USB_SCAN_DEFAULT="$SRC/files/etc/uci-defaults/zz-photonicat-qmodem-usb-scan"
-QMODEM_USB_SCAN_INIT="$SRC/files/etc/init.d/photonicat-qmodem-scan"
-QMODEM_USB_SCAN_HELPER="$SRC/files/usr/bin/photonicat-qmodem-scan"
-for file in "$QMODEM_USB_SCAN_DEFAULT" "$QMODEM_USB_SCAN_INIT" "$QMODEM_USB_SCAN_HELPER"; do
-  test -f "$file" || { echo "::error::缺少 QModem USB 开机检查文件：$file" >&2; exit 1; }
-  chmod 755 "$file"
-  sh -n "$file"
-done
-echo 'QModem：等待 USB 网卡和串口就绪后补扫；持续未识别时限次恢复，保留已有模组配置。'
+# 固定逻辑接口 wwan_5g；由一次性 UCI 默认配置设置官方槽位别名和单一扫描。
+QMODEM_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-qmodem"
+test -f "$QMODEM_DEFAULT" || { echo '::error::缺少 QModem 固定接口配置' >&2; exit 1; }
+chmod 755 "$QMODEM_DEFAULT"
+sh -n "$QMODEM_DEFAULT"
+test ! -e "$SRC/files/usr/bin/photonicat-qmodem-mwan3-sync"
+test ! -e "$SRC/files/usr/bin/photonicat-qmodem-scan"
+echo 'QModem：固定别名 wwan_5g，仅使用官方 USB 扫描服务。'
 
 # MyOpenWrt 的 tom_modem 权限文件直接放进固件根文件系统。
 # rpcd 启动时会读取 acl.d，无须额外设置首启重启。
@@ -275,4 +260,4 @@ echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.
 bash "$(dirname "$0")/../patches/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫配置、官方 QModem main、Generic main 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'
-echo '首次使用：QModem 扫描拨号即可，无需固定别名；mwan3 自动识别实际 IPv4 接口，Wi-Fi STA 绑定 wwan'
+echo '首次使用：QModem 别名预设为 wwan_5g，mwan3 固定绑定；Wi-Fi STA 绑定 wwan'
