@@ -6,11 +6,11 @@
 
 ## 配置和启用
 
-1. 在官方 QModem 页面完成拨号。`auto` 从 `mwan3.qmodem_priority3.interface` 读取出口；本固件默认固定为 `wwan_5g`。
+1. 在官方 QModem 页面完成拨号，记下实际逻辑接口名。固件默认关闭 mwan3；使用本工具前需手动将实际接口加入 mwan3 的 IPv4 管理并启用服务，在 `cake-autorate.main.interface` 填写该接口名。`auto` 仅兼容已有的 `mwan3.qmodem_priority3.interface` 设置，项目不再创建该成员。
 2. 查询实际设备（在 LuCI 网页终端执行）：
 
    ```sh
-   iface="$(uci -q get mwan3.qmodem_priority3.interface)"
+   iface="$(uci -q get cake-autorate.main.interface)"
    ubus call "network.interface.$iface" status
    ```
 

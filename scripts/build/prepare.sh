@@ -175,14 +175,14 @@ MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
 jq -e -s 'length == 1 and (.[0]|type) == "object"' "$MODEM_MENU" >/dev/null
 grep -Fq '"title": "移动网络"' "$MODEM_MENU"
 
-# 首启统一配置 WAN 区域、网络工具和 QModem 固定接口，各部分独立重试。
+# 首启恢复旧项目的网络定制，保留管理地址、无线配置及网络工具。
 NETWORK_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-network"
 test -f "$NETWORK_DEFAULT" || { echo '::error::缺少光影猫首启网络配置' >&2; exit 1; }
 chmod 755 "$NETWORK_DEFAULT"
 sh -n "$NETWORK_DEFAULT"
 test ! -e "$SRC/files/usr/bin/photonicat-qmodem-mwan3-sync"
 test ! -e "$SRC/files/usr/bin/photonicat-qmodem-scan"
-echo 'QModem：固定别名 wwan_5g，仅使用官方 USB 扫描服务。'
+echo 'QModem：使用官方扫描、串口识别和拨号默认值；mwan3 默认关闭。'
 
 # MyOpenWrt 的 tom_modem 权限文件直接放进固件根文件系统。
 # rpcd 启动时会读取 acl.d，无须额外设置首启重启。
@@ -278,4 +278,4 @@ echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.
 bash "$(dirname "$0")/../patches/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫配置、官方 QModem main、Generic main 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'
-echo '首次使用：QModem 别名预设为 wwan_5g，mwan3 固定绑定；Wi-Fi STA 绑定 wwan'
+echo '首次使用：在官方 QModem 页面扫描并拨号；多 WAN 策略按需手动配置。'

@@ -78,31 +78,25 @@ Wi-Fi 按设备总线路径识别板载 SDIO 网卡，优先为它生成 2.4GHz�
 
 QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文件](files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 覆盖名称。每次构建通过 Feeds 拉取官方 QModem `main` 和 [PEIT98/Generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main`。Generic 已原样复刻，后续 WebUI 修复在自有仓库维护。
 
-QModem 固定使用逻辑接口 **`wwan_5g`**，由[一次性网络配置](files/etc/uci-defaults/99-photonicat-network)设置官方槽位默认别名和路由 metric 30。该脚本统一处理 WAN 防火墙区域、Travelmate/SQM 初始状态和 QModem；各部分独立记录完成状态，失败可重试，已完成的配置不重复覆盖。全新配置默认内置 USB 槽位 `6-1`；保留配置升级时，优先迁移此前主模组的别名、已有逻辑接口和实际槽位，保留 APN、串口及拨号参数。其他槽位的模组可在官方 QModem 页面将别名设为 `wwan_5g`；该固定出口同时对应一个主模组。
+QModem 的扫描、USB 网卡与 AT 串口识别、拨号及数据格式处理使用官方源码。扫描开关、厂家预扫描和延时使用软件包原始默认值，接口名由 QModem 自动生成。QMI 驱动选择恢复为官方默认的厂商驱动；原有 USB 数据协议和串口驱动继续内置。项目只保留 ndisc6 的下载及编译兼容修复。
 
-扫描只使用**官方 QModem 服务**：USB 扫描开启、PCIe 扫描关闭，`scan_delay=15`、`start_delay=0`，关闭厂家预扫描。开机仅排队一次 USB 扫描，热插拔与任务重试由官方服务处理。后台仍可修改扫描选项；项目不再附加补扫、恢复服务或 mwan3 动态同步任务。升级迁移只执行一次，此后保留用户修改。
+[首启网络配置](files/etc/uci-defaults/99-photonicat-network)会对旧项目配置执行一次恢复：备份 `/etc/config` 中的相关配置，撤销固定 `wwan_5g` 别名、项目槽位预设、强制扫描参数及 `host_ipv4_owner=netifd`，移除属于该模组的旧固定接口，由官方 QModem 重新创建。APN、串口、PDP 和拨号协议保留。备份目录为 `/root/photonicat-network-backup.*`；失败会保留任务供下次启动重试，成功后保留用户后续修改。
 
-官方 USB 扫描先按已绑定的 ECM、RNDIS、NCM、QMI、MBIM 驱动收集网卡，再按原规则筛选 AT 串口和语音端口。构建时直接执行[真实扫描函数回归检查](scripts/tests/test_qmodem_usb_net_filter.sh)，验证网卡不受 AT 白名单限制，不再额外改写官方扫描源码。网卡能被收集后，完整识别和拨号仍需要有效 AT 口、型号支持及正常网络配置。
-
-通用 USB `qmi_wwan` 路由拨号默认使用官方 `qmodem_runtime` 将 IPv4 地址、路由和 DNS 交给 netifd，避免拨号程序已有 IP、系统接口仍等待 DHCP。发布上线事件前，拨号程序按模块实际协商结果同步 `raw_ip`，切换失败时不上报上线。保留 ECM、RNDIS、NCM、MBIM、厂商驱动、QMAP、PCIe 和桥接的原有路径；显式 `host_ipv4_owner` 设置及上游可选管理器继续生效。新配置的 mwan3 默认回到主路由兜底，保留配置升级不覆盖已有策略。构建前执行[接管及数据格式回归](scripts/tests/test_qmodem_netifd_owner.sh)，上游关键结构变化时停止并提示核对；仍需 RM520N 真机冷启动、重拨及多线路切换验收。
+[构建检查](scripts/build/verify-qmodem-feeds.sh)核对 QModem 运行源码与拉取的官方提交一致；[首启回归](scripts/tests/test_qmodem_defaults.sh)覆盖新装、旧配置恢复、备份、失败重试和配置保留。管理地址与 Wi-Fi 默认值保持不变。
 
 QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`qmodem-smsd` 和 `sms-forwarder-next` 是新版 Next 的短信依赖。
 
-Generic 位于 **移动网络 → 模组管理**，与官方 **QModem** 页面并列，共用同一套模组配置和拨号后台。先用官方页面完成扫描与拨号，避免同时从两个页面修改模组。Generic 原版自带缓存、流量采集、MT5700 SIM 初始化和支持库同步服务，也会随上游一并启用。
+Generic 位于 **移动网络 → 模组管理**，与官方 **QModem** 页面并列，共用官方 ubus 接口、模组配置和拨号后台，保留其流量统计与模组支持库组件。固件和 Release 记录两个软件源的实际提交号。
 
-**试用限制：** 本次核对的 Generic `a5a2b41` 控制任务未统一传递 QModem `73d1839` 要求的模组配置节，AT、异步短信和流量定时清零参数也有差异；拨号、短信及其他修改操作先用官方 Next 页面。Generic 本地后台测试的服务停止与锁清理项目未全部通过，尚需真机验证。固件和 Release 会记录两个上游的实际提交号，便于排查和回退。
+## 多 WAN 设置
 
-## 多 WAN 优先级
+mwan3 插件保留，首次安装及从旧项目升级恢复时关闭服务，使用普通系统路由。项目不再预设三路主备策略或为 QM 绑定固定接口；已有 mwan3 配置保留供需要时手动调整。无线中继仍绑定 `wwan`，Travelmate 首次默认关闭。
 
-**主备优先级（从高到低）：有线 WAN（`wan`）→ Wi-Fi 中继（`wwan`）→ QModem 5G/LTE（`wwan_5g`）。**
-
-mwan3 三个成员的优先级 metric 分别为 1、2、3；第三级固定绑定 `wwan_5g`。QModem 负责创建和维护该逻辑接口，不预设 `usb0`、`wwan0` 或串口，不再运行动态同步脚本。内核网卡名与模组配置节名称仍由 QModem 识别。
-
-查看固定绑定及在线状态：
+如需重新启用多 WAN，请先完成官方 QModem 拨号，再按实际接口名配置 mwan3 并手动启用服务。恢复后排查网络可先查看：
 
 ```sh
-uci -q get mwan3.qmodem_priority3.interface
-mwan3 status
+ip route
+ubus call network.interface dump
 ```
 
 ## 在线升级
@@ -124,7 +118,7 @@ mwan3 status
 
 - **系统 → 文件管理器**：官方 `luci-app-filemanager`，在浏览器中管理文件。
 - **Aurora 设置**：使用 [主题作者的配置插件](https://github.com/eamonxg/luci-app-aurora-config)，支持配色、布局、背景、字体与快捷按钮。
-- **服务 → Travelmate**：官方无线热点管理，预关联现有 `wwan`，首次保持关闭。扫描并添加自己的热点后再启用；有线 → Wi-Fi → 5G 的 mwan3 优先级保持原配置。
+- **服务 → Travelmate**：官方无线热点管理，预关联现有 `wwan`，首次保持关闭。扫描并添加自己的热点后再启用；多 WAN 策略由用户手动配置。
 - **cake-autorate + 网络 → SQM QoS**：稳定版 3.2.1，首次关闭。先按实测速率设置 SQM 的 CAKE 队列和六项带宽，再启动自动调整；跟随实际 QModem 接口，详见 [配置步骤](packages/cake-autorate/README.md)。
 
 ## 编译与下载

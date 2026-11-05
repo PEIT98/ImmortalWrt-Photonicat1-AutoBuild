@@ -19,7 +19,6 @@ config interface 'lan'
 config interface 'wan'
 	option device 'eth0'
 	option proto 'dhcp'
-	option metric '5'
 
 config interface 'wan6'
 	option device '@wan'
@@ -28,7 +27,6 @@ config interface 'wan6'
 # Wi-Fi STA 中继绑定到 wwan
 config interface 'wwan'
 	option proto 'dhcp'
-	option metric '10'
 	option peerdns '1'
 
-# QModem 使用固定别名 wwan_5g 创建实际拨号接口；不预设设备名或 DHCP 接口。
+# 模组逻辑接口、设备及路由均由官方 QModem 按扫描结果创建。

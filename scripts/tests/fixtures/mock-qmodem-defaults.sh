@@ -3,8 +3,21 @@
 set -eu
 state=$QMODEM_DEFAULTS_STATE
 jq -cn --args '$ARGS.positional' -- "$@" >> "$QMODEM_DEFAULTS_CALLS"
-while [ "${1:-}" = -q ]; do shift; done
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -q|-X) shift ;;
+        -c|-t) shift 2 ;;
+        *) break ;;
+    esac
+done
 action=$1; key=$2
+case "$key" in
+    stock_qmodem_*)
+        [ "$action" = get ] || exit 1
+        jq -er --arg key "qmodem.${key#*.}" '.rom[$key] // empty' "$state"
+        exit
+        ;;
+esac
 mutate() { jq "$@" "$state" > "$state.next"; mv "$state.next" "$state"; }
 case "$action" in
 get) jq -er --arg key "$key" '.uci[$key] // empty | if type=="array" then join(" ") else . end' "$state" ;;

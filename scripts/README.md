@@ -20,7 +20,7 @@
 | --- | --- |
 | [enable-qca9377-ath10k-sdio.sh](patches/enable-qca9377-ath10k-sdio.sh) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 检查 taskd 等依赖，在临时副本中校验并固定 iStore 包名，通过后写回 |
-| [fix-qmodem-netifd-owner.sh](patches/fix-qmodem-netifd-owner.sh) | 通用 USB QMI 默认由 netifd 接管 IPv4，并按协商结果同步数据格式；保留其他拨号路径及显式设置 |
+| [fix-qmodem-ndisc6-source.sh](patches/fix-qmodem-ndisc6-source.sh) | 仅处理 ndisc6 源码下载和编译兼容，保留官方 QM 扫描及拨号源码 |
 | [wifi-band-order.sh](patches/wifi-band-order.sh) | 板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz，按网卡频段能力回退；统一 SSID Photonicat-Wrt，WPA2-PSK，密码 photonicat |
 
 ## 光影猫电池与电源插件
@@ -39,7 +39,7 @@
 ## 配置来源与构建顺序
 
 1. `build/prepare.sh` 继承参考设备配置，并加载兼容补丁。
-2. 更新 Feeds 后，直接回归官方 QModem USB 扫描函数，再由 `build/select-packages.sh` 应用根目录 `photonicat1.config` 的覆盖项。
+2. 更新 Feeds 后，核对官方 QModem 运行源码保持原样，再由 `build/select-packages.sh` 应用根目录 `photonicat1.config` 的覆盖项。
 3. 运行 `make defconfig`，再由 `build/verify-config.sh` 检查依赖。
 4. 编译成功后用 `build/release-notes.sh` 生成发布说明。
 
@@ -55,7 +55,9 @@
 
 **QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [PEIT98/luci-app-qmodem-generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装。Generic 原样复刻自 LianXia233，后续 WebUI 修复直接在自有仓库维护。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
 
-**首启网络配置：** [统一入口](../files/etc/uci-defaults/99-photonicat-network)负责 WAN 防火墙区域、网络工具和 QModem；各部分独立记录完成状态，某部分失败可下次重试，已完成部分保留用户后续修改。QModem 主 USB 模组的官方别名设置为 `wwan_5g`、路由 metric 设置为 30，并配置对应槽位的默认别名；mwan3 第三级成员固定使用该接口。全新配置使用槽位 `6-1`，升级时迁移现有主模组的实际槽位和接口，保留 APN、串口和拨号协议。这里只修改逻辑接口名，不固定内核网卡或 AT 口。扫描只使用官方服务：USB 开启、PCIe 关闭，`scan_delay=15`、`start_delay=0`、厂家预扫描关闭；项目不再另设补扫或动态接口同步服务。`tests/test_qmodem_defaults.sh` 验证配置迁移、失败重试及官方启动时仅排队一次扫描；`tests/test_qmodem_usb_net_filter.sh` 直接验证官方扫描源码。
+**首启网络配置：** [统一入口](../files/etc/uci-defaults/99-photonicat-network)保留 Travelmate/SQM 初始状态和无线中继的 WAN 区域配置。对旧项目配置先备份，再一次性撤销固定别名、槽位预设、扫描参数和 IPv4 接管选项，移除该模组旧固定接口，保留 APN、串口、PDP 及拨号协议。mwan3 保留插件和配置，恢复时关闭服务；普通路由由系统与官方 QM 维护。各部分独立完成和重试，成功后保留用户后续修改。`tests/test_qmodem_defaults.sh` 验证恢复、备份、重试、配置保留和运行源码检查；不再改写或单独测试官方 USB 排序逻辑。
+
+**QModem 源码与驱动：** `build/verify-qmodem-feeds.sh runtime` 检查扫描、AT 端口、拨号、连接管理器和驱动目录与官方提交一致；仅 ndisc6 有构建兼容修复。QMI 选择项恢复为上游默认的厂商驱动，依赖检查同步核对移远、广和通和芯讯通三个驱动包。
 
 **在线升级：** `build/prepare.sh` 将项目内完整 [luci-app-online-upgrade](../packages/luci-app-online-upgrade/) 复制到 `package/luci-app-online-upgrade`，光影猫适配直接在插件源码中维护。Actions 核对整套源码复制一致，并将同一个 Release 标签写进固件身份和发布任务；检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。固件及 Release 的来源信息记录本项目提交号。
 

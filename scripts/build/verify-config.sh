@@ -15,7 +15,10 @@ need=(
   CONFIG_PACKAGE_luci-app-qmodem-generic
   CONFIG_PACKAGE_qmodem-smsd
   CONFIG_PACKAGE_sms-forwarder-next
-  CONFIG_PACKAGE_qmodem_INCLUDE_generic-qmi-wwan
+  CONFIG_PACKAGE_qmodem_INCLUDE_vendor-qmi-wwan
+  CONFIG_PACKAGE_kmod-qmi_wwan_q
+  CONFIG_PACKAGE_kmod-qmi_wwan_f
+  CONFIG_PACKAGE_kmod-qmi_wwan_s
   CONFIG_PACKAGE_qmodem_INCLUDE_SEAL
   CONFIG_PACKAGE_qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
   CONFIG_PACKAGE_luci-app-online-upgrade
@@ -192,11 +195,8 @@ absent=(
   CONFIG_PACKAGE_luci-app-smartdns
   CONFIG_PACKAGE_luci-app-zerotier
   CONFIG_PACKAGE_kmod-ath10k-sdio
-  CONFIG_PACKAGE_qmodem_INCLUDE_vendor-qmi-wwan
+  CONFIG_PACKAGE_qmodem_INCLUDE_generic-qmi-wwan
   CONFIG_PACKAGE_qmodem_INCLUDE_nss-qmi-wwan
-  CONFIG_PACKAGE_kmod-qmi_wwan_q
-  CONFIG_PACKAGE_kmod-qmi_wwan_f
-  CONFIG_PACKAGE_kmod-qmi_wwan_s
   CONFIG_PACKAGE_qmodem-sipd
   CONFIG_PACKAGE_smartdns
   CONFIG_PACKAGE_zerotier

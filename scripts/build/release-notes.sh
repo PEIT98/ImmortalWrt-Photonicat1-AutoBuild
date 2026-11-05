@@ -39,8 +39,9 @@ test -f "$dir/build-sources.txt"
   echo '- 内置 SQM/CAKE 与 cake-autorate 稳定版，默认关闭；先填写实测速率并配置队列，再手动开启'
   echo '- 新增固件版本与 Docker 存储状态卡片、Bandix Plus 多接口流量统计（首次默认关闭）' 
   echo '- Docker 存储仅检测提示，不会自动挂载、迁移、格式化或修改防火墙' 
-  echo '- 优先级：WAN > Wi-Fi 中继 > 5G/LTE'
-  echo '- 首次配置 Wi-Fi STA/wwan 和 QModem APN；5G 别名预设为 wwan_5g，mwan3 固定绑定'
+  echo '- QModem 使用官方扫描、串口识别、拨号及默认厂商 QMI 驱动；接口名自动生成'
+  echo '- mwan3 保留插件和配置，默认关闭；多 WAN 策略按需手动配置'
+  echo '- 旧项目配置会先备份，再一次性撤销固定 5G 接口和扫描参数，保留 APN 与拨号配置'
   echo
   echo '<details><summary>源码版本</summary>'
   echo

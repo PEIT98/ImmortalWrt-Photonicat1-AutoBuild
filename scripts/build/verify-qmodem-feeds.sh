@@ -1,7 +1,7 @@
 #!/bin/bash
 # 解析实际 Feeds，检查依赖、APK 版本、菜单及安装文件冲突。
 set -euo pipefail
-mode=${1:?需要 dependencies 或 menus}
+mode=${1:?需要 dependencies、menus 或 runtime}
 root=${2:-.}
 next="$root/feeds/qmodem/luci/luci-app-qmodem-next"
 generic="$root/feeds/qmodem_generic/luci-app-qmodem-generic"
@@ -31,6 +31,13 @@ elif [[ $mode == menus ]]; then
         LC_ALL=C comm -12 "$tmp/generic" "$tmp/upstream" > "$tmp/shared"
         if [[ -s $tmp/shared ]]; then cat "$tmp/shared" >&2; echo '::error::上游插件安装文件重名' >&2; exit 1; fi
     done
+elif [[ $mode == runtime ]]; then
+    # ndisc6 仅有构建兼容修复；扫描、串口、拨号程序和驱动必须保持官方源码。
+    git -C "$root/feeds/qmodem" diff --exit-code HEAD -- \
+        application/qmodem application/modem_scan application/quectel_CM_5G_M driver
+    extra=$(git -C "$root/feeds/qmodem" ls-files --others --exclude-standard -- \
+        application/qmodem application/modem_scan application/quectel_CM_5G_M driver)
+    [[ -z $extra ]] || { echo "::error::QModem 运行源码存在额外文件：$extra" >&2; exit 1; }
 else
     echo '::error::未知 Feeds 校验模式' >&2; exit 1
 fi

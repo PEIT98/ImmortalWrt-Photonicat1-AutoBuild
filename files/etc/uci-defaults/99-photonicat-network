@@ -1,5 +1,5 @@
 #!/bin/sh
-# 首启网络配置；各部分独立完成、独立重试，扫描和拨号交给官方 QModem。
+# 首启工具配置及一次性撤销旧网络定制；扫描、串口和拨号由官方 QModem 管理。
 set -e
 # 系统 UCI 函数库会直接读取可选变量及参数，不能在 nounset 下调用。
 # 此文件也可能被 uci-defaults source，须同时关闭继承的 nounset。
@@ -46,7 +46,6 @@ configure_network_tools() (
         if [ -z "$type" ]; then
             uci set network.wwan=interface
             uci set network.wwan.proto=dhcp
-            uci set network.wwan.metric=20
             uci commit network
         elif [ "$type" != interface ]; then
             die 'network.wwan 已被其他类型配置占用，请手动配置 Travelmate'
@@ -77,7 +76,7 @@ configure_wan_firewall() (
     found=0
     configure_wan() {
         [ "$(get "firewall.$1.name")" = wan ] || return 0
-        for name in wwan wwan_5g wwan_5gv6; do
+        for name in wwan; do
             case " $(get "firewall.$1.network") " in *" $name "*) ;; *) uci add_list "firewall.$1.network=$name" ;; esac
         done
         found=1
@@ -89,173 +88,120 @@ configure_wan_firewall() (
     mark_network_complete photonicat_wan_v1
 )
 
-configure_qmodem() (
-    [ "$(get qmodem.main)" = main ] || exit 1
-    [ "$(get qmodem.main.photonicat_fixed_5g_v1)" != 1 ] || exit 0
-    [ -f "${PHOTONICAT_DEFAULTS_ROOT:-}/etc/config/mwan3" ] || exit 1
-    . "${PHOTONICAT_DEFAULTS_ROOT:-}/lib/functions.sh" || die '无法载入 UCI 配置函数'
-
-    # 升级时优先迁移旧策略使用的 USB 模组；全新配置默认内置 USB 槽位 6-1。
-    previous=$(get mwan3.qmodem_priority3.interface)
-    primary=; best=99; count=0; first=; slot=6-1
-    choose_modem() {
-        local section="$1" alias path rank=99
-        [ "$(get "qmodem.$section.data_interface")" = usb ] || return 0
-        count=$((count + 1)); first=$section
-        alias=$(get "qmodem.$section.alias")
-        path=$(get "qmodem.$section.path"); path=${path%/}
-        if [ "$alias" = wwan_5g ]; then rank=1
-        elif [ -n "$previous" ] && { [ "$previous" = "$section" ] || [ "$previous" = "$alias" ]; }; then rank=2
-        elif [ "${path##*/}" = 6-1 ]; then rank=3
-        fi
-        if [ "$rank" -lt "$best" ]; then primary=$section; best=$rank; fi
-    }
-    config_load qmodem
-    config_foreach choose_modem modem-device
-    if [ -z "$primary" ] && [ "$count" -eq 1 ]; then primary=$first; fi
-    old_name=
-    if [ -n "$primary" ]; then
-        old_name=$(get "qmodem.$primary.alias")
-        case "$old_name" in ''|-) old_name=$primary ;; esac
-        case "$old_name" in wan|wwan|lan|loopback|wan6|*[!A-Za-z0-9_]*) die '现有模组别名与系统接口冲突' ;; esac
-        path=$(get "qmodem.$primary.path"); path=${path%/}
-        candidate=${path##*/}
-        case "$candidate" in ''|*[!0-9.-]*) ;; *) slot=$candidate ;; esac
-    fi
-
-    # 先核对固定名称的所有权，避免接管用户自己的接口或配置节。
-    for name in wwan_5g wwan_5gv6; do
-        if [ -n "$(get "network.$name")" ]; then
-            [ -n "$primary" ] && [ "$(get "network.$name.modem_config")" = "$primary" ] || die "$name 已被其他配置占用"
-        fi
-    done
-    if [ -n "$(get dhcp.wwan_5gv6)" ]; then
-        [ "$(get dhcp.wwan_5gv6)" = dhcp ] && [ "$(get dhcp.wwan_5gv6.interface)" = wwan_5gv6 ] || die 'wwan_5gv6 DHCP 配置已被其他接口占用'
-    fi
-    for entry in 'wwan_5g interface' 'qmodem_priority3 member' 'failover policy'; do
-        set -- $entry
-        existing=$(get "mwan3.$1")
-        [ -z "$existing" ] || [ "$existing" = "$2" ] || die "mwan3.$1 配置类型冲突"
-    done
-
-    # 用官方槽位预设给以后扫描到的模组赋别名，不增加扫描或热插拔脚本。
-    slot_found=0
-    configure_slot() {
-        [ "$(get "qmodem.$1.slot")" = "$slot" ] || return 0
-        uci set "qmodem.$1.type=usb"
-        uci set "qmodem.$1.alias=wwan_5g"
-        uci set "qmodem.$1.default_metric=30"
-        slot_found=1
-    }
-    config_foreach configure_slot modem-slot
-    if [ "$slot_found" -eq 0 ]; then
-        section=$(uci add qmodem modem-slot) || exit 1
-        uci set "qmodem.$section.slot=$slot"
-        configure_slot "$section"
-    fi
-    if [ -n "$primary" ]; then
-        uci set "qmodem.$primary.alias=wwan_5g"
-        uci set "qmodem.$primary.metric=30"
-    fi
-
-    # 迁移属于同一模组的旧逻辑接口；保留 APN、串口、拨号协议和其他模组。
-    network_changed=0; dhcp_changed=0; migrated=' '
-    if [ -n "$primary" ] && [ "$old_name" != wwan_5g ]; then
-        for suffix in '' v6; do
-            old="$old_name$suffix"; new="wwan_5g$suffix"
-            [ "$(get "network.$old.modem_config")" = "$primary" ] || continue
-            if [ -n "$(get "network.$new")" ]; then uci delete "network.$old"
-            else uci rename "network.$old=$new"
-            fi
-            migrated="$migrated$old "
-            network_changed=1
-        done
-    fi
-    case "$migrated" in
-        *" ${old_name}v6 "*)
-            if [ "$(get "dhcp.${old_name}v6.interface")" = "${old_name}v6" ]; then
-                if [ -n "$(get dhcp.wwan_5gv6)" ]; then uci delete "dhcp.${old_name}v6"
-                else uci rename "dhcp.${old_name}v6=wwan_5gv6"
-                fi
-                uci set dhcp.wwan_5gv6.interface=wwan_5gv6
-                dhcp_changed=1
-            fi
-            ;;
-    esac
-    if [ -n "$primary" ]; then
-        for name in wwan_5g wwan_5gv6; do
-            [ "$(get "network.$name.modem_config")" = "$primary" ] || continue
-            uci set "network.$name.metric=30"; network_changed=1
-        done
-        for option in device ifname; do
-            [ "$(get "network.wwan_5gv6.$option")" != "@$old_name" ] || uci set "network.wwan_5gv6.$option=@wwan_5g"
-        done
-    fi
-
-    # 固定的第三级 mwan3 成员；不再运行接口动态同步服务。
-    case "$migrated" in *" $previous "*) [ -z "$previous" ] || uci -q delete "mwan3.$previous" || true ;; esac
-    if [ -z "$(get mwan3.wwan_5g)" ]; then
-        uci set mwan3.wwan_5g=interface
-        for setting in enabled=1 family=ipv4 track_method=ping reliability=2 count=1 timeout=3 interval=5 down=3 up=3; do uci set "mwan3.wwan_5g.$setting"; done
-        for ip in 223.5.5.5 119.29.29.29 1.1.1.1; do uci add_list "mwan3.wwan_5g.track_ip=$ip"; done
-        uci add_list mwan3.wwan_5g.flush_conntrack=disconnected
-    fi
-    uci set mwan3.wwan_5g.family=ipv4
-    uci set mwan3.qmodem_priority3=member
-    uci set mwan3.qmodem_priority3.interface=wwan_5g
-    uci set mwan3.qmodem_priority3.metric=3
-    uci set mwan3.qmodem_priority3.weight=1
-    if [ -z "$(get mwan3.failover)" ]; then
-        uci set mwan3.failover=policy
-        uci add_list mwan3.failover.use_member=wan_priority1
-        uci add_list mwan3.failover.use_member=wwan_priority2
-        uci set mwan3.failover.last_resort=default
-    fi
-    uci -q del_list mwan3.failover.use_member=wwan5g_priority3 || true
-    if [ "$(get mwan3.wwan5g_priority3)" = member ]; then uci delete mwan3.wwan5g_priority3; fi
-    case " $(get mwan3.failover.use_member) " in *' qmodem_priority3 '*) ;; *) uci add_list mwan3.failover.use_member=qmodem_priority3 ;; esac
-
-    config_load firewall
-    configure_wan() {
-        [ "$(get "firewall.$1.name")" = wan ] || return 0
-        for old in $migrated; do uci -q del_list "firewall.$1.network=$old" || true; done
-    }
-    config_foreach configure_wan zone
-
-    uci set qmodem.main.enable_usb_scan=1
-    uci set qmodem.main.enable_pcie_scan=0
-    uci set qmodem.main.try_preset_usb=0
-    uci set qmodem.main.try_preset_pcie=0
-    uci set qmodem.main.start_delay=0
-    uci set qmodem.main.scan_delay=15
-    uci -q delete qmodem.main.photonicat_usb_scan_defaults || true
-    uci -q delete qmodem.main.photonicat_usb_scan_guard_defaults || true
-    [ "$network_changed" -eq 0 ] || uci commit network
-    [ "$dhcp_changed" -eq 0 ] || uci commit dhcp
-    uci commit mwan3
-    uci commit firewall
-
-    # 清理保留配置升级可能带回的旧服务、启动链接和热插拔入口。
+restore_network_defaults() (
+    [ "$(get network.globals.photonicat_stock_network_v1)" != 1 ] || exit 0
+    check_network_globals
     base=${PHOTONICAT_DEFAULTS_ROOT:-}
+    . "$base/lib/functions.sh" || die '无法载入 UCI 配置函数'
+
+    legacy=0
+    for key in photonicat_fixed_5g_v1 photonicat_usb_scan_defaults photonicat_usb_scan_guard_defaults; do
+        [ -z "$(get "qmodem.main.$key")" ] || legacy=1
+    done
+    [ -z "$(get mwan3.qmodem_priority3)" ] || legacy=1
+    migrated=' '
+    if [ "$legacy" -eq 1 ]; then
+        # 仅对旧项目配置执行一次恢复，先备份；保留 APN、串口及拨号协议。
+        [ "$(get qmodem.main)" = main ] || die '等待 QModem 配置后重试恢复'
+        [ -s "$base/rom/etc/config/qmodem" ] || die '缺少官方 QModem 默认配置，保留任务供下次启动重试'
+        umask 077
+        mkdir -p "$base/root" || die '无法创建配置备份目录'
+        backup=$(mktemp -d "$base/root/photonicat-network-backup.XXXXXX") || die '无法创建网络配置备份'
+        for package in qmodem network firewall dhcp mwan3; do
+            [ ! -f "$base/etc/config/$package" ] || cp -p "$base/etc/config/$package" "$backup/" || die '网络配置备份失败'
+        done
+        # 使用独立包名读取 ROM，避免 /tmp/.uci/qmodem 的暂存值污染默认值。
+        stock_package="stock_qmodem_$$"
+        cp "$base/rom/etc/config/qmodem" "$backup/$stock_package" || die '无法读取官方默认配置'
+        mkdir "$backup/delta" || die '无法准备默认配置读取目录'
+        [ "$(command uci -c "$backup" -t "$backup/delta" -q get "$stock_package.main")" = main ] || die '官方 QModem 默认配置无效'
+        for key in enable_usb_scan enable_pcie_scan try_preset_usb try_preset_pcie start_delay scan_delay; do
+            value=$(command uci -c "$backup" -t "$backup/delta" -q get "$stock_package.main.$key") || value=
+            if [ -n "$value" ]; then uci set "qmodem.main.$key=$value"
+            else uci -q delete "qmodem.main.$key" || true
+            fi
+        done
+        remove_interface() {
+            local name="$1" modem="$2"
+            [ "$(get "network.$name")" = interface ] || return 0
+            [ "$(get "network.$name.modem_config")" = "$modem" ] || return 0
+            uci delete "network.$name"
+            if [ "$(get "dhcp.$name")" = dhcp ] && [ "$(get "dhcp.$name.interface")" = "$name" ]; then
+                uci delete "dhcp.$name"
+            fi
+            migrated="$migrated$name "
+        }
+        restore_device() {
+            local section="$1"
+            if [ "$(get "qmodem.$section.alias")" = wwan_5g ]; then
+                uci delete "qmodem.$section.alias"
+                [ "$(get "qmodem.$section.metric")" != 30 ] || uci delete "qmodem.$section.metric"
+                remove_interface wwan_5g "$section"
+                remove_interface wwan_5gv6 "$section"
+            fi
+            [ "$(get "qmodem.$section.host_ipv4_owner")" != netifd ] || uci delete "qmodem.$section.host_ipv4_owner"
+            return 0
+        }
+        restore_slot() {
+            local section="$1" extra settings
+            [ "$(get "qmodem.$section.alias")" = wwan_5g ] || return 0
+            settings=$(command uci -X -q show "qmodem.$section") || die '无法读取旧槽位配置'
+            extra=$(printf '%s\n' "$settings" | awk -F= -v section="$section" '{key=$1; sub(/^.*\./,"",key); if(key!=section && key!~/^(slot|type|alias|default_metric)$/) n++} END{print n+0}')
+            if [ "$extra" -eq 0 ] && [ "$(get "qmodem.$section.type")" = usb ] && [ "$(get "qmodem.$section.default_metric")" = 30 ]; then
+                uci delete "qmodem.$section"
+            else
+                # 含 GPIO 等额外设置的槽位保留，仅撤销项目写入的别名和优先级。
+                uci delete "qmodem.$section.alias"
+                [ "$(get "qmodem.$section.default_metric")" != 30 ] || uci delete "qmodem.$section.default_metric"
+            fi
+        }
+        config_load qmodem || die '无法读取 QModem 配置'
+        config_foreach restore_device modem-device || die '无法恢复模组配置'
+        config_foreach restore_slot modem-slot || die '无法恢复槽位配置'
+        config_load firewall || die '无法读取防火墙配置'
+        remove_old_wan_names() {
+            [ "$(get "firewall.$1.name")" = wan ] || return 0
+            for name in $migrated; do uci -q del_list "firewall.$1.network=$name" || true; done
+        }
+        config_foreach remove_old_wan_names zone || die '无法恢复防火墙配置'
+        for key in photonicat_fixed_5g_v1 photonicat_usb_scan_defaults photonicat_usb_scan_guard_defaults; do
+            uci -q delete "qmodem.main.$key" || true
+        done
+        uci commit qmodem
+        if [ -f "$base/etc/config/dhcp" ]; then uci commit dhcp; fi
+        uci commit firewall
+        echo "photonicat-network: 旧网络配置已备份到 $backup"
+    fi
+
+    # 撤销项目预设路由优先级；普通 DHCP 路由交回 netifd。
+    [ "$(get network.wan.metric)" != 5 ] || uci delete network.wan.metric
+    case "$(get network.wwan.metric)" in 10|20) uci delete network.wwan.metric ;; esac
+    uci commit network
+    if [ -x "$base/etc/init.d/mwan3" ]; then
+        "$base/etc/init.d/mwan3" disable || die '无法关闭 mwan3 默认启动'
+        "$base/etc/init.d/mwan3" stop || die '无法停止旧 mwan3 路由策略'
+    fi
+
+    # 升级时移除旧项目的后台补扫和接口同步入口，不增加常驻任务。
     for service in photonicat-qmodem-mwan3 photonicat-qmodem-scan; do
         if [ -x "$base/etc/init.d/$service" ]; then
-            "$base/etc/init.d/$service" stop >/dev/null 2>&1 || true
-            "$base/etc/init.d/$service" disable >/dev/null 2>&1 || true
+            "$base/etc/init.d/$service" stop >/dev/null 2>&1 || die '无法停止旧网络服务'
+            "$base/etc/init.d/$service" disable >/dev/null 2>&1 || die '无法关闭旧网络服务'
         fi
-        for link in "$base"/etc/rc.d/[SK][0-9][0-9]"$service"; do [ ! -L "$link" ] || unlink "$link"; done
-        for file in "$base/etc/init.d/$service" "$base/usr/bin/$service"; do [ ! -f "$file" ] || unlink "$file"; done
+        for link in "$base"/etc/rc.d/[SK][0-9][0-9]"$service"; do [ ! -L "$link" ] || unlink "$link" || die '无法清理旧服务启动链接'; done
+        for file in "$base/etc/init.d/$service" "$base/usr/bin/$service"; do [ ! -f "$file" ] || unlink "$file" || die '无法清理旧网络服务'; done
     done
     for file in etc/hotplug.d/iface/95-photonicat-qmodem-mwan3 usr/bin/photonicat-qmodem-mwan3-sync; do
-        [ ! -f "$base/$file" ] || unlink "$base/$file"
+        [ ! -f "$base/$file" ] || unlink "$base/$file" || die '无法清理旧接口同步入口'
     done
-    mark_complete qmodem.main.photonicat_fixed_5g_v1
+    mark_network_complete photonicat_stock_network_v1
 )
 
 main() {
     local result=0
+    restore_network_defaults || result=1
     configure_network_tools || result=1
     configure_wan_firewall || result=1
-    configure_qmodem || result=1
     return "$result"
 }
 main "$@"
