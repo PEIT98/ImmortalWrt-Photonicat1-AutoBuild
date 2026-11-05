@@ -32,9 +32,18 @@ elif [[ $mode == menus ]]; then
         if [[ -s $tmp/shared ]]; then cat "$tmp/shared" >&2; echo '::error::上游插件安装文件重名' >&2; exit 1; fi
     done
 elif [[ $mode == runtime ]]; then
-    # ndisc6 仅有构建兼容修复；扫描、串口、拨号程序和驱动必须保持官方源码。
+    # 只允许扫描器的单调时钟修复；其余运行源码必须与官方提交一致。
     git -C "$root/feeds/qmodem" diff --exit-code HEAD -- \
-        application/qmodem application/modem_scan application/quectel_CM_5G_M driver
+        application/qmodem application/modem_scan application/quectel_CM_5G_M driver \
+        ':!application/modem_scan/src/modem_scand.c'
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    scanner=application/modem_scan/src/modem_scand.c
+    mkdir -p "$tmp/expected/$(dirname "$scanner")"
+    git -C "$root/feeds/qmodem" show "HEAD:$scanner" > "$tmp/expected/$scanner"
+    sh "$(dirname "$0")/../patches/packages/fix-qmodem-monotonic-clock.sh" "$tmp/expected"
+    cmp -s "$tmp/expected/$scanner" "$root/feeds/qmodem/$scanner" || {
+        echo '::error::QModem 扫描器存在限定计时修复之外的改动' >&2; exit 1;
+    }
     extra=$(git -C "$root/feeds/qmodem" ls-files --others --exclude-standard -- \
         application/qmodem application/modem_scan application/quectel_CM_5G_M driver)
     [[ -z $extra ]] || { echo "::error::QModem 运行源码存在额外文件：$extra" >&2; exit 1; }
