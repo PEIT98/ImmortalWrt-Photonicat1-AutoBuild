@@ -1,0 +1,24 @@
+#!/bin/sh
+# Aurora：导入配置包内置签名公钥，首次启动添加作者 APK 更新源。
+set -eu
+
+command -v apk >/dev/null 2>&1 || exit 0
+
+key_source=/usr/share/aurora/feed/eamonxg.pem
+feed_file=/etc/apk/repositories.d/customfeeds.list
+feed_url=https://openwrt.eamonxg.fun/snapshots/apk/packages.adb
+
+[ -s "$key_source" ] || {
+    echo 'Aurora 更新源：缺少配置插件内置签名公钥，稍后重试。' >&2
+    exit 1
+}
+
+mkdir -p /etc/apk/keys /etc/apk/repositories.d
+cp "$key_source" /etc/apk/keys/eamonxg.pem
+
+# 保留已选渠道；只在缺少有效源时添加，重复执行不会重复写入。
+if ! grep -Eq '^[[:space:]]*https://openwrt[.]eamonxg[.]fun/' "$feed_file" 2>/dev/null; then
+    printf '\n%s\n' "$feed_url" >> "$feed_file"
+fi
+
+exit 0

@@ -201,6 +201,14 @@ test -f "$AURORA_CONFIG_DIR/po/zh_Hans/aurora-config.po"
 # 上游预生成的现代 JS 不适合旧 jsmin；保留上游关闭二次压缩的设置。
 grep -Fxq 'LUCI_MINIFY_JS:=0' "$AURORA_CONFIG_DIR/Makefile"
 
+# 首启离线登记作者更新源；签名公钥直接使用 Aurora 配置包内置文件。
+# 不在开机阶段刷新软件索引，避免因外网未就绪阻塞启动。
+test -s "$AURORA_CONFIG_DIR/root/usr/share/aurora/feed/eamonxg.pem"
+AURORA_FEED_DEFAULT="$SRC/files/etc/uci-defaults/99-aurora-update-source"
+test -f "$AURORA_FEED_DEFAULT"
+chmod 755 "$AURORA_FEED_DEFAULT"
+sh -n "$AURORA_FEED_DEFAULT"
+
 echo '文件管理和 Travelmate 使用官方包；Aurora 设置已准备。'
 
 # 固件版本/存储卡片只使用 rootfs 覆盖文件；不能修改 Aurora 主题。

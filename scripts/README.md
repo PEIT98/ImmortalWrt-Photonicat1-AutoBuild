@@ -86,3 +86,6 @@ bash scripts/tests/test_online_upgrade.sh
 网络、品牌和无线名称见 [首页](../README.md#默认网络设置)。保留配置升级时沿用已有网络、无线、密码和自定义主机名。QM 使用官方启动扫描、串口、PCIe 和热插拔逻辑，保留计时修复及仅针对 FM350 的自动 APN 补全。ndisc6 保留构建兼容修复。独立菜单文件将显示名称设为“移动网络”。mwan3 保留上游默认配置，首启关闭服务及自启动。
 
 本地插件完整源码位于 [packages/](../packages/)；电源与软件源设置、CPU 调频、在线升级和硬盘保活的说明见首页对应链接。文件管理、Travelmate 和 SQM 使用官方软件源；Aurora 设置使用主题作者源码。
+
+Aurora 更新源由 [99-aurora-update-source](../files/etc/uci-defaults/99-aurora-update-source) 在首启时登记：使用配置插件自带签名公钥，默认添加作者的 APK snapshots 源；已有 Aurora 源和其他软件源保持原样。首启不联网刷新索引，需要升级时在软件包页面更新列表。
+
