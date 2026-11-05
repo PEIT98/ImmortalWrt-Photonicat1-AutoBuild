@@ -55,7 +55,7 @@
 
 **QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [PEIT98/luci-app-qmodem-generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装。Generic 原样复刻自 LianXia233，后续 WebUI 修复直接在自有仓库维护。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
 
-**首启网络配置：** [统一入口](../files/etc/uci-defaults/99-photonicat-network)保留 Travelmate/SQM 初始状态和无线中继的 WAN 区域配置。对旧项目配置先备份，再一次性撤销固定别名、槽位预设、扫描参数和 IPv4 接管选项，移除该模组旧固定接口，保留 APN、串口、PDP 及拨号协议。mwan3 保留插件和配置，恢复时关闭服务；普通路由由系统与官方 QM 维护。各部分独立完成和重试，成功后保留用户后续修改。`tests/test_qmodem_defaults.sh` 验证恢复、备份、重试、配置保留和运行源码检查；不再改写或单独测试官方 USB 排序逻辑。
+**首启网络配置：** [统一入口](../files/etc/uci-defaults/99-photonicat-network)保留 Travelmate/SQM 初始状态和无线中继的 WAN 区域配置。先备份，再从 ROM 完整导入官方 QM 默认配置，清理旧 APN、串口、PDP、拨号选择、模组及槽位记录和未提交的改动；删除 QM 生成的独立网络接口及对应 DHCP/防火墙关联。管理网络、Wi-Fi 及现有插件保留；mwan3 恢复时关闭服务。独立 v2 标记覆盖上一版保留 APN 的恢复，成功后保留用户新设置，失败可重试。`tests/test_qmodem_defaults.sh` 验证完整清理、旧版本迁移、备份、重试、普通网络保护及运行源码检查；不再改写或单独测试官方 USB 排序逻辑。
 
 **QModem 源码与驱动：** `build/verify-qmodem-feeds.sh runtime` 检查扫描、AT 端口、拨号、连接管理器和驱动目录与官方提交一致；仅 ndisc6 有构建兼容修复。QMI 选择项恢复为上游默认的厂商驱动，依赖检查同步核对移远、广和通和芯讯通三个驱动包。
 

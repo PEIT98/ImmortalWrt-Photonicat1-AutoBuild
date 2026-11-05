@@ -89,89 +89,58 @@ configure_wan_firewall() (
 )
 
 restore_network_defaults() (
-    [ "$(get network.globals.photonicat_stock_network_v1)" != 1 ] || exit 0
+    [ "$(get network.globals.photonicat_stock_network_v2)" != 1 ] || exit 0
     check_network_globals
     base=${PHOTONICAT_DEFAULTS_ROOT:-}
     . "$base/lib/functions.sh" || die '无法载入 UCI 配置函数'
 
-    legacy=0
-    for key in photonicat_fixed_5g_v1 photonicat_usb_scan_defaults photonicat_usb_scan_guard_defaults; do
-        [ -z "$(get "qmodem.main.$key")" ] || legacy=1
+    # 本次同时清理旧 APN、串口、PDP 和拨号选择；官方扫描会重新生成模组记录。
+    # v2 独立于上一版保留 APN 的 v1 标记，已运行 v1 的设备也会执行一次。
+    [ -s "$base/rom/etc/config/qmodem" ] || die '缺少官方 QModem 默认配置，保留任务供下次启动重试'
+    umask 077
+    mkdir -p "$base/root" || die '无法创建配置备份目录'
+    backup=$(mktemp -d "$base/root/photonicat-network-backup.XXXXXX") || die '无法创建网络配置备份'
+    for package in qmodem network firewall dhcp mwan3; do
+        [ ! -f "$base/etc/config/$package" ] || cp -p "$base/etc/config/$package" "$backup/" || die '网络配置备份失败'
     done
-    [ -z "$(get mwan3.qmodem_priority3)" ] || legacy=1
-    migrated=' '
-    if [ "$legacy" -eq 1 ]; then
-        # 仅对旧项目配置执行一次恢复，先备份；保留 APN、串口及拨号协议。
-        [ "$(get qmodem.main)" = main ] || die '等待 QModem 配置后重试恢复'
-        [ -s "$base/rom/etc/config/qmodem" ] || die '缺少官方 QModem 默认配置，保留任务供下次启动重试'
-        umask 077
-        mkdir -p "$base/root" || die '无法创建配置备份目录'
-        backup=$(mktemp -d "$base/root/photonicat-network-backup.XXXXXX") || die '无法创建网络配置备份'
-        for package in qmodem network firewall dhcp mwan3; do
-            [ ! -f "$base/etc/config/$package" ] || cp -p "$base/etc/config/$package" "$backup/" || die '网络配置备份失败'
-        done
-        # 使用独立包名读取 ROM，避免 /tmp/.uci/qmodem 的暂存值污染默认值。
-        stock_package="stock_qmodem_$$"
-        cp "$base/rom/etc/config/qmodem" "$backup/$stock_package" || die '无法读取官方默认配置'
-        mkdir "$backup/delta" || die '无法准备默认配置读取目录'
-        [ "$(command uci -c "$backup" -t "$backup/delta" -q get "$stock_package.main")" = main ] || die '官方 QModem 默认配置无效'
-        for key in enable_usb_scan enable_pcie_scan try_preset_usb try_preset_pcie start_delay scan_delay; do
-            value=$(command uci -c "$backup" -t "$backup/delta" -q get "$stock_package.main.$key") || value=
-            if [ -n "$value" ]; then uci set "qmodem.main.$key=$value"
-            else uci -q delete "qmodem.main.$key" || true
-            fi
-        done
-        remove_interface() {
-            local name="$1" modem="$2"
-            [ "$(get "network.$name")" = interface ] || return 0
-            [ "$(get "network.$name.modem_config")" = "$modem" ] || return 0
-            uci delete "network.$name"
-            if [ "$(get "dhcp.$name")" = dhcp ] && [ "$(get "dhcp.$name.interface")" = "$name" ]; then
-                uci delete "dhcp.$name"
-            fi
-            migrated="$migrated$name "
-        }
-        restore_device() {
-            local section="$1"
-            if [ "$(get "qmodem.$section.alias")" = wwan_5g ]; then
-                uci delete "qmodem.$section.alias"
-                [ "$(get "qmodem.$section.metric")" != 30 ] || uci delete "qmodem.$section.metric"
-                remove_interface wwan_5g "$section"
-                remove_interface wwan_5gv6 "$section"
-            fi
-            [ "$(get "qmodem.$section.host_ipv4_owner")" != netifd ] || uci delete "qmodem.$section.host_ipv4_owner"
+    # 使用独立包名核对 ROM，避免旧 UCI 暂存配置影响检查。
+    stock_package="stock_qmodem_$$"
+    cp "$base/rom/etc/config/qmodem" "$backup/$stock_package" || die '无法读取官方默认配置'
+    mkdir "$backup/delta" || die '无法准备默认配置读取目录'
+    [ "$(command uci -c "$backup" -t "$backup/delta" -q get "$stock_package.main")" = main ] || die '官方 QModem 默认配置无效'
+    # import 不使用 -m：完整替换并提交，旧记录和未提交的 APN/串口改动一并清理。
+    uci import qmodem < "$base/rom/etc/config/qmodem"
+
+    removed=' '
+    remove_modem_interface() {
+        local section="$1"
+        [ -n "$(get "network.$section.modem_config")" ] || return 0
+        # 保留管理网络和常规 WAN；仅删除 QM 创建的独立逻辑接口。
+        case "$section" in lan|wan|wan6|wwan|loopback) return 0 ;; esac
+        uci delete "network.$section"
+        removed="$removed$section "
+    }
+    config_load network || die '无法读取网络配置'
+    config_foreach remove_modem_interface interface || die '无法清理旧模组接口'
+    if [ -f "$base/etc/config/dhcp" ]; then
+        remove_modem_dhcp() {
+            local interface
+            interface=$(get "dhcp.$1.interface")
+            [ -n "$interface" ] || return 0
+            case "$removed" in *" $interface "*) uci delete "dhcp.$1" ;; esac
             return 0
         }
-        restore_slot() {
-            local section="$1" extra settings
-            [ "$(get "qmodem.$section.alias")" = wwan_5g ] || return 0
-            settings=$(command uci -X -q show "qmodem.$section") || die '无法读取旧槽位配置'
-            extra=$(printf '%s\n' "$settings" | awk -F= -v section="$section" '{key=$1; sub(/^.*\./,"",key); if(key!=section && key!~/^(slot|type|alias|default_metric)$/) n++} END{print n+0}')
-            if [ "$extra" -eq 0 ] && [ "$(get "qmodem.$section.type")" = usb ] && [ "$(get "qmodem.$section.default_metric")" = 30 ]; then
-                uci delete "qmodem.$section"
-            else
-                # 含 GPIO 等额外设置的槽位保留，仅撤销项目写入的别名和优先级。
-                uci delete "qmodem.$section.alias"
-                [ "$(get "qmodem.$section.default_metric")" != 30 ] || uci delete "qmodem.$section.default_metric"
-            fi
-        }
-        config_load qmodem || die '无法读取 QModem 配置'
-        config_foreach restore_device modem-device || die '无法恢复模组配置'
-        config_foreach restore_slot modem-slot || die '无法恢复槽位配置'
-        config_load firewall || die '无法读取防火墙配置'
-        remove_old_wan_names() {
-            [ "$(get "firewall.$1.name")" = wan ] || return 0
-            for name in $migrated; do uci -q del_list "firewall.$1.network=$name" || true; done
-        }
-        config_foreach remove_old_wan_names zone || die '无法恢复防火墙配置'
-        for key in photonicat_fixed_5g_v1 photonicat_usb_scan_defaults photonicat_usb_scan_guard_defaults; do
-            uci -q delete "qmodem.main.$key" || true
-        done
-        uci commit qmodem
-        if [ -f "$base/etc/config/dhcp" ]; then uci commit dhcp; fi
-        uci commit firewall
-        echo "photonicat-network: 旧网络配置已备份到 $backup"
+        config_load dhcp || die '无法读取 DHCP 配置'
+        config_foreach remove_modem_dhcp dhcp || die '无法清理旧模组 IPv6 配置'
+        uci commit dhcp
     fi
+    config_load firewall || die '无法读取防火墙配置'
+    remove_modem_zone_names() {
+        for name in $removed; do uci -q del_list "firewall.$1.network=$name" || true; done
+    }
+    config_foreach remove_modem_zone_names zone || die '无法清理旧模组防火墙关联'
+    uci commit firewall
+    echo "photonicat-network: 旧网络配置已备份到 $backup，QModem 已完整恢复官方默认"
 
     # 撤销项目预设路由优先级；普通 DHCP 路由交回 netifd。
     [ "$(get network.wan.metric)" != 5 ] || uci delete network.wan.metric
@@ -194,7 +163,7 @@ restore_network_defaults() (
     for file in etc/hotplug.d/iface/95-photonicat-qmodem-mwan3 usr/bin/photonicat-qmodem-mwan3-sync; do
         [ ! -f "$base/$file" ] || unlink "$base/$file" || die '无法清理旧接口同步入口'
     done
-    mark_network_complete photonicat_stock_network_v1
+    mark_network_complete photonicat_stock_network_v2
 )
 
 main() {

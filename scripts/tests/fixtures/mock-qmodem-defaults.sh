@@ -20,6 +20,13 @@ case "$key" in
 esac
 mutate() { jq "$@" "$state" > "$state.next"; mv "$state.next" "$state"; }
 case "$action" in
+import)
+    [ "$key" = qmodem ] || exit 1
+    # UCI import 默认完整替换并提交；模拟 ROM 默认配置及导入失败。
+    cat >/dev/null
+    jq -e '(.fail_import!=true) and (.fail_commit!=true) and (.fail_commit_package!="qmodem")' "$state" >/dev/null || exit 1
+    mutate '.rom as $stock | .uci=(.uci|with_entries(select(.key|startswith("qmodem.")|not)))+$stock'
+    ;;
 get) jq -er --arg key "$key" '.uci[$key] // empty | if type=="array" then join(" ") else . end' "$state" ;;
 show) jq -r --arg key "$key" '.uci|to_entries[]|select(.key==$key or (.key|startswith($key+".")))|"\(.key)=\(.value)"' "$state" ;;
 set)

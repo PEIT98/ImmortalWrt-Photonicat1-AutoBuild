@@ -41,7 +41,7 @@ test -f "$dir/build-sources.txt"
   echo '- Docker 存储仅检测提示，不会自动挂载、迁移、格式化或修改防火墙' 
   echo '- QModem 使用官方扫描、串口识别、拨号及默认厂商 QMI 驱动；接口名自动生成'
   echo '- mwan3 保留插件和配置，默认关闭；多 WAN 策略按需手动配置'
-  echo '- 旧项目配置会先备份，再一次性撤销固定 5G 接口和扫描参数，保留 APN 与拨号配置'
+  echo '- 先备份再完整恢复官方 QM 默认，清理旧 APN、串口和模组配置，由官方重新扫描；成功后保留新设置'
   echo
   echo '<details><summary>源码版本</summary>'
   echo

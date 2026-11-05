@@ -80,7 +80,7 @@ QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文�
 
 QModem 的扫描、USB 网卡与 AT 串口识别、拨号及数据格式处理使用官方源码。扫描开关、厂家预扫描和延时使用软件包原始默认值，接口名由 QModem 自动生成。QMI 驱动选择恢复为官方默认的厂商驱动；原有 USB 数据协议和串口驱动继续内置。项目只保留 ndisc6 的下载及编译兼容修复。
 
-[首启网络配置](files/etc/uci-defaults/99-photonicat-network)会对旧项目配置执行一次恢复：备份 `/etc/config` 中的相关配置，撤销固定 `wwan_5g` 别名、项目槽位预设、强制扫描参数及 `host_ipv4_owner=netifd`，移除属于该模组的旧固定接口，由官方 QModem 重新创建。APN、串口、PDP 和拨号协议保留。备份目录为 `/root/photonicat-network-backup.*`；失败会保留任务供下次启动重试，成功后保留用户后续修改。
+[首启网络配置](files/etc/uci-defaults/99-photonicat-network)会先备份相关配置，再从 `/rom/etc/config/qmodem` 完整恢复官方默认：清理旧 APN、用户名/密码、串口、PDP、拨号选择、模组和槽位记录，以及旧 UCI 暂存改动。带 `modem_config` 标记的独立模组网络接口、对应 DHCP/IPv6 配置及防火墙关联也会清理，由官方 QModem 重新扫描生成。LAN、普通 WAN、无线中继和 Wi-Fi 保留。备份目录为 `/root/photonicat-network-backup.*`，不会自动回填；失败会保留任务供下次启动重试。本次使用独立的 v2 完成标记，已执行上一版恢复的设备也会清理一次，成功后保留用户新填写的 APN 和其他设置。
 
 [构建检查](scripts/build/verify-qmodem-feeds.sh)核对 QModem 运行源码与拉取的官方提交一致；[首启回归](scripts/tests/test_qmodem_defaults.sh)覆盖新装、旧配置恢复、备份、失败重试和配置保留。管理地址与 Wi-Fi 默认值保持不变。
 
