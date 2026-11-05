@@ -59,6 +59,8 @@
 
 **QModem 源码与驱动：** `build/verify-qmodem-feeds.sh runtime` 检查扫描、AT 端口、拨号、连接管理器和驱动目录与官方提交一致；仅 ndisc6 有构建兼容修复。QMI 选择项恢复为上游默认的厂商驱动，依赖检查同步核对移远、广和通和芯讯通三个驱动包。
 
+**TD-TECH 串口支持：** [原版内核补丁](../999-add-TD-TECH-option-id.patch)由 `build/prepare.sh` 复制到 Rockchip Linux 6.12 补丁目录，为 `3466` 的指定 USB 接口增加 `option` 驱动匹配，不改 QM 端口排序、扫描或拨号代码。
+
 **在线升级：** `build/prepare.sh` 将项目内完整 [luci-app-online-upgrade](../packages/luci-app-online-upgrade/) 复制到 `package/luci-app-online-upgrade`，光影猫适配直接在插件源码中维护。Actions 核对整套源码复制一致，并将同一个 Release 标签写进固件身份和发布任务；检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。固件及 Release 的来源信息记录本项目提交号。
 
 **管理工具：** 文件管理、Travelmate 和 SQM 来自官方软件源并使用上游默认配置；Aurora 设置直接拉取主题作者 `master`，保留上游关闭旧 jsmin 的设置并记录实际提交号。

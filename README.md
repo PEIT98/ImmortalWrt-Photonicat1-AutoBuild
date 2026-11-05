@@ -17,7 +17,7 @@
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
 | 驱动支持 | USB QMI / MBIM / ECM / NCM / RNDIS、AT 串口、PCIe / SDIO 无线网卡 |
 
-无线驱动包括 Realtek RTL8922AE / RTL8852BE / RTL8852CE、MediaTek MT7921 / MT7925 / MT7916、Qualcomm ath10k / ath11k / ath12k。板载 QCA9377 系列使用 SDIO 驱动，是否可用取决于板子实际硬件和固件支持。USB 串口使用上游驱动。
+无线驱动包括 Realtek RTL8922AE / RTL8852BE / RTL8852CE、MediaTek MT7921 / MT7925 / MT7916、Qualcomm ath10k / ath11k / ath12k。板载 QCA9377 系列使用 SDIO 驱动，是否可用取决于板子实际硬件和固件支持。USB 串口保留上游驱动及 [TD-TECH 3466 串口支持补丁](999-add-TD-TECH-option-id.patch)，不改 QM 的端口排序、扫描或拨号代码。
 
 内置 [NFA765 hw2.1 E108 专用固件](firmware/nfa765-e108/README.md)：仅 PCI 子设备 `105b:e108` 使用 NFA765 amss/m3 及已验证的 E108 板卡文件；普通 NFA765 保留原固件与板卡配置。固件随镜像提供，开机无需下载。
 
