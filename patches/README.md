@@ -7,7 +7,8 @@
 | 内核 / USB 串口 | [999-add-TD-TECH-option-id.patch](kernel/999-add-TD-TECH-option-id.patch) | 为 `3466` 的指定接口增加 `option` 驱动匹配；由 `scripts/build/prepare.sh` 复制到 Rockchip `patches-6.12/` |
 | 无线 / ath11k | [999-photonicat-nfa765-e108-firmware.patch](wireless/999-photonicat-nfa765-e108-firmware.patch) | 仅为 NFA765 hw2.1 `105b:e108` 选择专用固件；由 `scripts/build/bundle-nfa765-e108.sh` 安装到 mac80211 的 `patches/ath11k/` |
 | 存储 / Rockchip | [swrt-upgrade-partitions.sh](storage/swrt-upgrade-partitions.sh) | 分区比较函数片段，由 `scripts/patches/storage/enable-emmc-autogrow.sh` 插入升级脚本，保留已扩大的根分区 |
+| QModem / 启动扫描 | [boot-usb-scan.sh](qmodem/boot-usb-scan.sh) | 函数片段，由 `scripts/patches/packages/fix-qmodem-boot-scan.sh` 插入官方 QM 启动脚本，等待网卡就绪并按需补扫一次 |
 
-目录分类只改变仓库中的存放位置；补丁原内容、目标文件名和应用顺序保持不变。`storage/` 中的 `.sh` 是供插入的函数片段，不是设备开机脚本。
+`storage/` 和 `qmodem/` 中的 `.sh` 是供插入的函数片段，不单独运行。USB 启动扫描并入 QM 已有启动入口，不新增独立后台服务。
 
 来源：TD-TECH 保留西瓜皮原版；NFA765 说明见 [固件目录](../firmware/nfa765-e108/README.md)；存储片段基于 SlAlot/ImmortalWrt_Photonicat1 `ae655185`，许可证为 AGPL-3.0-only。

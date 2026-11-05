@@ -26,7 +26,7 @@
 | 构建 | [bundle-nfa765-e108.sh](build/bundle-nfa765-e108.sh) | 校验并内置 E108 专用固件，安装对应 ath11k 补丁 |
 | 构建 | [bundle-openclash-core.sh](build/bundle-openclash-core.sh) | 获取、验证并内置 OpenClash Meta 内核 |
 | 检查 | [verify-config.sh](checks/verify-config.sh) | `make defconfig` 后检查目标、插件、驱动和必选依赖 |
-| 检查 | [verify-qmodem-feeds.sh](checks/verify-qmodem-feeds.sh) | 检查 QM/Generic 依赖、菜单冲突，运行源码只允许指定计时修复 |
+| 检查 | [verify-qmodem-feeds.sh](checks/verify-qmodem-feeds.sh) | 检查 QM/Generic 依赖、菜单冲突，运行源码只允许指定计时及启动扫描修复 |
 | 检查 | [check-qmodem-ndisc6-build.sh](checks/check-qmodem-ndisc6-build.sh) | 检查 ndisc6 归档 SHA256、musl 编译和程序安装 |
 | 发布 | [stamp-firmware.sh](release/stamp-firmware.sh) | 为在线升级和 Release 写入相同的设备、标签和提交号 |
 | 发布 | [release-notes.sh](release/release-notes.sh) | 生成中文发布说明、源码信息和校验值 |
@@ -42,6 +42,7 @@
 | 软件包 | [fix-luajit-riscv-provider.sh](patches/packages/fix-luajit-riscv-provider.sh) | 在 armv8/aarch64 上修复 LuaJIT 虚拟包自依赖 |
 | 软件包 | [fix-qmodem-ndisc6-source.sh](patches/packages/fix-qmodem-ndisc6-source.sh) | 修复已知旧版 ndisc6 的下载与编译兼容 |
 | 软件包 | [fix-qmodem-monotonic-clock.sh](patches/packages/fix-qmodem-monotonic-clock.sh) | 扫描延时和超时使用单调时钟，防止联网校时回拨使任务长时间等待 |
+| 软件包 | [fix-qmodem-boot-scan.sh](patches/packages/fix-qmodem-boot-scan.sh) | 等待 USB 模组网卡和扫描后台就绪，15 秒后仍未识别时补扫一次 |
 | 软件包 | [fix-weechat-provider.sh](patches/packages/fix-weechat-provider.sh) | 使用已有的 WeeChat 默认提供者，避免 Kconfig 自递归 |
 
 [lib/patch.sh](lib/patch.sh) 提供源码锚点检查、临时副本修改与写回函数。电源插件内的 `patch-common.sh` 保持独立副本，插件复制到源码树后可以自行构建。
@@ -49,7 +50,7 @@
 ## 调用顺序
 
 1. `build/prepare.sh` 准备参考配置、本地插件、TD-TECH、存储与无线默认值。
-2. 启用板载 SDIO；更新 Feeds 后处理 LuaJIT、ndisc6、WeeChat 兼容，验证并修复 QM 计时，再刷新索引并安装 Feeds。
+2. 启用板载 SDIO；更新 Feeds 后处理 LuaJIT、ndisc6、WeeChat 兼容，验证并修复 QM 计时及启动扫描，再刷新索引并安装 Feeds。
 3. 检查 QM/Generic，处理 iStore 包名；`build/select-packages.sh` 应用插件选择。
 4. 执行 `make defconfig`，由 `checks/verify-config.sh` 检查，再生成固件身份、内置文件并下载源码。
 5. 检查 ndisc6，准备构建工具并显式构建主机 `ucode`，验证无线默认值后再编译固件，收集短文件名镜像并生成发布说明。
@@ -62,6 +63,7 @@
 | --- | --- |
 | 构建与依赖 | [test_build_scripts.sh](tests/test_build_scripts.sh)、[test_build_dependencies.sh](tests/test_build_dependencies.sh) |
 | QM 扫描计时 | [test_qmodem_clock.sh](tests/test_qmodem_clock.sh)；需要官方 QM Feed、C 编译器和 json-c 开发库 |
+| QM 启动扫描 | [test_qmodem_boot_scan.sh](tests/test_qmodem_boot_scan.sh)；需要官方 QM Feed，验证网卡等待、15 秒补扫和已识别跳过 |
 | 无线与固件 | [test_wifi_defaults.sh](tests/test_wifi_defaults.sh)、[test_nfa765_e108.sh](tests/test_nfa765_e108.sh)；需要对应 ImmortalWrt 源码树 |
 | eMMC 与升级分区 | [test_autogrow.sh](tests/test_autogrow.sh)、[test_storage_integration.sh](tests/test_storage_integration.sh)、[test_autogrow_real.sh](tests/test_autogrow_real.sh) |
 | USB 硬盘保活 | [test_disk_keepalive.sh](tests/test_disk_keepalive.sh)、[前端测试](tests/test_disk_keepalive_frontend.cjs) |
@@ -82,6 +84,6 @@ bash scripts/tests/test_online_upgrade.sh
 
 ## 设备默认值与插件
 
-网络、品牌和无线名称见 [首页](../README.md#默认网络设置)。保留配置升级时沿用已有网络、无线、密码和自定义主机名。QM 保留官方扫描、串口和拨号配置；仅修复扫描队列及 AT/子进程超时的计时方式，ndisc6 保留构建兼容修复。独立菜单文件将显示名称设为“移动网络”。mwan3 保留上游默认配置，首启关闭服务及自启动。
+网络、品牌和无线名称见 [首页](../README.md#默认网络设置)。保留配置升级时沿用已有网络、无线、密码和自定义主机名。QM 保留串口、拨号、PCIe 和热插拔逻辑；修复扫描计时，USB 启动扫描在后台最多等待 60 秒，网卡和扫描服务就绪后执行。首次扫描 15 秒后仅对仍未识别的情况补扫一轮；保留自定义 `scan_delay`，禁用 USB 扫描或启用手动模式时跳过。ndisc6 保留构建兼容修复。独立菜单文件将显示名称设为“移动网络”。mwan3 保留上游默认配置，首启关闭服务及自启动。
 
 本地插件完整源码位于 [packages/](../packages/)；电源与软件源设置、CPU 调频、在线升级和硬盘保活的说明见首页对应链接。文件管理、Travelmate 和 SQM 使用官方软件源；Aurora 设置使用主题作者源码。

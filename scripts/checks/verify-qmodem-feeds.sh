@@ -32,18 +32,25 @@ elif [[ $mode == menus ]]; then
         if [[ -s $tmp/shared ]]; then cat "$tmp/shared" >&2; echo '::error::上游插件安装文件重名' >&2; exit 1; fi
     done
 elif [[ $mode == runtime ]]; then
-    # 只允许扫描器的单调时钟修复；其余运行源码必须与官方提交一致。
+    # 只允许指定的计时及 USB 启动扫描修复；其他运行源码保持官方提交。
     git -C "$root/feeds/qmodem" diff --exit-code HEAD -- \
         application/qmodem application/modem_scan application/quectel_CM_5G_M driver \
-        ':!application/modem_scan/src/modem_scand.c'
+        ':!application/modem_scan/src/modem_scand.c' \
+        ':!application/qmodem/files/etc/init.d/qmodem_init'
     tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
     scanner=application/modem_scan/src/modem_scand.c
-    mkdir -p "$tmp/expected/$(dirname "$scanner")"
-    git -C "$root/feeds/qmodem" show "HEAD:$scanner" > "$tmp/expected/$scanner"
+    init=application/qmodem/files/etc/init.d/qmodem_init
+    for path in "$scanner" "$init"; do
+        mkdir -p "$tmp/expected/$(dirname "$path")"
+        git -C "$root/feeds/qmodem" show "HEAD:$path" > "$tmp/expected/$path"
+    done
     sh "$(dirname "$0")/../patches/packages/fix-qmodem-monotonic-clock.sh" "$tmp/expected"
-    cmp -s "$tmp/expected/$scanner" "$root/feeds/qmodem/$scanner" || {
-        echo '::error::QModem 扫描器存在限定计时修复之外的改动' >&2; exit 1;
-    }
+    sh "$(dirname "$0")/../patches/packages/fix-qmodem-boot-scan.sh" "$tmp/expected"
+    for path in "$scanner" "$init"; do
+        cmp -s "$tmp/expected/$path" "$root/feeds/qmodem/$path" || {
+            echo "::error::QModem 存在限定修复之外的改动：$path" >&2; exit 1;
+        }
+    done
     extra=$(git -C "$root/feeds/qmodem" ls-files --others --exclude-standard -- \
         application/qmodem application/modem_scan application/quectel_CM_5G_M driver)
     [[ -z $extra ]] || { echo "::error::QModem 运行源码存在额外文件：$extra" >&2; exit 1; }

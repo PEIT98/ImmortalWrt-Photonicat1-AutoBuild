@@ -8,6 +8,8 @@ setup() {
     # Always replay the selected official commit, even if the Feed is patched already.
     git -C "$FEED" show HEAD:application/modem_scan/src/modem_scand.c > "$src/modem_scand.c"
     git -C "$FEED" show HEAD:application/modem_scan/src/modem_scan_common.h > "$src/modem_scan_common.h"
+    mkdir -p "$TEST_TMP/feed/application/qmodem/files/etc/init.d"
+    git -C "$FEED" show HEAD:application/qmodem/files/etc/init.d/qmodem_init > "$TEST_TMP/feed/application/qmodem/files/etc/init.d/qmodem_init"
     scanner="$src/modem_scand.c"
     patch="$ROOT/scripts/patches/packages/fix-qmodem-monotonic-clock.sh"
     # Queue tests must not read or change the host UCI configuration.
@@ -64,11 +66,17 @@ test_runtime_check_allows_only_the_expected_clock_patch() {
     # A missed build hook must not silently ship the unpatched scanner.
     reject bash "$check" runtime "$TEST_TMP/root"
     apply_patch
+    reject bash "$check" runtime "$TEST_TMP/root"
+    ok sh "$ROOT/scripts/patches/packages/fix-qmodem-boot-scan.sh" "$feed"
     ok bash "$check" runtime "$TEST_TMP/root"
     cp "$scanner" "$TEST_TMP/valid-scanner"
     printf '\n/* unexpected scanner change */\n' >> "$scanner"
     reject bash "$check" runtime "$TEST_TMP/root"
     cp "$TEST_TMP/valid-scanner" "$scanner"
+    cp "$feed/application/qmodem/files/etc/init.d/qmodem_init" "$TEST_TMP/valid-init"
+    printf '\n# unexpected init change\n' >> "$feed/application/qmodem/files/etc/init.d/qmodem_init"
+    reject bash "$check" runtime "$TEST_TMP/root"
+    cp "$TEST_TMP/valid-init" "$feed/application/qmodem/files/etc/init.d/qmodem_init"
     printf '# unexpected dial change\n' >> "$feed/application/qmodem/config"
     reject bash "$check" runtime "$TEST_TMP/root"
     git -C "$feed" checkout -- application/qmodem/config
