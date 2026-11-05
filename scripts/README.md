@@ -21,7 +21,7 @@
 | [enable-qca9377-ath10k-sdio.sh](patches/enable-qca9377-ath10k-sdio.sh) | 保留 PCIe ath10k，同时为板载 QCA9377 加入 SDIO 驱动 |
 | [fix-istore-25.12.sh](patches/fix-istore-25.12.sh) | 检查 taskd 等依赖，在临时副本中校验并固定 iStore 包名，通过后写回 |
 | [fix-qmodem-ndisc6-source.sh](patches/fix-qmodem-ndisc6-source.sh) | 仅处理 ndisc6 源码下载和编译兼容，保留官方 QM 扫描及拨号源码 |
-| [wifi-band-order.sh](patches/wifi-band-order.sh) | 板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz，按网卡频段能力回退；统一 SSID Photonicat-Wrt，WPA2-PSK，密码 photonicat |
+| [wifi-band-order.sh](patches/wifi-band-order.sh) | 板载 SDIO：Pwrt；M.2 优先 Pwrt-5G，无可用 5G 信道时回退 Pwrt-2.4G；双射频按能力分别配置两频段，WPA2-PSK，密码 photonicat |
 
 ## 光影猫电池与电源插件
 
@@ -47,9 +47,11 @@
 
 **编译触发：** 仅通过 Actions 手动 `Run workflow` 编译。保留所有插件、系统配置、源码缓存及 CCache。
 
-**品牌和网络默认值：** 主机名及 5GHz／2.4GHz Wi-Fi 名称均为 `Photonicat-Wrt`；后台 [http://172.16.0.1](http://172.16.0.1/)；后台 root 密码与 Wi-Fi 密码均为 `photonicat`。板载 SDIO 优先 2.4GHz，M.2 等其他网卡优先 5GHz（支持时 AX／80MHz／36 信道）；实际频段由网卡能力决定。完整默认值见[主说明](../README.md#默认网络设置)。
+**品牌和网络默认值：** 主机名 `Pwrt`，板载 Wi-Fi `Pwrt`，M.2 按实际生成频段命名为 `Pwrt-5G`／`Pwrt-2.4G`；后台 [http://172.16.0.1](http://172.16.0.1/)；后台 root 密码与 Wi-Fi 密码均为 `photonicat`。板载 SDIO 优先 2.4GHz；M.2 单射频优先可用的 5GHz，双射频支持时分别生成两频段。5GHz 支持时使用 AX／80MHz，信道跟随驱动检测（通常为 36）。完整默认值见[主说明](../README.md#默认网络设置)。
 
 `photonicat1.config` 设置固件品牌，Aurora 无需改源码；[首启配置](../files/etc/uci-defaults/99-photonicat-brand) 迁移原默认主机名，并仅在 root 密码为空时初始化密码。这些默认值需要重新编译；保留配置升级时沿用已有网络、无线、root 密码和自定义主机名。
+
+旧默认主机名 `Photonicat-Wrt`、`ImmortalWrt`、`OpenWrt` 会迁移为 `Pwrt`。单射频网卡只生成一个热点，支持独立双射频的网卡才分别分配 2.4GHz 和 5GHz；频段回退依据驱动报告的可用信道，不自动重写用户已有无线设置。`tests/test_wifi_defaults.sh` 使用本次上游源码与原生主机 ucode 检查实际生成结果，编译后、上传前运行。
 
 **QModem 菜单名称：** [独立菜单文件](../files/usr/share/luci/menu.d/zz-photonicat-modem-title.json) 仅覆盖 `admin/modem` 的标题为“移动网络”。LuCI 按顺序合并菜单，原有子页面、动作和 ACL 保留。
 

@@ -1,4 +1,4 @@
-# 光影猫一代自动编译
+# 光影猫一代 Pwrt 自动编译
 
 基于 [ImmortalWrt 25.12](https://github.com/immortalwrt/immortalwrt/tree/openwrt-25.12)，适用于 **Ariaboard Photonicat 一代（RK3568）**。
 
@@ -20,11 +20,15 @@ QModem 使用官方扫描与拨号逻辑，菜单为“移动网络”；Generic
 | --- | --- |
 | 后台地址 | [172.16.0.1](http://172.16.0.1/) |
 | 后台 / SSH 账号及密码 | `root` / `photonicat` |
-| 主机名 / Wi-Fi 名称 | `Photonicat-Wrt` |
+| 主机名 / 界面品牌 | `Pwrt` |
+| 板载 SDIO Wi-Fi | `Pwrt`（优先 2.4GHz） |
+| M.2 单射频 Wi-Fi | 优先 5GHz `Pwrt-5G`；无可用 5GHz 信道时回退 `Pwrt-2.4G` |
+| M.2 双射频 Wi-Fi | 支持同时双频时分别为 `Pwrt-2.4G`、`Pwrt-5G` |
 | Wi-Fi 密码 / 加密 | `photonicat` / WPA2-PSK |
-| Wi-Fi 频段 | 板载 SDIO 优先 2.4GHz；M.2 等其他网卡优先 5GHz，按网卡能力回退 |
+| 5GHz 设置 | 优先 AX / 80MHz；信道跟随驱动检测，通常为 36 |
 
 以上为首次刷入或恢复出厂的默认值；保留配置升级时沿用已有网络、无线及密码设置。
+频段回退依据驱动能力，热点实际启动仍需真机验证；旧默认主机名会迁移为 `Pwrt`，自定义主机名保留。
 
 ## 编译与下载
 
@@ -33,6 +37,8 @@ QModem 使用官方扫描与拨号逻辑，菜单为“移动网络”；Generic
 3. 从 [Releases](https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild/releases) 下载 SquashFS sysupgrade 镜像；测试正常后可手动转为正式版。
 
 **仅手动编译，普通提交不会启动编译。** 在线升级入口为“系统 → 在线升级”，默认国内加速，校验完成后手动确认刷写。刷机前请备份配置。
+
+固件文件名：`Pwrt-P1_YYYYMMDDHH.img.gz`（北京时间，SquashFS sysupgrade）。旧更新器不识别短文件名时，先手动上传升级一次。
 
 ## 详细说明
 

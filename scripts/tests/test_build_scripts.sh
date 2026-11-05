@@ -122,9 +122,57 @@ test_config_inheritance_and_passwall() {
     assert_has "$TEST_TMP/config" '# untouched'
     assert_has "$TEST_TMP/config" 'CONFIG_PACKAGE_unrelated=y'
     assert_has "$TEST_TMP/config" 'CONFIG_PACKAGE_luci-app-qmodem-next=y'
+    assert_has "$TEST_TMP/config" 'CONFIG_VERSION_DIST="Pwrt"'
     assert_not_has "$TEST_TMP/config" 'CONFIG_PACKAGE_luci-app-qmodem-next=m'
     assert_has "$TEST_TMP/config" '# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Foo is not set'
     awk 'BEGIN{bad=0} /^(# )?CONFIG_/ {key=$0;sub(/^# /,"",key);sub(/(=| is not set).*$/,"",key);if(seen[key]++)bad=1}END{exit bad}' "$TEST_TMP/config"
+}
+test_short_firmware_collection() {
+    local out="$TEST_TMP/immortalwrt/bin/targets/rockchip/armv8" name
+    mkdir -p "$out" "$TEST_TMP/bin"
+    printf '#!/bin/sh\nprintf "2026110601\\n"\n' > "$TEST_TMP/bin/date"
+    chmod +x "$TEST_TMP/bin/date"
+    name=pwrt-25.12-snapshot-r0-test-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade.img.gz
+    printf 'squashfs firmware\n' > "$out/$name"
+    printf 'exclude ext4\n' > "$out/pwrt-rockchip-armv8-ariaboard_photonicat-ext4-sysupgrade.img.gz"
+    printf 'exclude other board\n' > "$out/pwrt-rockchip-armv8-ariaboard_photonicat2-squashfs-sysupgrade.img.gz"
+    # Execute the production collection block up to ancillary build metadata.
+    awk '/^      - name: 收集固件及编译信息$/ {block=1; next}
+        block && /^          out=/ {code=1}
+        code && /^          for f in .*manifest/ {exit}
+        code {sub(/^          /, ""); print}' "$ROOT/.github/workflows/build.yml" > "$TEST_TMP/collect.sh"
+    (
+        cd "$TEST_TMP"
+        ok env PATH="$TEST_TMP/bin:$PATH" bash -euo pipefail collect.sh
+    )
+    assert_eq 1 "$(find "$TEST_TMP/release" -type f | wc -l)"
+    assert_same "$out/$name" "$TEST_TMP/release/Pwrt-P1_2026110601.img.gz"
+    # Multiple inputs must fail instead of silently overwriting a short name.
+    cp "$out/$name" "$out/immortalwrt-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade.img.gz"
+    rm -rf "$TEST_TMP/release"
+    (cd "$TEST_TMP"; reject env PATH="$TEST_TMP/bin:$PATH" bash -euo pipefail collect.sh)
+}
+test_brand_migrates_defaults_and_keeps_custom_hostname() {
+    mkdir -p "$TEST_TMP/bin"
+    cat > "$TEST_TMP/bin/uci" <<'UCI'
+#!/bin/sh
+case "$*" in
+    '-q get system.@system[0].hostname') printf '%s\n' "$TEST_HOSTNAME" ;;
+    *) printf '%s\n' "$*" >> "$TEST_BRAND_LOG" ;;
+esac
+UCI
+    chmod +x "$TEST_TMP/bin/uci"
+    printf 'root:already-set:0:0:0:0:0:0:\n' > "$TEST_TMP/shadow"
+    sed "s#/etc/shadow#$TEST_TMP/shadow#g" "$ROOT/files/etc/uci-defaults/99-photonicat-brand" > "$TEST_TMP/brand.sh"
+    local hostname
+    for hostname in '' OpenWrt ImmortalWrt Photonicat-Wrt photonicat-wrt Pwrt MyRouter; do
+        rm -f "$TEST_TMP/brand.log"
+        ok env PATH="$TEST_TMP/bin:$PATH" TEST_HOSTNAME="$hostname" TEST_BRAND_LOG="$TEST_TMP/brand.log" sh "$TEST_TMP/brand.sh"
+        case "$hostname" in
+            Pwrt|MyRouter) assert_absent "$TEST_TMP/brand.log" ;;
+            *) assert_eq $'set system.@system[0].hostname=Pwrt\ncommit system' "$(cat "$TEST_TMP/brand.log")" ;;
+        esac
+    done
 }
 test_invalid_override_does_not_write() {
     mkdir -p "$TEST_TMP/project/scripts/build" "$TEST_TMP/project/scripts/lib"

@@ -4,7 +4,7 @@ set -euo pipefail
 dir="${1:-release}"
 test -f "$dir/build-sources.txt"
 {
-  echo '# 光影猫一代 Photonicat-Wrt + QModem 自动编译'
+  echo '# 光影猫一代 Pwrt + QModem 自动编译'
   echo
   echo '> 发布流程：构建后先预发布，测试确认后再手动转为正式版本。'
   echo
@@ -14,16 +14,18 @@ test -f "$dir/build-sources.txt"
   echo
   echo '| 项目 | 默认值 |'
   echo '| --- | --- |'
-  echo '| 主机名／界面品牌 | `Photonicat-Wrt` |'
+  echo '| 主机名／界面品牌 | `Pwrt` |'
   echo '| 后台地址 | [http://172.16.0.1](http://172.16.0.1/) |'
   echo '| 后台／SSH 账号 | `root` |'
   echo '| 后台／SSH 密码 | `photonicat` |'
-  echo '| 5GHz／2.4GHz Wi-Fi 名称 | 均为 `Photonicat-Wrt` |'
+  echo '| 板载 SDIO Wi-Fi 名称 | `Pwrt`（优先 2.4GHz） |'
+  echo '| M.2 Wi-Fi 名称 | 5GHz 为 `Pwrt-5G`；2.4GHz 为 `Pwrt-2.4G` |'
   echo '| Wi-Fi 密码／加密 | `photonicat`／WPA2-PSK |'
-  echo '| 频段判断顺序 | 板载 SDIO 优先 2.4GHz；M.2 等其他网卡优先 5GHz；按网卡能力回退 |'
-  echo '| 5GHz 模式／带宽／信道 | AX（HE80）／80MHz／36；按网卡能力回退 |'
+  echo '| 频段判断顺序 | M.2 单射频优先可用的 5GHz，否则 2.4GHz；双射频支持时分别配置两个频段 |'
+  echo '| 5GHz 模式／带宽／信道 | 优先 AX（HE80）／80MHz；驱动检测信道（通常为 36） |'
   echo
   echo '默认值用于首次刷入、恢复出厂或新生成配置；保留配置升级沿用已有网络、无线、root 密码和自定义主机名。'
+  echo '固件文件名：Pwrt-P1_年月日时.img.gz（北京时间，SquashFS sysupgrade）。旧更新器不认识短文件名时，请先手动上传升级一次。'
   echo
   echo '## 内置功能'
   echo

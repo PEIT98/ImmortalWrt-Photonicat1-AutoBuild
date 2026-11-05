@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-online-upgrade
 PKG_VERSION:=2.0.0
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_LICENSE:=AGPL-3.0-only
 PKG_MAINTAINER:=SlAlot
 PKGARCH:=all
@@ -14,7 +14,7 @@ define Package/luci-app-online-upgrade
   SECTION:=luci
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
-  TITLE:=Photonicat-Wrt verified online firmware upgrade
+  TITLE:=Pwrt verified online firmware upgrade
   DEPENDS:=@TARGET_rockchip_armv8 +luci-base +rpcd +curl +ca-bundle +jq-full +flock +coreutils-sha256sum +coreutils-stat +uci
 endef
 

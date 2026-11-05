@@ -428,6 +428,9 @@ jobs:
             make -j1 V=s
           fi
 
+      - name: 核对 Pwrt 无线默认值
+        run: bash scripts/tests/test_wifi_defaults.sh "$GITHUB_WORKSPACE/immortalwrt"
+
       - name: Report compiler cache
         if: always()
         shell: bash
@@ -469,10 +472,8 @@ jobs:
           n=0
           for f in "$out"/*ariaboard_photonicat-squashfs-sysupgrade.img.gz; do
             [ -f "$f" ] || continue
-            filename="${f##*/}"
-            if [[ "$filename" == *-sysupgrade.img.gz ]]; then
-              filename="${filename%-sysupgrade.img.gz}-sysupgrade_${build_hour}.img.gz"
-            fi
+            filename="Pwrt-P1_${build_hour}.img.gz"
+            [ ! -e "release/$filename" ] || { echo 'Duplicate Photonicat1 image!' >&2; exit 1; }
             cp -- "$f" "release/$filename"
             echo "Firmware Release asset: $filename"
             n=$((n+1))
@@ -548,7 +549,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.name }}
-          name: 光影猫一代 Photonicat-Wrt + QModem ${{ steps.tag.outputs.name }}
+          name: 光影猫一代 Pwrt ${{ steps.tag.outputs.name }}
           prerelease: true
           draft: false
           make_latest: "false"

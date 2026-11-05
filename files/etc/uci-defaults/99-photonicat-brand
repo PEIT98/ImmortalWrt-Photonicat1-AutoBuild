@@ -4,8 +4,8 @@
 set -eu
 hostname="$(uci -q get 'system.@system[0].hostname' || true)"
 case "$hostname" in
-	''|OpenWrt|ImmortalWrt)
-		uci set 'system.@system[0].hostname=Photonicat-Wrt'
+	''|OpenWrt|ImmortalWrt|Photonicat-Wrt|photonicat-wrt)
+		uci set 'system.@system[0].hostname=Pwrt'
 		uci commit system
 		;;
 esac

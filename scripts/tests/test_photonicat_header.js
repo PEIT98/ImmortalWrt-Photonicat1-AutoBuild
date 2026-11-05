@@ -38,7 +38,7 @@ const nativeIndicator = {
 	addEventListener() {}, style: nativeStyle
 };
 const brandAttrs = {}, headerClasses = new Set();
-const brand = { textContent: 'Photonicat-Wrt', setAttribute(key, value) { brandAttrs[key] = value; } };
+const brand = { textContent: 'Pwrt', setAttribute(key, value) { brandAttrs[key] = value; } };
 const headerShell = {
 	classList: { add(value) { headerClasses.add(value); } },
 	querySelector(selector) { return selector === 'a.brand' ? brand : null; }

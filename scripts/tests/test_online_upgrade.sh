@@ -10,7 +10,7 @@ setup() {
     printf '{"repository":"%s","board":"ariaboard,photonicat","version":"photonicat1-20261101-120000-9"}\n' "$repo" > "$identity"
     board="$root/tmp/sysinfo/board_name"; printf 'ariaboard,photonicat\n' > "$board"
     mounts="$root/proc/mounts"; printf '/dev/root /rom squashfs ro 0 0\noverlay / overlay rw 0 0\n' > "$mounts"
-    name=photonicat-wrt-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_2026110223.img.gz
+    name=Pwrt-P1_2026110223.img.gz
     fixture="$root/fixtures"
     printf 'fixture image' | gzip -n > "$fixture/image"
     printf ' {"supported_devices":["ariaboard,photonicat"]} FWx0' >> "$fixture/image"
@@ -118,6 +118,24 @@ test_source_and_channel_saved() {
 test_real_release_schema() {
     cp "$ROOT/scripts/tests/fixtures/photonicat-release.json" "$fixture/release.json"
     engine_ok check; assert_json "$OUT" '.release.tag=="photonicat1-20261102-222244-55" and .release.prerelease and (.release.name|contains("ariaboard_photonicat-squashfs-sysupgrade_"))'
+}
+test_historical_filenames_still_download_and_validate() {
+    local prefix legacy
+    for prefix in photonicat-wrt immortalwrt pwrt; do
+        legacy="$prefix-25.12-snapshot-r0-3682a14d-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_2026110223.img.gz"
+        jq --arg name "$legacy" '.assets[0].name=$name | .assets[0].browser_download_url=(.assets[0].browser_download_url|sub("[^/]+$";$name))' "$TEST_TMP/release.original" > "$fixture/release.json"
+        printf '%s  ./%s\n' "$sha" "$legacy" > "$fixture/sha256sums"
+        prepare; no_flash
+    done
+}
+test_wrong_short_names_and_duplicate_images_rejected() {
+    local bad
+    for bad in Pwrt-P2_2026110223.img.gz Pwrt-P1_202611022.img.gz Pwrt-P1_2026110223-ext4.img.gz Pwrt-P1_2026110223.img.gz.bak ../Pwrt-P1_2026110223.img.gz; do
+        jq --arg name "$bad" '.assets[0].name=$name | .assets[0].browser_download_url=(.assets[0].browser_download_url|sub("[^/]+$";$name))' "$TEST_TMP/release.original" > "$fixture/release.json"
+        engine_reject check; assert_absent "$log"
+    done
+    jq '.assets += [.assets[0]]' "$TEST_TMP/release.original" > "$fixture/release.json"
+    engine_reject check; assert_absent "$log"
 }
 test_proxy_and_canonical_urls() {
     prepare; assert_eq 4 "$(wc -l < "$root/curl.log")"

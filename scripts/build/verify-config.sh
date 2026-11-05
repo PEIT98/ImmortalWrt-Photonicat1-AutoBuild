@@ -124,7 +124,7 @@ need=(
 )
 failed=0
 # 品牌选项必须经过 defconfig 保留；不修改版本号、下载软件源或设备识别。
-for setting in 'CONFIG_VERSION_DIST="Photonicat-Wrt"' 'CONFIG_VERSION_MANUFACTURER="Photonicat"' 'CONFIG_VERSION_HOME_URL="https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild"'; do
+for setting in 'CONFIG_VERSION_DIST="Pwrt"' 'CONFIG_VERSION_MANUFACTURER="Photonicat"' 'CONFIG_VERSION_HOME_URL="https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild"'; do
   if ! grep -Fxq "$setting" "$CFG"; then
     echo "::error::固件品牌配置未生效：$setting" >&2
     failed=1

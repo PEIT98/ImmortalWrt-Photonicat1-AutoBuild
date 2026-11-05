@@ -254,7 +254,7 @@ cmp -s "$TD_PATCH_SRC" "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁复制
 grep -Fq 'TDTECH_VENDOR_ID' "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁内容不完整" >&2; exit 1; }
 echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.12。'
 
-# 使用本次上游检测源码设置频段顺序、Photonicat SSID 和 WPA2 密码。
+# 使用本次上游检测源码设置频段顺序、Pwrt SSID 和 WPA2 密码。
 bash "$(dirname "$0")/../patches/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫配置、官方 QModem main、Generic main 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'

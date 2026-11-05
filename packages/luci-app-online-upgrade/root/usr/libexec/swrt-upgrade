@@ -8,6 +8,8 @@ SCRIPT="${SWRT_UPGRADE_SCRIPT:-/usr/libexec/swrt-upgrade}"
 DIR="$ROOT/tmp/swrt-upgrade"
 REPO='PEIT98/ImmortalWrt-Photonicat1-AutoBuild'
 API="https://api.github.com/repos/$REPO/releases"
+# 新短文件名与历史长文件名共用同一套校验；仅接受光影猫一代 SquashFS。
+IMAGE_PATTERN='^(Pwrt-P1_[0-9]{10}|(pwrt|photonicat-wrt|immortalwrt)(-[0-9][0-9A-Za-z._-]*)?-rockchip-armv8-ariaboard_photonicat-squashfs-sysupgrade_[0-9]{10})\.img\.gz$'
 CONFIG_DIR="$ROOT/etc/config"
 SOURCE="$(uci -c "$CONFIG_DIR" -q get swrt_upgrade.main.source 2>/dev/null || true)"
 case "$SOURCE" in proxy|github) ;; *) SOURCE=proxy ;; esac
@@ -72,7 +74,7 @@ require_device() {
 fetch() {
     curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
         --connect-timeout 5 --max-time 30 --max-filesize 8388608 \
-        -H 'Accept: application/vnd.github+json' -H 'User-Agent: Photonicat-Wrt-Online-Upgrade/2.0' \
+        -H 'Accept: application/vnd.github+json' -H 'User-Agent: Pwrt-Online-Upgrade/2.0' \
         -o "$2" "$(transport_url "$1")" 2>"$DIR/network.log"
 }
 transport_url() {
@@ -86,7 +88,7 @@ require_source() {
     [ "$(jq -r '.channel // ""' "$RELEASE")" = "$CHANNEL" ] || fail '更新通道已变化，请重新检查更新'
 }
 select_release() {
-    jq -e --arg repo "$REPO" --arg fs "$FS" --arg source "$SOURCE" --arg channel "$CHANNEL" '
+    jq -e --arg repo "$REPO" --arg pattern "$IMAGE_PATTERN" --arg source "$SOURCE" --arg channel "$CHANNEL" '
         def tagkey: capture("^photonicat1-(?<day>[0-9]{8})-(?<clock>[0-9]{6})-(?<run>[0-9]+)$") |
             [(.day|tonumber),(.clock|tonumber),(.run|tonumber)];
         (if type == "array" then . else [.] end) |
@@ -94,8 +96,6 @@ select_release() {
             ($channel == "prerelease" and .prerelease == true))) |
         .tag_name as $tag |
         select($tag | type == "string" and test("^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$")) |
-        ("^(photonicat-wrt|immortalwrt)(-[0-9][0-9A-Za-z._-]*)?-rockchip-armv8-ariaboard_photonicat-" +
-            $fs + "-sysupgrade_[0-9]{10}\\.img\\.gz$") as $pattern |
         [.assets[] | select(.name | type == "string" and test($pattern))] as $images |
         [.assets[] | select(.name == "SHA256SUMS.txt")] as $sums |
         select(($images|length) == 1 and ($sums|length) == 1) |
@@ -152,7 +152,7 @@ check_image() {
     require_source
     name="$(jq -r '.name' "$RELEASE")"
     version="$(jq -r '.version' "$RELEASE")"
-    printf '%s' "$name" | grep -Eq "^(photonicat-wrt|immortalwrt)(-[0-9][0-9A-Za-z._-]*)?-rockchip-armv8-ariaboard_photonicat-$FS-sysupgrade_[0-9]{10}\.img\.gz$" || fail '文件系统或固件名称不匹配'
+    printf '%s' "$name" | grep -Eq "$IMAGE_PATTERN" || fail '文件系统或固件名称不匹配'
     newer "$version" || fail '该固件不是更新版本，已阻止回刷'
     expected="$(jq -er '.sha256 | select(test("^[0-9a-f]{64}$"))' "$RELEASE")" || fail '缺少有效校验值'
     if [ ! -f "$IMAGE" ] || [ -L "$IMAGE" ]; then fail '固件文件不存在'; fi
@@ -276,7 +276,7 @@ case "$MODE" in
         rm -f "$IMAGE" "$IMAGE.part"
         curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
             --connect-timeout 8 --max-time 900 --speed-time 30 --speed-limit 1024 \
-            -H 'User-Agent: Photonicat-Wrt-Online-Upgrade/2.0' \
+            -H 'User-Agent: Pwrt-Online-Upgrade/2.0' \
             --max-filesize "$size" -o "$IMAGE.part" "$(transport_url "$(jq -r '.url' "$RELEASE")")" \
             2>"$DIR/network.log" || fail '固件下载失败，请检查所选更新源或切换后重试'
         mv "$IMAGE.part" "$IMAGE"

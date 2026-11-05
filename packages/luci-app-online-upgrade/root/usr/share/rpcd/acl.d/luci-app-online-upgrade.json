@@ -1,6 +1,6 @@
 {
   "luci-app-online-upgrade": {
-    "description": "Check and manually install verified Photonicat-Wrt firmware",
+    "description": "Check and manually install verified Pwrt firmware",
     "read": { "ubus": { "luci.swrt_upgrade": [ "status" ] } },
     "write": { "ubus": { "luci.swrt_upgrade": [ "check", "download", "install", "set_source", "set_channel" ] } }
   }

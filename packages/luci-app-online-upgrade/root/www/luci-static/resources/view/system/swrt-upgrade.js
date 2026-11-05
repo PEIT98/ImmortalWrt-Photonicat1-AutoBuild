@@ -183,7 +183,7 @@ return view.extend({
         root = E('div', { id: 'swrt-upgrade', 'class': 'np-root swrt-page' }, [
             E('link', { rel: 'stylesheet', href: L.resource('swrt-upgrade.css') + '?v=2.0.0' }),
             E('div', { 'class': 'np-page-heading' }, [
-                E('div', {}, [ E('h2', { 'class': 'np-page-title' }, 'Photonicat-Wrt 在线更新'),
+                E('div', {}, [ E('h2', { 'class': 'np-page-title' }, 'Pwrt 在线更新'),
                     E('p', { 'class': 'np-page-description' }, '光影猫一代 · PEIT98 仓库 · 支持正式与预发行固件') ]),
                 E('span', { 'class': 'np-chip' }, 'Photonicat 1')
             ]),
@@ -217,7 +217,7 @@ return view.extend({
             E('details', { 'class': 'swrt-details', open: '' }, [ E('summary', {}, '发布说明'),
                 E('div', { 'class': 'swrt-details-content' }, [ notes, releaseLink ]) ])
             ]),
-            E('p', { 'class': 'np-footer' }, 'Photonicat-Wrt · 更新器基于 SlAlot SWRT 适配')
+            E('p', { 'class': 'np-footer' }, 'Pwrt · 更新器基于 SlAlot SWRT 适配')
         ]);
         keep.checked = !initial || initial.keep_default !== false;
         if (initial && initial.ok === true) update(initial);

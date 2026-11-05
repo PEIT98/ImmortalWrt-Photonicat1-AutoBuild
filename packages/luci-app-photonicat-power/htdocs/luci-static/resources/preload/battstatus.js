@@ -125,7 +125,7 @@ function headerStyle() {
 	if (header) {
 		header.classList.add('pcat-header');
 		const brand = header.querySelector('a.brand');
-		if (brand && brand.textContent.trim() === 'Photonicat-Wrt')
+		if (brand && brand.textContent.trim() === 'Pwrt')
 			brand.setAttribute('data-pcat-mobile-brand', 'Pwrt');
 	}
 	let link = document.getElementById('photonicat-header-style');
