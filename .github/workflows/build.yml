@@ -398,6 +398,22 @@ jobs:
           du -sh immortalwrt/dl "$CCACHE_DIR" 2>/dev/null || true
           df -h immortalwrt
 
+      - name: 准备无线检查所需的主机工具
+        working-directory: immortalwrt
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 固件中的 ucode 是 ARM 程序；无线回归需要显式构建主机版本。
+          # 先准备其构建工具，后续固件编译会复用这些产物。
+          jobs="$(nproc)"
+          [ "$jobs" -le 3 ] || jobs=3
+          make -j"$jobs" tools/install V=0
+          make package/utils/ucode/host/compile V=s
+          test -x staging_dir/hostpkg/bin/ucode
+
+      - name: 核对 Pwrt 无线默认值
+        run: bash scripts/tests/test_wifi_defaults.sh "$GITHUB_WORKSPACE/immortalwrt"
+
       - name: 编译光影猫固件
         working-directory: immortalwrt
         shell: bash
@@ -427,9 +443,6 @@ jobs:
             echo '::warning::并行编译失败且空间尚充足，尝试单线程 V=s 定位真实错误'
             make -j1 V=s
           fi
-
-      - name: 核对 Pwrt 无线默认值
-        run: bash scripts/tests/test_wifi_defaults.sh "$GITHUB_WORKSPACE/immortalwrt"
 
       - name: Report compiler cache
         if: always()

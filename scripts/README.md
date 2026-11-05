@@ -51,7 +51,7 @@
 2. 启用板载 SDIO；更新 Feeds 后处理 LuaJIT、ndisc6、WeeChat 兼容，再刷新索引并安装 Feeds。
 3. 检查 QM/Generic，处理 iStore 包名；`build/select-packages.sh` 应用插件选择。
 4. 执行 `make defconfig`，由 `checks/verify-config.sh` 检查，再生成固件身份、内置文件并下载源码。
-5. 检查 ndisc6，编译固件，验证无线默认值，收集短文件名镜像并生成发布说明。
+5. 检查 ndisc6，准备构建工具并显式构建主机 `ucode`，验证无线默认值后再编译固件，收集短文件名镜像并生成发布说明。
 
 编译仅由 Actions 手动触发；普通提交不会启动编译。完整 `.config` 由流程生成并上传为 `photonicat1-build-config`，根目录仅维护覆盖配置。
 
