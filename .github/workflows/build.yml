@@ -96,6 +96,9 @@ jobs:
         working-directory: immortalwrt
         run: |
           ./scripts/feeds update -a
+          # 修复上游 LuaJIT 虚拟包在 armv8 上的 Kconfig 自依赖，再重建 Packages 索引。
+          sh ../scripts/patches/fix-luajit-riscv-provider.sh .
+          ./scripts/feeds update -i packages
           sh ../scripts/patches/fix-qmodem-ndisc6-source.sh feeds/qmodem/application/ndisc6/Makefile
           sh ../scripts/patches/fix-weechat-provider.sh .
           bash ../scripts/tests/test_build_dependencies.sh
