@@ -48,6 +48,26 @@ test_fresh_fixed_alias_and_single_scan_settings() {
     assert_json "$state" '(.uci|has("network.wwan_5g")|not) and .uci["network.lan.ipaddr"]=="172.16.0.1"'
     jq -e '.uci["firewall.wan.network"]|contains(["wwan","wwan_5g","wwan_5gv6"])' "$state" >/dev/null
 }
+test_system_library_unset_environment_does_not_abort_defaults() {
+    # Stock /lib/functions.sh reads IPKG_INSTROOT directly while being sourced.
+    # Normal device boot does not have to export this packaging variable.
+    printf '%s\n' '[ -z "$IPKG_INSTROOT" ] || true' > "$TEST_TMP/functions"
+    cat "$root/lib/functions.sh" >> "$TEST_TMP/functions"
+    cp "$TEST_TMP/functions" "$root/lib/functions.sh"
+    ok env -u IPKG_INSTROOT sh "$defaults"
+    assert_json "$state" '.uci["qmodem.cfg001.alias"]=="wwan_5g" and .uci["qmodem.main.photonicat_fixed_5g_v1"]=="1" and .uci["network.globals.photonicat_wan_v1"]=="1"'
+}
+test_sourced_defaults_disable_inherited_nounset_for_system_callbacks() {
+    # Stock config_get accepts three arguments and expands an optional $4.
+    # Model that library contract without accessing the host UCI database.
+    cat >> "$root/lib/functions.sh" <<'LIB'
+stock_config_get_optional() { local optional="$4"; }
+stock_config_get_optional variable section TYPE
+LIB
+    modem
+    ok sh -uc '( . "$1" )' sh "$defaults"
+    assert_json "$state" '.uci["qmodem.6_2.alias"]=="wwan_5g" and .uci["qmodem.6_2.apn"]=="custom-apn" and .uci["qmodem.main.photonicat_fixed_5g_v1"]=="1"'
+}
 test_existing_modem_migrates_without_touching_apn() {
     modem
     update_json "$state" '.uci+={"mwan3.qmodem_priority3":"member","mwan3.qmodem_priority3.interface":"6_2","mwan3.6_2":"interface","network.6_2":"interface","network.6_2.modem_config":"6_2","network.6_2.proto":"qmodem_runtime","network.6_2v6":"interface","network.6_2v6.modem_config":"6_2","network.6_2v6.device":"@6_2","network.6_2v6.ifname":"@6_2"}|.uci["firewall.wan.network"]+=["6_2","6_2v6"]'

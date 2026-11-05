@@ -1,6 +1,9 @@
 #!/bin/sh
 # 首启网络配置；各部分独立完成、独立重试，扫描和拨号交给官方 QModem。
-set -eu
+set -e
+# 系统 UCI 函数库会直接读取可选变量及参数，不能在 nounset 下调用。
+# 此文件也可能被 uci-defaults source，须同时关闭继承的 nounset。
+set +u
 die() { echo "photonicat-network: $*" >&2; exit 1; }
 # uci-defaults 会被放在条件命令中 source，不能只依赖 set -e。
 uci() {
