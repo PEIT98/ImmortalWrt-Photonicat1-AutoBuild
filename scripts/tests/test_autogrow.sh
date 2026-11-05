@@ -7,12 +7,12 @@ setup() {
     mkdir -p "$(dirname "$platform")"
     cp "$ROOT/scripts/tests/fixtures/rockchip-platform.sh" "$platform"
     cp "$ROOT/scripts/tests/fixtures/rockchip-storage.config" "$kernel"
-    patch="$ROOT/scripts/patches/enable-emmc-autogrow.sh"
+    patch="$ROOT/scripts/patches/storage/enable-emmc-autogrow.sh"
     printf '1 65536 32768\n2 131072 2097152\n' > "$TEST_TMP/image"
 }
 compare() {
     printf '%s' "$1" > "$TEST_TMP/boot"
-    sh -c '. "$1"; swrt_partition_difference "$2" "$3"' sh "$ROOT/patches/rockchip/swrt-upgrade-partitions.sh" "$TEST_TMP/boot" "$TEST_TMP/image"
+    sh -c '. "$1"; swrt_partition_difference "$2" "$3"' sh "$ROOT/patches/storage/swrt-upgrade-partitions.sh" "$TEST_TMP/boot" "$TEST_TMP/image"
 }
 test_both_paths_and_idempotence() {
     ok sh "$patch" "$TEST_TMP"

@@ -3,7 +3,7 @@
 # 修正官方 LinkEase iStore 在 ImmortalWrt 25.12 中的软件包名称。
 # 在安装 Feeds 后执行；仅修改编译机的临时源码。
 set -eu
-. "$(dirname "$0")/../lib/patch.sh"
+. "$(dirname "$0")/../../lib/patch.sh"
 SRC="${1:?用法: fix-istore-25.12.sh IMMORTALWRT_SRC}"
 APP="$SRC/package/feeds/istore/luci-app-store/Makefile"
 for pkg in luci-app-store luci-lib-taskd luci-lib-xterm taskd; do

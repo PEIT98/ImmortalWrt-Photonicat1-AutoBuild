@@ -4,6 +4,6 @@
 bin/
 build_dir/
 downloads/
-release/
+/release/
 __pycache__/
 *.py[cod]

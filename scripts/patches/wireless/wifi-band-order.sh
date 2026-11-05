@@ -1,7 +1,7 @@
 #!/bin/sh
 # 构建主机脚本：先校验，再提交全部文本修改。
 set -eu
-. "$(dirname "$0")/../lib/patch.sh"
+. "$(dirname "$0")/../../lib/patch.sh"
 root=${1:?需要 ImmortalWrt 根目录}
 from="$root/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc"
 to="$root/files/lib/wifi/mac80211.uc"

@@ -1,7 +1,7 @@
 #!/bin/sh
 # 升级已知旧版 ndisc6；保留上游其他版本及校验已知旧补丁后才移除。
 set -eu
-. "$(dirname "$0")/../lib/patch.sh"
+. "$(dirname "$0")/../../lib/patch.sh"
 recipe=${1:?需要 ndisc6 Makefile}
 pc_init
 pc_load "$recipe"

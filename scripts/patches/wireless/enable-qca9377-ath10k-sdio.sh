@@ -1,7 +1,7 @@
 #!/bin/sh
 # 构建主机脚本：先校验，再提交全部文本修改。
 set -eu
-. "$(dirname "$0")/../lib/patch.sh"
+. "$(dirname "$0")/../../lib/patch.sh"
 pc_init
 pc_load "${1:?需要 ImmortalWrt 根目录}/package/kernel/mac80211/ath.mk"
 pc_replace 'config-$(call config_package,ath10k,regular) += ATH10K ATH10K_PCI

@@ -42,7 +42,7 @@ QModem 使用官方扫描与拨号逻辑，菜单为“移动网络”；Generic
 
 ## 详细说明
 
-- 配置与构建：[插件和驱动配置](photonicat1.config) · [构建脚本说明](scripts/README.md)
+- 配置与构建：[插件和驱动配置](photonicat1.config) · [脚本分类说明](scripts/README.md) · [补丁分类说明](patches/README.md)
 - 系统管理：[光影猫管理与软件源](packages/luci-app-photonicat-power/README.md) · [CPU 调频](packages/luci-app-cpufreq/README.md) · [在线升级](packages/luci-app-online-upgrade/README.md)
 - 存储与固件：[eMMC 扩容](docs/STORAGE-RECOVERY.md) · [USB 硬盘保活](packages/luci-app-swrt-disk-keepalive/README.md) · [NFA765 E108 固件](firmware/nfa765-e108/README.md)
 

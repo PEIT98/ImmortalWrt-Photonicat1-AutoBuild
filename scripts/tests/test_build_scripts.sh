@@ -70,7 +70,7 @@ PKG_VERSION:=0.2.1-r1
 include $(TOPDIR)/feeds/luci/luci.mk
 # call BuildPackage - OpenWrt buildroot signature
 MAKEFILE
-    patch="$ROOT/scripts/patches/fix-istore-25.12.sh"
+    patch="$ROOT/scripts/patches/packages/fix-istore-25.12.sh"
 }
 test_istore_patch_preserves_feed_links_and_is_idempotent() {
     istore_fixture

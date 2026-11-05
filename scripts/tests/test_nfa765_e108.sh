@@ -12,7 +12,7 @@ patch_file="$src/package/kernel/mac80211/patches/ath11k/$patch_name"
 recipe="$src/package/firmware/linux-firmware/qca_ath11k.mk"
 cp "$recipe" "$work/recipe.before"
 (cd "$payload" && sha256sum -c "$project/firmware/nfa765-e108/SHA256SUMS")
-cmp "$patch_file" "$project/patches/ath11k/$patch_name"
+cmp "$patch_file" "$project/patches/wireless/$patch_name"
 grep -aFq 'subsystem-vendor=105b,subsystem-device=e108,qmi-chip-id=2,qmi-board-id=255' "$payload/board-2.bin"
 grep -aFq 'subsystem-vendor=105b,subsystem-device=e108,qmi-chip-id=18,qmi-board-id=255' "$payload/board-2.bin"
 test -s "$payload/Notice.txt" && test -s "$payload/LICENSE.QualcommAtheros_ath10k"

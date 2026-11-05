@@ -1,7 +1,7 @@
 #!/bin/sh
 # 使用已存在的默认 WeeChat 提供者，避免虚拟包依赖循环。
 set -eu
-. "$(dirname "$0")/../lib/patch.sh"
+. "$(dirname "$0")/../../lib/patch.sh"
 root=${1:?需要源码目录}
 recipe="$root/feeds/luci/applications/luci-app-weechat/Makefile"
 [ -f "$recipe" ] || { echo 'WeeChat frontend is absent; no provider patch needed'; exit 0; }

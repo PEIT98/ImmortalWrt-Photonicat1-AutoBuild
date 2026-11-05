@@ -37,7 +37,7 @@ test_native_upgrade_write_targets() {
     mkdir -p "$(dirname "$platform")"
     cp "$ROOT/scripts/tests/fixtures/rockchip-platform.sh" "$platform"
     cp "$ROOT/scripts/tests/fixtures/rockchip-storage.config" "$TEST_TMP/target/linux/rockchip/armv8/config-6.12"
-    ok sh "$ROOT/scripts/patches/enable-emmc-autogrow.sh" "$TEST_TMP"
+    ok sh "$ROOT/scripts/patches/storage/enable-emmc-autogrow.sh" "$TEST_TMP"
     cp "$platform" "$TEST_TMP/upgrade.sh"
     rewrite "$TEST_TMP/upgrade.sh" /tmp/ "$TEST_TMP/"
     printf '1 65536 32768\n2 131072 8257536\n3 8388608 1048576\n' > "$TEST_TMP/fixture.bootdisk"

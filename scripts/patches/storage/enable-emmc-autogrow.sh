@@ -1,11 +1,11 @@
 #!/bin/sh
 # 保留扩容后的 eMMC 分区；基于 SlAlot ae655185，AGPL-3.0-only。
 set -eu
-. "$(dirname "$0")/../lib/patch.sh"
+. "$(dirname "$0")/../../lib/patch.sh"
 root=${1:?需要 ImmortalWrt 根目录}
 platform="$root/target/linux/rockchip/armv8/base-files/lib/upgrade/platform.sh"
 kernel="$root/target/linux/rockchip/armv8/config-6.12"
-helper=$(cd "$(dirname "$0")/../.." && pwd)/patches/rockchip/swrt-upgrade-partitions.sh
+helper=$(cd "$(dirname "$0")/../../.." && pwd)/patches/storage/swrt-upgrade-partitions.sh
 for option in BLK_DEV_LOOP F2FS_FS; do
     grep -Fxq "CONFIG_$option=y" "$kernel" || pc_fail "CONFIG_$option must be built in for preinit eMMC expansion"
 done

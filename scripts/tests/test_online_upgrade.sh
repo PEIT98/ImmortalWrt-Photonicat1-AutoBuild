@@ -51,7 +51,7 @@ no_flash() { if [[ -e $log ]] && grep -Ev '^-T ' "$log"; then fail 'unexpected f
 test_identity_signature_and_acl() {
     ok sh "$package/usr/libexec/rpcd/luci.swrt_upgrade" list
     assert_json "$OUT" '(.install.keep|type)=="number" and (.set_source.source|type)=="string" and (.set_channel.channel|type)=="string"'
-    ok sh "$ROOT/scripts/build/stamp-firmware.sh" "$TEST_TMP/stamp" photonicat1-20261102-222244-55 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    ok sh "$ROOT/scripts/release/stamp-firmware.sh" "$TEST_TMP/stamp" photonicat1-20261102-222244-55 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     assert_json "$TEST_TMP/stamp/files/etc/photonicat-release.json" '.repository=="PEIT98/ImmortalWrt-Photonicat1-AutoBuild" and .board=="ariaboard,photonicat" and .version=="photonicat1-20261102-222244-55" and .commit=="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'
     local legacy="$TEST_TMP/stamp/files/etc/online-upgrade-device"
     ok sh -n "$legacy"
@@ -59,11 +59,11 @@ test_identity_signature_and_acl() {
     cp "$TEST_TMP/stamp/files/etc/photonicat-release.json" "$TEST_TMP/identity.before"
     cp "$legacy" "$TEST_TMP/legacy.before"
     for tag in 1.10 photonicat1-00001102-222244-55 photonicat1-20260230-222244-55 photonicat1-20261102-256144-55; do
-        reject sh "$ROOT/scripts/build/stamp-firmware.sh" "$TEST_TMP/stamp" "$tag" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        reject sh "$ROOT/scripts/release/stamp-firmware.sh" "$TEST_TMP/stamp" "$tag" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         assert_same "$TEST_TMP/stamp/files/etc/photonicat-release.json" "$TEST_TMP/identity.before"
         assert_same "$legacy" "$TEST_TMP/legacy.before"
     done
-    reject sh "$ROOT/scripts/build/stamp-firmware.sh" "$TEST_TMP/stamp" photonicat1-20261102-222244-55 invalid-commit
+    reject sh "$ROOT/scripts/release/stamp-firmware.sh" "$TEST_TMP/stamp" photonicat1-20261102-222244-55 invalid-commit
     assert_same "$TEST_TMP/stamp/files/etc/photonicat-release.json" "$TEST_TMP/identity.before"
     assert_same "$legacy" "$TEST_TMP/legacy.before"
     assert_json "$package/usr/share/rpcd/acl.d/luci-app-online-upgrade.json" '.["luci-app-online-upgrade"]|.read=={ubus:{"luci.swrt_upgrade":["status"]}} and (.write.ubus["luci.swrt_upgrade"]|sort)==(["check","download","install","set_source","set_channel"]|sort) and (.write|has("file")|not)'
@@ -72,7 +72,7 @@ test_identity_signature_and_acl() {
     assert_has "$package/../Makefile" /etc/config/swrt_upgrade
 }
 test_identity_generation_failure_preserves_both_files() {
-    local stamp="$TEST_TMP/stamp" script="$ROOT/scripts/build/stamp-firmware.sh"
+    local stamp="$TEST_TMP/stamp" script="$ROOT/scripts/release/stamp-firmware.sh"
     ok sh "$script" "$stamp" photonicat1-20261102-222244-55 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     cp "$stamp/files/etc/photonicat-release.json" "$TEST_TMP/identity.before"
     cp "$stamp/files/etc/online-upgrade-device" "$TEST_TMP/legacy.before"

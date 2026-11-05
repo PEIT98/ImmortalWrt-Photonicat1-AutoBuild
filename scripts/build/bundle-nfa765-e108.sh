@@ -8,7 +8,7 @@ data="$project/firmware/nfa765-e108"
 revision=273e26348fbd4c14320f6789e999b3211e696690
 base="https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware/+/$revision/ath11k/WCN6855/hw2.0/nfa765"
 patch_name=999-photonicat-nfa765-e108-firmware.patch
-patch_src="$project/patches/ath11k/$patch_name"
+patch_src="$project/patches/wireless/$patch_name"
 patch_dst="$src/package/kernel/mac80211/patches/ath11k/$patch_name"
 recipe="$src/package/firmware/linux-firmware/qca_ath11k.mk"
 

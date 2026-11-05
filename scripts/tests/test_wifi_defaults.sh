@@ -9,7 +9,7 @@ setup() {
     upstream="$WIFI_SOURCE_ROOT/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc"
     mkdir -p "$wifi/package/network/config/wifi-scripts/files/lib/wifi"
     cp "$upstream" "$wifi/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc"
-    ok sh "$ROOT/scripts/patches/wifi-band-order.sh" "$wifi"
+    ok sh "$ROOT/scripts/patches/wireless/wifi-band-order.sh" "$wifi"
     generated="$wifi/files/lib/wifi/mac80211.uc"
     cat > "$TEST_TMP/run.uc" <<'UCODE'
 function readfile(path) {
@@ -97,11 +97,11 @@ test_disabled_bands_do_not_generate_invalid_ap() {
 }
 test_patch_is_repeatable_and_rejects_upstream_drift() {
     cp "$generated" "$TEST_TMP/once"
-    ok sh "$ROOT/scripts/patches/wifi-band-order.sh" "$wifi"
+    ok sh "$ROOT/scripts/patches/wireless/wifi-band-order.sh" "$wifi"
     assert_same "$TEST_TMP/once" "$generated"
     assert_same "$upstream" "$wifi/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc"
     rewrite "$wifi/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc" 'let band_name = filter(bands_order, (b) => radio.bands[b])[0];' 'let band_name = "2G";'
-    reject sh "$ROOT/scripts/patches/wifi-band-order.sh" "$wifi"
+    reject sh "$ROOT/scripts/patches/wireless/wifi-band-order.sh" "$wifi"
     assert_same "$TEST_TMP/once" "$generated"
 }
 run_tests "$@"

@@ -153,7 +153,7 @@ cp -a "$OVERLAY/." "$SRC/files/"
 AUTOGROW="$SRC/files/usr/libexec/swrt-autogrow"
 test -x "$AUTOGROW"
 sh -n "$AUTOGROW" "$SRC/files/lib/preinit/79-swrt-autogrow"
-sh "$(dirname "$0")/../patches/enable-emmc-autogrow.sh" "$SRC"
+sh "$(dirname "$0")/../patches/storage/enable-emmc-autogrow.sh" "$SRC"
 
 # Aurora 使用系统主机名显示品牌；默认配置在首启生成后应用。
 BRAND_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-brand"
@@ -244,7 +244,7 @@ echo 'Bandix Plus 前/后端已加入：首次默认不启用流量挂钩和限�
 # kmod-usb-serial-option 由 select-packages.sh 选择；此处仅安装内核补丁源码。
 # 必须确保 Rockchip 目标仍使用 Linux 6.12；如升级到新内核则明确报错，
 # 避免补丁被放进错误目录而悄然失效。
-TD_PATCH_SRC="$(dirname "$0")/../../999-add-TD-TECH-option-id.patch"
+TD_PATCH_SRC="$(dirname "$0")/../../patches/kernel/999-add-TD-TECH-option-id.patch"
 TD_PATCH_DIR="$SRC/target/linux/rockchip/patches-6.12"
 test -f "$TD_PATCH_SRC" || { echo "::error::TD-TECH 补丁源文件丢失" >&2; exit 1; }
 test -d "$TD_PATCH_DIR" || { echo "::error::Rockchip Linux 6.12 补丁目录不存在，需检查内核版本" >&2; exit 1; }
@@ -255,7 +255,7 @@ grep -Fq 'TDTECH_VENDOR_ID' "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁�
 echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.12。'
 
 # 使用本次上游检测源码设置频段顺序、Pwrt SSID 和 WPA2 密码。
-bash "$(dirname "$0")/../patches/wifi-band-order.sh" "$SRC"
+bash "$(dirname "$0")/../patches/wireless/wifi-band-order.sh" "$SRC"
 echo '准备完成：已加载光影猫配置、官方 QModem main、Generic main 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'
 echo '首次使用：在官方 QModem 页面扫描并拨号；多 WAN 策略按需手动配置。'
