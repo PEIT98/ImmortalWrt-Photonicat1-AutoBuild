@@ -24,9 +24,4 @@ config interface 'wan6'
 	option device '@wan'
 	option proto 'dhcpv6'
 
-# Wi-Fi STA 中继绑定到 wwan
-config interface 'wwan'
-	option proto 'dhcp'
-	option peerdns '1'
-
 # 模组逻辑接口、设备及路由均由官方 QModem 按扫描结果创建。

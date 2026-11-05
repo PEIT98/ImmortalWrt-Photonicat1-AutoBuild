@@ -175,21 +175,12 @@ MODEM_MENU="$SRC/files/usr/share/luci/menu.d/zz-photonicat-modem-title.json"
 jq -e -s 'length == 1 and (.[0]|type) == "object"' "$MODEM_MENU" >/dev/null
 grep -Fq '"title": "移动网络"' "$MODEM_MENU"
 
-# 首启恢复旧项目的网络定制，保留管理地址、无线配置及网络工具。
-NETWORK_DEFAULT="$SRC/files/etc/uci-defaults/99-photonicat-network"
-test -f "$NETWORK_DEFAULT" || { echo '::error::缺少光影猫首启网络配置' >&2; exit 1; }
-chmod 755 "$NETWORK_DEFAULT"
-sh -n "$NETWORK_DEFAULT"
-test ! -e "$SRC/files/usr/bin/photonicat-qmodem-mwan3-sync"
-test ! -e "$SRC/files/usr/bin/photonicat-qmodem-scan"
+# mwan3 使用软件包自带配置，首启仅停止服务并关闭自启动。
+MWAN_DEFAULT="$SRC/files/etc/uci-defaults/99-mwan3-disable"
+test -f "$MWAN_DEFAULT"
+chmod 755 "$MWAN_DEFAULT"
+sh -n "$MWAN_DEFAULT"
 echo 'QModem：使用官方扫描、串口识别和拨号默认值；mwan3 默认关闭。'
-
-# MyOpenWrt 的 tom_modem 权限文件直接放进固件根文件系统。
-# rpcd 启动时会读取 acl.d，无须额外设置首启重启。
-TOM_ACL="$SRC/files/usr/share/rpcd/acl.d/tom_modem.json"
-test -f "$TOM_ACL" || { echo "::error::缺少 MyOpenWrt tom_modem ACL 文件" >&2; exit 1; }
-jq -e -s 'length == 1 and (.[0]|type) == "object"' "$TOM_ACL" >/dev/null
-echo "MyOpenWrt ACL 已内置并通过 JSON 校验：/usr/share/rpcd/acl.d/tom_modem.json"
 
 # Aurora 官方源码根目录直接包含 Makefile，直接作为 OpenWrt 本地软件包编译。
 # 该软件包含自身的 UCI 首启默认主题设置，无须添加重复脚本。
@@ -210,18 +201,7 @@ test -f "$AURORA_CONFIG_DIR/po/zh_Hans/aurora-config.po"
 # 上游预生成的现代 JS 不适合旧 jsmin；保留上游关闭二次压缩的设置。
 grep -Fxq 'LUCI_MINIFY_JS:=0' "$AURORA_CONFIG_DIR/Makefile"
 
-# cake-autorate 使用固定稳定版源码和 SHA256，本地封装提供默认关闭的服务。
-CAKE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/cake-autorate"
-CAKE_DST="$SRC/package/cake-autorate"
-test -f "$CAKE_SRC/Makefile" || { echo '::error::缺少 cake-autorate 本地封装' >&2; exit 1; }
-test ! -e "$CAKE_DST" || { echo '::error::cake-autorate 目标路径已存在，禁止覆盖' >&2; exit 1; }
-mkdir -p "$CAKE_DST"
-cp -a "$CAKE_SRC/." "$CAKE_DST/"
-test -x "$CAKE_DST/files/cake-autorate.init"
-test -x "$CAKE_DST/files/cake-autorate-prepare"
-test -x "$CAKE_DST/files/98-cake-autorate"
-sh -n "$CAKE_DST/files/cake-autorate.init" "$CAKE_DST/files/cake-autorate-prepare" "$CAKE_DST/files/98-cake-autorate"
-echo '文件管理和 Travelmate 使用官方包；Aurora 设置及 cake-autorate 已准备。'
+echo '文件管理和 Travelmate 使用官方包；Aurora 设置已准备。'
 
 # 固件版本/存储卡片只使用 rootfs 覆盖文件；不能修改 Aurora 主题。
 INFO_RPC="$SRC/files/usr/libexec/rpcd/luci.photonicat1"
@@ -259,20 +239,6 @@ fi
 sed -i "s/option enable_traffic '1'/option enable_traffic '0'/" "$BANDIX_CONFIG"
 grep -Fq "option enable_traffic '0'" "$BANDIX_CONFIG" || exit 1
 echo 'Bandix Plus 前/后端已加入：首次默认不启用流量挂钩和限速。'
-
-# 西瓜皮原版 TD-TECH (3466) USB option 串口内核补丁（保持原内容不修改）。
-# kmod-usb-serial-option 由 select-packages.sh 选择；此处仅安装内核补丁源码。
-# 必须确保 Rockchip 目标仍使用 Linux 6.12；如升级到新内核则明确报错，
-# 避免补丁被放进错误目录而悄然失效。
-TD_PATCH_SRC="$(dirname "$0")/../../999-add-TD-TECH-option-id.patch"
-TD_PATCH_DIR="$SRC/target/linux/rockchip/patches-6.12"
-test -f "$TD_PATCH_SRC" || { echo "::error::TD-TECH 补丁源文件丢失" >&2; exit 1; }
-test -d "$TD_PATCH_DIR" || { echo "::error::Rockchip Linux 6.12 补丁目录不存在，需检查内核版本" >&2; exit 1; }
-TD_PATCH_DEST="$TD_PATCH_DIR/999-add-TD-TECH-option-id.patch"
-cp -f "$TD_PATCH_SRC" "$TD_PATCH_DEST"
-cmp -s "$TD_PATCH_SRC" "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁复制不一致" >&2; exit 1; }
-grep -Fq 'TDTECH_VENDOR_ID' "$TD_PATCH_DEST" || { echo "::error::TD-TECH 补丁内容不完整" >&2; exit 1; }
-echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.12。'
 
 # 使用本次上游检测源码设置频段顺序、Photonicat SSID 和 WPA2 密码。
 bash "$(dirname "$0")/../patches/wifi-band-order.sh" "$SRC"

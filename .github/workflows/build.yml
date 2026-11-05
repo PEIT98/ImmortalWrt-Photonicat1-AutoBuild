@@ -158,19 +158,16 @@ jobs:
           grep -Fxq 'PKG_BUILD_DEPENDS:=luci-base/host' package/luci-app-photonicat-power/Makefile
           echo '单一光影猫电源包将提供 MCU 服务、页面、电池状态和中文翻译。'
 
-      - name: 检查官方 QModem 源码与网络默认值恢复
+      - name: 检查官方 QModem 源码与 mwan3 默认关闭
         run: |
           bash scripts/build/verify-qmodem-feeds.sh runtime "$GITHUB_WORKSPACE/immortalwrt"
-          sh -n files/etc/uci-defaults/99-photonicat-network
-          test -x immortalwrt/files/etc/uci-defaults/99-photonicat-network
-          test ! -e immortalwrt/files/usr/bin/photonicat-qmodem-mwan3-sync
-          test ! -e immortalwrt/files/usr/bin/photonicat-qmodem-scan
-          bash scripts/tests/test_qmodem_defaults.sh
+          sh -n immortalwrt/files/etc/uci-defaults/99-mwan3-disable
+          test -x immortalwrt/files/etc/uci-defaults/99-mwan3-disable
 
       - name: 修复 iStore 软件包名称
         run: sh scripts/patches/fix-istore-25.12.sh "$GITHUB_WORKSPACE/immortalwrt"
 
-      - name: 核对新增管理插件与 CAKE 接入
+      - name: 核对新增管理插件
         working-directory: immortalwrt
         run: |
           test -f feeds/luci/applications/luci-app-filemanager/Makefile
@@ -178,11 +175,6 @@ jobs:
           test -f package/luci-app-aurora-config/Makefile
           test -x package/luci-app-aurora-config/root/usr/libexec/rpcd/luci.aurora
           grep -Fxq 'LUCI_MINIFY_JS:=0' package/luci-app-aurora-config/Makefile
-          diff -r ../packages/cake-autorate package/cake-autorate
-          sh -n package/cake-autorate/files/cake-autorate.init
-          sh -n package/cake-autorate/files/cake-autorate-prepare
-          sh -n package/cake-autorate/files/98-cake-autorate
-          bash ../scripts/tests/test_cake_autorate.sh
 
       - name: 核对光影猫在线升级
         working-directory: immortalwrt
@@ -287,7 +279,7 @@ jobs:
             exit 1
           fi
           echo '===== 核对上游插件是否被注册为目标包 ====='
-          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-app-photonicat-power luci-app-filemanager luci-app-aurora-config luci-app-travelmate cake-autorate luci-app-sqm; do
+          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic qmodem-smsd sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd luci-app-bandix-plus bandix-plus luci-app-cpufreq luci-app-photonicat-power luci-app-filemanager luci-app-aurora-config luci-app-travelmate luci-app-sqm; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
               echo "registered: $pkg"
             else
@@ -351,7 +343,6 @@ jobs:
             echo "Release tag: ${{ steps.firmware_identity.outputs.release_tag }}"
             echo "Aurora theme: $(git -C immortalwrt/package/luci-theme-aurora rev-parse HEAD)"
             echo "Aurora config: $(git -C immortalwrt/package/luci-app-aurora-config rev-parse HEAD)"
-            sed -n 's/^PKG_SOURCE_VERSION:=/cake-autorate stable source: /p' packages/cake-autorate/Makefile
             echo "Reference: $(git -C photonicat-reference rev-parse HEAD)"
           } > immortalwrt/files/etc/photonicat1-build-info
 
@@ -500,7 +491,6 @@ jobs:
             echo "Release tag: ${{ steps.firmware_identity.outputs.release_tag }}"
             echo "Aurora theme: $(git -C immortalwrt/package/luci-theme-aurora rev-parse HEAD)"
             echo "Aurora config: $(git -C immortalwrt/package/luci-app-aurora-config rev-parse HEAD)"
-            sed -n 's/^PKG_SOURCE_VERSION:=/cake-autorate stable source: /p' packages/cake-autorate/Makefile
             echo "Workflow repo commit: $GITHUB_SHA"
             cat immortalwrt/files/lib/firmware/ath11k/WCN6855/hw2.0/nfa765-e108/build-info
             echo "Built at (Asia/Shanghai): $(date '+%Y-%m-%d %H:%M:%S %Z')"

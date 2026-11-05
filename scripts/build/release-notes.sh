@@ -36,12 +36,12 @@ test -f "$dir/build-sources.txt"
   echo '- 系统 → 硬盘保活：默认关闭，仅定时只读选中的 USB 硬盘'
   echo '- 系统 → 在线升级：国内/GitHub 源与正式/预发行通道可选，默认保留配置，仅手动确认后升级'
   echo '- 新增文件管理、Aurora 设置、Travelmate 无线中继（默认关闭）'
-  echo '- 内置 SQM/CAKE 与 cake-autorate 稳定版，默认关闭；先填写实测速率并配置队列，再手动开启'
+  echo '- 内置官方 SQM/CAKE，按需手动配置队列和速率'
   echo '- 新增固件版本与 Docker 存储状态卡片、Bandix Plus 多接口流量统计（首次默认关闭）' 
   echo '- Docker 存储仅检测提示，不会自动挂载、迁移、格式化或修改防火墙' 
   echo '- QModem 使用官方扫描、串口识别、拨号及默认厂商 QMI 驱动；接口名自动生成'
-  echo '- mwan3 保留插件和配置，默认关闭；多 WAN 策略按需手动配置'
-  echo '- 先备份再完整恢复官方 QM 默认，清理旧 APN、串口和模组配置，由官方重新扫描；成功后保留新设置'
+  echo '- mwan3 使用官方默认配置，首启关闭服务；多 WAN 策略按需手动配置'
+  echo '- QM 不附加恢复或网络改写脚本；需清除旧 APN 和串口等设置时，刷机请选择不保留配置'
   echo
   echo '<details><summary>源码版本</summary>'
   echo

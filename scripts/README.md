@@ -55,15 +55,13 @@
 
 **QModem 与 Generic：** `build/prepare.sh` 注册官方 [FUjr/QModem](https://github.com/FUjr/QModem) `main` 和 [PEIT98/luci-app-qmodem-generic](https://github.com/PEIT98/luci-app-qmodem-generic) `main` 两个软件源，由 Feeds 递归安装。Generic 原样复刻自 LianXia233，后续 WebUI 修复直接在自有仓库维护。Actions 检查依赖、菜单和安装文件冲突，构建信息记录两个源的实际提交号。参考仓库针对 ImmortalWrt `master` 的 `input-support` 门控未照搬到本项目 `openwrt-25.12`。
 
-**首启网络配置：** [统一入口](../files/etc/uci-defaults/99-photonicat-network)保留 Travelmate/SQM 初始状态和无线中继的 WAN 区域配置。先备份，再从 ROM 完整导入官方 QM 默认配置，清理旧 APN、串口、PDP、拨号选择、模组及槽位记录和未提交的改动；删除 QM 生成的独立网络接口及对应 DHCP/防火墙关联。管理网络、Wi-Fi 及现有插件保留；mwan3 恢复时关闭服务。独立 v2 标记覆盖上一版保留 APN 的恢复，成功后保留用户新设置，失败可重试。`tests/test_qmodem_defaults.sh` 验证完整清理、旧版本迁移、备份、重试、普通网络保护及运行源码检查；不再改写或单独测试官方 USB 排序逻辑。
+**网络默认值：** QM 不附加首启恢复、补扫、USB/AT 排序或接口同步脚本，配置与 LuCI 权限均随官方 QM 和 Generic 安装。mwan3 使用上游默认配置，[首启文件](../files/etc/uci-defaults/99-mwan3-disable)仅停止服务并关闭自启动。项目不预建无线中继接口、不改写防火墙。需要清除设备上的旧 APN、串口及网络设置时，刷机请选择不保留配置。
 
 **QModem 源码与驱动：** `build/verify-qmodem-feeds.sh runtime` 检查扫描、AT 端口、拨号、连接管理器和驱动目录与官方提交一致；仅 ndisc6 有构建兼容修复。QMI 选择项恢复为上游默认的厂商驱动，依赖检查同步核对移远、广和通和芯讯通三个驱动包。
 
 **在线升级：** `build/prepare.sh` 将项目内完整 [luci-app-online-upgrade](../packages/luci-app-online-upgrade/) 复制到 `package/luci-app-online-upgrade`，光影猫适配直接在插件源码中维护。Actions 核对整套源码复制一致，并将同一个 Release 标签写进固件身份和发布任务；检查版本时优先读取 `/rom` 中本次固件的身份，避免旧配置覆盖版本记录。固件及 Release 的来源信息记录本项目提交号。
 
-**管理工具：** 文件管理、Travelmate 和 SQM 来自官方软件源；Aurora 设置直接拉取主题作者 `master`，保留上游关闭旧 jsmin 的设置并记录实际提交号。[首启网络配置](../files/etc/uci-defaults/99-photonicat-network)将 Travelmate 关联 `wwan` 并保持关闭，保留用户已有的 Travelmate、SQM 和 autorate 设置。
-
-**cake-autorate：** [本地包](../packages/cake-autorate/README.md) 固定稳定版提交和下载 SHA256，原样安装上游核心，首次关闭。启动前检查实际 QModem/mwan3 接口、SQM 和真实 CAKE/IFB 队列，探测固定走选定出口。网络事件会刷新实际接口，缺少队列时不启动；原有网络、防火墙和 SQM 配置由用户维护。
+**管理工具：** 文件管理、Travelmate 和 SQM 来自官方软件源并使用上游默认配置；Aurora 设置直接拉取主题作者 `master`，保留上游关闭旧 jsmin 的设置并记录实际提交号。
 
 ## eMMC 与 USB 存储
 

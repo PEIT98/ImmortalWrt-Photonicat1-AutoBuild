@@ -10,14 +10,14 @@
 
 | 分类 | 内置功能 |
 | --- | --- |
-| 5G / 网络 | QModem Next（含短信）、QModem Generic、mwan3、OpenClash、Travelmate 无线中继、SQM/CAKE 与 cake-autorate |
+| 5G / 网络 | QModem Next（含短信）、QModem Generic、mwan3（默认关闭）、OpenClash、Travelmate 无线中继、SQM/CAKE |
 | 系统界面 | Aurora 主题及设置、右上角模组/网口/无线/电池状态、光影猫一代管理（电源控制实验性）、CPU 调频、ttyd 网页终端、固件信息卡片 |
 | 应用与容器 | iStore、Docker、Docker Compose、Dockerman |
 | 管理工具 | 文件管理、在线升级、USB 硬盘保活、DiskMan、Bandix Plus、定时重启、UPnP |
 | 诊断工具 | `lsusb`、`lspci`、`lsblk`、`iperf3`、`tcpdump` |
 | 驱动支持 | USB QMI / MBIM / ECM / NCM / RNDIS、AT 串口、PCIe / SDIO 无线网卡 |
 
-无线驱动包括 Realtek RTL8922AE / RTL8852BE / RTL8852CE、MediaTek MT7921 / MT7925 / MT7916、Qualcomm ath10k / ath11k / ath12k。板载 QCA9377 系列使用 SDIO 驱动，是否可用取决于板子实际硬件和固件支持。内置 [TD-TECH 3466 USB 串口补丁](999-add-TD-TECH-option-id.patch)。
+无线驱动包括 Realtek RTL8922AE / RTL8852BE / RTL8852CE、MediaTek MT7921 / MT7925 / MT7916、Qualcomm ath10k / ath11k / ath12k。板载 QCA9377 系列使用 SDIO 驱动，是否可用取决于板子实际硬件和固件支持。USB 串口使用上游驱动。
 
 内置 [NFA765 hw2.1 E108 专用固件](firmware/nfa765-e108/README.md)：仅 PCI 子设备 `105b:e108` 使用 NFA765 amss/m3 及已验证的 E108 板卡文件；普通 NFA765 保留原固件与板卡配置。固件随镜像提供，开机无需下载。
 
@@ -80,9 +80,9 @@ QModem 顶部菜单显示为“移动网络”，使用 [独立 LuCI 菜单文�
 
 QModem 的扫描、USB 网卡与 AT 串口识别、拨号及数据格式处理使用官方源码。扫描开关、厂家预扫描和延时使用软件包原始默认值，接口名由 QModem 自动生成。QMI 驱动选择恢复为官方默认的厂商驱动；原有 USB 数据协议和串口驱动继续内置。项目只保留 ndisc6 的下载及编译兼容修复。
 
-[首启网络配置](files/etc/uci-defaults/99-photonicat-network)会先备份相关配置，再从 `/rom/etc/config/qmodem` 完整恢复官方默认：清理旧 APN、用户名/密码、串口、PDP、拨号选择、模组和槽位记录，以及旧 UCI 暂存改动。带 `modem_config` 标记的独立模组网络接口、对应 DHCP/IPv6 配置及防火墙关联也会清理，由官方 QModem 重新扫描生成。LAN、普通 WAN、无线中继和 Wi-Fi 保留。备份目录为 `/root/photonicat-network-backup.*`，不会自动回填；失败会保留任务供下次启动重试。本次使用独立的 v2 完成标记，已执行上一版恢复的设备也会清理一次，成功后保留用户新填写的 APN 和其他设置。
+项目不附加 QM 首启恢复、补充扫描、USB/AT 排序、接口同步或网络改写脚本。APN、串口、模组记录及拨号参数由官方 QM 管理；LuCI 权限使用官方 QM 和 Generic 自带的 ACL。
 
-[构建检查](scripts/build/verify-qmodem-feeds.sh)核对 QModem 运行源码与拉取的官方提交一致；[首启回归](scripts/tests/test_qmodem_defaults.sh)覆盖新装、旧配置恢复、备份、失败重试和配置保留。管理地址与 Wi-Fi 默认值保持不变。
+[构建检查](scripts/build/verify-qmodem-feeds.sh)只核对依赖、菜单、文件冲突及官方源码一致性。需要清除设备已有的旧 APN、串口及网络设置时，刷入新固件请选择**不保留配置**；保留配置升级会沿用旧设置。管理地址与 Wi-Fi 默认值保持不变。
 
 QModem Next 自带两个短信页面：**短信消息**用于收发、会话和历史记录；**SIM 卡短信**用于查看、删除卡内原始短信。它们属于同一个插件。`qmodem-smsd` 和 `sms-forwarder-next` 是新版 Next 的短信依赖。
 
@@ -90,9 +90,9 @@ Generic 位于 **移动网络 → 模组管理**，与官方 **QModem** 页面�
 
 ## 多 WAN 设置
 
-mwan3 插件保留，首次安装及从旧项目升级恢复时关闭服务，使用普通系统路由。项目不再预设三路主备策略或为 QM 绑定固定接口；已有 mwan3 配置保留供需要时手动调整。无线中继仍绑定 `wwan`，Travelmate 首次默认关闭。
+mwan3 插件及其上游默认配置保留，[首启文件](files/etc/uci-defaults/99-mwan3-disable)仅停止服务并关闭自启动，使用普通系统路由。项目不预设三路主备策略、不绑定 QM 接口，也不预建无线中继接口或改写防火墙；Travelmate 使用官方默认配置。
 
-如需重新启用多 WAN，请先完成官方 QModem 拨号，再按实际接口名配置 mwan3 并手动启用服务。恢复后排查网络可先查看：
+如需重新启用多 WAN，请先完成官方 QModem 拨号，再按实际接口名配置 mwan3 并手动启用服务。排查网络可先查看：
 
 ```sh
 ip route
@@ -118,8 +118,8 @@ ubus call network.interface dump
 
 - **系统 → 文件管理器**：官方 `luci-app-filemanager`，在浏览器中管理文件。
 - **Aurora 设置**：使用 [主题作者的配置插件](https://github.com/eamonxg/luci-app-aurora-config)，支持配色、布局、背景、字体与快捷按钮。
-- **服务 → Travelmate**：官方无线热点管理，预关联现有 `wwan`，首次保持关闭。扫描并添加自己的热点后再启用；多 WAN 策略由用户手动配置。
-- **cake-autorate + 网络 → SQM QoS**：稳定版 3.2.1，首次关闭。先按实测速率设置 SQM 的 CAKE 队列和六项带宽，再启动自动调整；跟随实际 QModem 接口，详见 [配置步骤](packages/cake-autorate/README.md)。
+- **服务 → Travelmate**：官方无线热点管理，使用上游默认配置。扫描并添加自己的热点后再启用；多 WAN 策略由用户手动配置。
+- **网络 → SQM QoS**：官方 SQM/CAKE，按需手动配置接口、队列和速率。
 
 ## 编译与下载
 
@@ -142,7 +142,7 @@ ubus call network.interface dump
 - **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
 - **2026-10-17**：QModem Generic（引用 PEIT98 自有复刻仓库 `main`，与官方 QModem Next 共存）。
 - **2026-10-17**：在线升级（完整本地插件，适配本仓库光影猫固件）。
-- **2026-10-17**：文件管理、Aurora 设置、Travelmate 无线中继、SQM/CAKE 与 cake-autorate。
+- **2026-10-17**：文件管理、Aurora 设置、Travelmate 无线中继、SQM/CAKE。
 
 - **2026-11-03**：USB 硬盘保活（默认关闭，支持稳定标识和可选 USB 防挂起）。
 

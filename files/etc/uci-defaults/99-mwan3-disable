@@ -1,0 +1,5 @@
+#!/bin/sh
+# 保留 mwan3 软件包自带配置，首启关闭服务及自启动。
+/etc/init.d/mwan3 stop || exit 1
+/etc/init.d/mwan3 disable || exit 1
+exit 0

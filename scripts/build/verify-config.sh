@@ -54,14 +54,12 @@ need=(
   CONFIG_PACKAGE_luci-app-travelmate
   CONFIG_PACKAGE_luci-i18n-travelmate-zh-cn
   CONFIG_PACKAGE_travelmate
-  CONFIG_PACKAGE_cake-autorate
   CONFIG_PACKAGE_luci-app-sqm
   CONFIG_PACKAGE_luci-i18n-sqm-zh-cn
   CONFIG_PACKAGE_sqm-scripts
   CONFIG_PACKAGE_kmod-sched-cake
   CONFIG_PACKAGE_kmod-ifb
   CONFIG_PACKAGE_tc-full
-  CONFIG_PACKAGE_fping
   CONFIG_PACKAGE_bash
   CONFIG_PACKAGE_luci-compat
   CONFIG_PACKAGE_luci-app-store
@@ -212,4 +210,4 @@ if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代必选配置通过：现有插件及驱动、文件管理、Aurora 设置、Travelmate、SQM/CAKE 与 cake-autorate 均已保留。'
+echo '光影猫一代必选配置通过：现有插件及驱动、文件管理、Aurora 设置、Travelmate 和 SQM/CAKE 均已保留。'
