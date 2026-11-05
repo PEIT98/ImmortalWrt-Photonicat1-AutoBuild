@@ -32,26 +32,28 @@ elif [[ $mode == menus ]]; then
         if [[ -s $tmp/shared ]]; then cat "$tmp/shared" >&2; echo '::error::上游插件安装文件重名' >&2; exit 1; fi
     done
 elif [[ $mode == runtime ]]; then
-    # 只允许指定的计时及 USB 启动扫描修复；其他运行源码保持官方提交。
-    git -C "$root/feeds/qmodem" diff --exit-code HEAD -- \
-        application/qmodem application/modem_scan application/quectel_CM_5G_M driver \
-        ':!application/modem_scan/src/modem_scand.c' \
-        ':!application/qmodem/files/etc/init.d/qmodem_init'
-    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    # 精确核对计时、USB 启动扫描及 FM350 自动 APN 修复，其余源码保持官方提交。
     scanner=application/modem_scan/src/modem_scand.c
     init=application/qmodem/files/etc/init.d/qmodem_init
-    for path in "$scanner" "$init"; do
+    dial=application/qmodem/files/usr/share/qmodem/modem_dial.sh
+    fragment=application/qmodem/files/usr/share/qmodem/fixes/fm350-auto-apn/auto-apn.sh
+    git -C "$root/feeds/qmodem" diff --exit-code HEAD -- \
+        application/qmodem application/modem_scan application/quectel_CM_5G_M driver \
+        ":!$scanner" ":!$init" ":!$dial" ":!$fragment"
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    for path in "$scanner" "$init" "$dial"; do
         mkdir -p "$tmp/expected/$(dirname "$path")"
         git -C "$root/feeds/qmodem" show "HEAD:$path" > "$tmp/expected/$path"
     done
     sh "$(dirname "$0")/../../patches/qmodem/apply.sh" "$tmp/expected"
-    for path in "$scanner" "$init"; do
+    for path in "$scanner" "$init" "$dial" "$fragment"; do
         cmp -s "$tmp/expected/$path" "$root/feeds/qmodem/$path" || {
             echo "::error::QModem 存在限定修复之外的改动：$path" >&2; exit 1;
         }
     done
     extra=$(git -C "$root/feeds/qmodem" ls-files --others --exclude-standard -- \
-        application/qmodem application/modem_scan application/quectel_CM_5G_M driver)
+        application/qmodem application/modem_scan application/quectel_CM_5G_M driver \
+        ":!$fragment")
     [[ -z $extra ]] || { echo "::error::QModem 运行源码存在额外文件：$extra" >&2; exit 1; }
 else
     echo '::error::未知 Feeds 校验模式' >&2; exit 1

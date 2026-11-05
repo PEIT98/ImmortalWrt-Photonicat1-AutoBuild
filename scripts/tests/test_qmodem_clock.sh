@@ -10,6 +10,8 @@ setup() {
     git -C "$FEED" show HEAD:application/modem_scan/src/modem_scan_common.h > "$src/modem_scan_common.h"
     mkdir -p "$TEST_TMP/feed/application/qmodem/files/etc/init.d"
     git -C "$FEED" show HEAD:application/qmodem/files/etc/init.d/qmodem_init > "$TEST_TMP/feed/application/qmodem/files/etc/init.d/qmodem_init"
+    mkdir -p "$TEST_TMP/feed/application/qmodem/files/usr/share/qmodem"
+    git -C "$FEED" show HEAD:application/qmodem/files/usr/share/qmodem/modem_dial.sh > "$TEST_TMP/feed/application/qmodem/files/usr/share/qmodem/modem_dial.sh"
     scanner="$src/modem_scand.c"
     patch="$ROOT/patches/qmodem/fix-qmodem-monotonic-clock.sh"
     # Queue tests must not read or change the host UCI configuration.
@@ -55,7 +57,7 @@ test_patch_rejects_changed_clock_layout_without_writing() {
     reject sh "$patch" "$TEST_TMP/feed"
     assert_same "$scanner" "$TEST_TMP/before"
 }
-test_runtime_check_allows_only_the_expected_clock_patch() {
+test_runtime_check_allows_only_the_expected_qmodem_fixes() {
     local feed="$TEST_TMP/feed" check="$ROOT/scripts/checks/verify-qmodem-feeds.sh"
     mkdir -p "$TEST_TMP/root/feeds" "$feed/application/qmodem"
     printf '# unchanged dial configuration\n' > "$feed/application/qmodem/config"
@@ -68,7 +70,19 @@ test_runtime_check_allows_only_the_expected_clock_patch() {
     apply_patch
     reject bash "$check" runtime "$TEST_TMP/root"
     ok sh "$ROOT/patches/qmodem/fix-qmodem-boot-scan.sh" "$feed"
+    reject bash "$check" runtime "$TEST_TMP/root"
+    ok sh "$ROOT/patches/qmodem/fix-fm350-auto-apn.sh" "$feed"
     ok bash "$check" runtime "$TEST_TMP/root"
+    local dial="$feed/application/qmodem/files/usr/share/qmodem/modem_dial.sh"
+    local fragment="$feed/application/qmodem/files/usr/share/qmodem/fixes/fm350-auto-apn/auto-apn.sh"
+    cp "$dial" "$TEST_TMP/valid-dial"
+    printf '\n# unexpected dial change\n' >> "$dial"
+    reject bash "$check" runtime "$TEST_TMP/root"
+    cp "$TEST_TMP/valid-dial" "$dial"
+    cp "$fragment" "$TEST_TMP/valid-fragment"
+    printf '\n# unexpected APN change\n' >> "$fragment"
+    reject bash "$check" runtime "$TEST_TMP/root"
+    cp "$TEST_TMP/valid-fragment" "$fragment"
     cp "$scanner" "$TEST_TMP/valid-scanner"
     printf '\n/* unexpected scanner change */\n' >> "$scanner"
     reject bash "$check" runtime "$TEST_TMP/root"
