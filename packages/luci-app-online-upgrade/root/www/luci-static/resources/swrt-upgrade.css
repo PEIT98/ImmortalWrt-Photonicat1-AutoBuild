@@ -28,10 +28,18 @@
 #swrt-upgrade .swrt-file{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 #swrt-upgrade .swrt-file span,#swrt-upgrade code{overflow-wrap:anywhere;white-space:normal}
 #swrt-upgrade code{font-size:11px;background:var(--np-soft);color:var(--np-muted);padding:8px;border-radius:8px}
-#swrt-upgrade .swrt-keep{display:flex;align-items:center;gap:8px;min-height:24px;margin:0;color:var(--np-text);cursor:pointer;font-weight:400}
-#swrt-upgrade .swrt-keep span{display:block;line-height:24px}
-#swrt-upgrade .swrt-keep-group{display:grid;gap:6px}
-#swrt-upgrade input[type=checkbox]{display:block;position:static;inset:auto;transform:none;width:18px!important;height:18px!important;accent-color:var(--np-accent);margin:0!important;flex:0 0 18px;align-self:center;vertical-align:middle}
+#swrt-upgrade .swrt-keep-group{margin:18px 0}
+#swrt-upgrade .swrt-keep{display:grid;grid-template-columns:24px minmax(0,1fr);align-items:start;gap:12px;width:100%;min-height:72px;box-sizing:border-box;padding:16px;margin:0;border:2px solid var(--np-accent);border-radius:10px;background:var(--np-soft);color:var(--np-text);cursor:pointer;font-weight:400;text-align:left;white-space:normal;touch-action:manipulation}
+#swrt-upgrade .swrt-keep-copy{display:grid;gap:5px;min-width:0}
+#swrt-upgrade .swrt-keep-title{font-size:16px;line-height:24px}
+#swrt-upgrade .swrt-keep-state{font-size:14px;color:var(--np-accent)}
+#swrt-upgrade .swrt-keep-hint{font-size:13px;color:var(--np-muted);line-height:1.6}
+#swrt-upgrade .swrt-keep[data-keep="0"]{border-color:var(--np-danger)}
+#swrt-upgrade .swrt-keep[data-keep="0"] .swrt-keep-state{color:var(--np-danger)}
+#swrt-upgrade .swrt-keep:focus-within{outline:2px solid var(--np-accent);outline-offset:3px}
+/* Keep the native checkmark visible when a theme hides plain checkbox inputs. */
+#swrt-upgrade input#swrt-keep-config{-webkit-appearance:checkbox!important;appearance:auto!important;display:block!important;position:static!important;inset:auto!important;transform:none!important;opacity:1!important;visibility:visible!important;clip:auto!important;clip-path:none!important;width:24px!important;height:24px!important;accent-color:var(--np-accent);margin:0!important;align-self:start;cursor:pointer}
+#swrt-upgrade input#swrt-keep-config:disabled{cursor:not-allowed}
 #swrt-upgrade progress{flex-basis:100%;width:100%;height:8px;accent-color:var(--np-accent)}
 #swrt-upgrade [data-phase=failed]{color:var(--np-danger)}
 #swrt-upgrade [data-phase=ready]{color:var(--np-green)}

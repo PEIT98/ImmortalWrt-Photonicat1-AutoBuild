@@ -33,7 +33,14 @@ return view.extend({
         var progressText = E('span', { 'class': 'np-hint' });
         var notes = E('pre', { 'class': 'swrt-release-notes' }, '检查更新后显示发布说明。');
         var releaseLink = E('a', { href: 'https://gh-proxy.com/#https://github.com/PEIT98/ImmortalWrt-Photonicat1-AutoBuild', target: '_blank', rel: 'noopener noreferrer' }, '查看发布页面');
-        var keep = E('input', { type: 'checkbox' });
+        var keep = E('input', { type: 'checkbox', id: 'swrt-keep-config', 'aria-describedby': 'swrt-keep-help' });
+        var keepState = E('strong', { 'class': 'swrt-keep-state', 'aria-live': 'polite' });
+        var keepHint = E('span', { id: 'swrt-keep-help', 'class': 'swrt-keep-hint' });
+        var keepChoice = E('label', { 'class': 'swrt-keep', 'for': 'swrt-keep-config' }, [ keep,
+            E('span', { 'class': 'swrt-keep-copy' }, [
+                E('strong', { 'class': 'swrt-keep-title' }, '保留配置升级'), keepState, keepHint
+            ])
+        ]);
         var checkButton = E('button', { type: 'button', 'class': 'np-btn primary' }, '检查更新');
         var downloadButton = E('button', { type: 'button', 'class': 'np-btn', disabled: '' }, '下载并校验');
         var installButton = E('button', { type: 'button', 'class': 'np-btn primary', disabled: '' }, '确认升级');
@@ -56,6 +63,12 @@ return view.extend({
             return result;
         }
         function bytes(value) { return (Math.max(0, Number(value) || 0) / 1048576).toFixed(1) + ' MiB'; }
+        function updateKeepChoice() {
+            keepChoice.dataset.keep = keep.checked ? '1' : '0';
+            keepState.textContent = keep.checked ? '已勾选：保留配置' : '未勾选：恢复默认配置';
+            keepHint.textContent = keep.checked ? '升级后沿用现有网络、Wi-Fi 和拨号设置。' :
+                '升级后恢复固件默认设置，需重新配置网络、Wi-Fi 和拨号。';
+        }
         function update(data) {
             accept(data);
             latest = data;
@@ -128,6 +141,7 @@ return view.extend({
                 if (latest) update(latest);
             });
         }
+        keep.addEventListener('change', updateKeepChoice);
         checkButton.addEventListener('click', function() { perform(checkCall); });
         downloadButton.addEventListener('click', function() { perform(downloadCall); });
         updateSource.addEventListener('change', function() {
@@ -181,7 +195,7 @@ return view.extend({
             ]);
         }
         root = E('div', { id: 'swrt-upgrade', 'class': 'np-root swrt-page' }, [
-            E('link', { rel: 'stylesheet', href: L.resource('swrt-upgrade.css') + '?v=2.0.0' }),
+            E('link', { rel: 'stylesheet', href: L.resource('swrt-upgrade.css') + '?v=2.0.0-3' }),
             E('div', { 'class': 'np-page-heading' }, [
                 E('div', {}, [ E('h2', { 'class': 'np-page-title' }, 'Pwrt 在线更新'),
                     E('p', { 'class': 'np-page-description' }, '光影猫一代 · PEIT98 仓库 · 支持正式与预发行固件') ]),
@@ -204,9 +218,7 @@ return view.extend({
                 card('升级准备', [
                     E('div', { 'class': 'np-actions swrt-backup' }, [ backupButton,
                         E('a', { 'class': 'np-btn', href: L.url('admin/system/flash') }, '恢复配置备份') ]),
-                    E('div', { 'class': 'swrt-keep-group' }, [
-                        E('label', { 'class': 'swrt-keep' }, [ keep, E('span', {}, '保留当前配置') ]),
-                        E('p', { 'class': 'np-hint' }, '默认保留现有设置；取消勾选后恢复固件默认配置。') ]),
+                    E('div', { 'class': 'swrt-keep-group' }, [ keepChoice ]),
                     E('div', { 'class': 'np-actions' }, [ installButton,
                         E('a', { href: L.url('admin/system/flash') }, '手动上传固件') ])
                 ])
@@ -220,6 +232,7 @@ return view.extend({
             E('p', { 'class': 'np-footer' }, 'Pwrt · 更新器基于 SlAlot SWRT 适配')
         ]);
         keep.checked = !initial || initial.keep_default !== false;
+        updateKeepChoice();
         if (initial && initial.ok === true) update(initial);
         else statusUnavailable(new Error(initial && initial.message || '在线更新服务暂不可用'));
         poll.add(function() {

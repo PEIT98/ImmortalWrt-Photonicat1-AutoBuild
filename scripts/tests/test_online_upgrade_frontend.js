@@ -83,7 +83,7 @@ const flush = async () => { await new Promise(resolve => setImmediate(resolve));
 (async () => {
     const available = harness();
     assert.deepEqual(walk(available.root).filter(n => n.tag === 'link').map(n => n.attrs.href), [
-        '/resources/swrt-upgrade.css?v=2.0.0'
+        '/resources/swrt-upgrade.css?v=2.0.0-3'
     ]);
     const restore = walk(available.root).find(n => n.tag === 'a' && n.textContent === '恢复配置备份');
     assert.equal(restore.attrs.href, '/cgi-bin/luci/admin/system/flash', 'Restore uses the native upload and restore workflow');
