@@ -1,0 +1,9 @@
+#!/bin/sh
+# ttyd 仅监听 LAN，打开网页终端时自动登录 root。
+set -eu
+
+[ -f /etc/config/ttyd ] || exit 0
+uci set 'ttyd.@ttyd[0].interface=@lan'
+uci set 'ttyd.@ttyd[0].command=/bin/login -f root'
+uci commit ttyd
+exit 0
