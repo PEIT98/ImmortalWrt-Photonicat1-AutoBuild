@@ -9,7 +9,7 @@ setup() {
         "$TEST_TMP/sys/bus/usb/devices" "$TEST_TMP/lock"
     git -C "$FEED" show "HEAD:$init" > "$feed/$init"
     cp "$feed/$init" "$TEST_TMP/original-init"
-    patch="$ROOT/scripts/patches/packages/fix-qmodem-boot-scan.sh"
+    patch="$ROOT/patches/qmodem/fix-qmodem-boot-scan.sh"
     ok sh "$patch" "$feed"
     cp "$feed/$init" "$TEST_TMP/init"
     # Source real functions, but substitute host-safe sysfs, client and lock paths.

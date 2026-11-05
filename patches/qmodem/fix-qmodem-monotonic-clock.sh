@@ -1,7 +1,7 @@
 #!/bin/sh
 # 扫描队列和 AT/子进程超时使用单调时钟，避免 NTP 回拨延长等待。
 set -eu
-. "$(dirname "$0")/../../lib/patch.sh"
+. "$(dirname "$0")/../../scripts/lib/patch.sh"
 feed=${1:?需要 QModem Feed 目录}
 pc_init
 pc_load "$feed/application/modem_scan/src/modem_scand.c"

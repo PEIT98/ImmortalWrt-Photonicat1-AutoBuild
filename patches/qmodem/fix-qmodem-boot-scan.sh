@@ -1,9 +1,9 @@
 #!/bin/sh
 # 仅替换官方 USB 启动扫描入口；保留 PCIe、预扫描、热插拔及拨号配置。
 set -eu
-. "$(dirname "$0")/../../lib/patch.sh"
+. "$(dirname "$0")/../../scripts/lib/patch.sh"
 feed=${1:?需要 QModem Feed 目录}
-fragment="$(dirname "$0")/../../../patches/qmodem/boot-usb-scan.sh"
+fragment="$(dirname "$0")/boot-usb-scan.sh"
 test -s "$fragment" || pc_fail '缺少 QM USB 启动扫描片段'
 sh -n "$fragment"
 pc_init

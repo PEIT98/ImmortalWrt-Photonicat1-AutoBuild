@@ -103,8 +103,7 @@ jobs:
           # 先在官方源码复现校时回拨，再修复扫描队列的计时；不覆盖 QM 配置。
           bash ../scripts/tests/test_qmodem_clock.sh feeds/qmodem
           bash ../scripts/tests/test_qmodem_boot_scan.sh feeds/qmodem
-          sh ../scripts/patches/packages/fix-qmodem-monotonic-clock.sh feeds/qmodem
-          sh ../scripts/patches/packages/fix-qmodem-boot-scan.sh feeds/qmodem
+          sh ../patches/qmodem/apply.sh feeds/qmodem
           sh ../scripts/patches/packages/fix-weechat-provider.sh .
           bash ../scripts/tests/test_build_dependencies.sh
           bash ../scripts/tests/test_build_scripts.sh

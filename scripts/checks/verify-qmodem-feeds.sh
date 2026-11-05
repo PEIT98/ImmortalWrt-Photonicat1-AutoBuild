@@ -44,8 +44,7 @@ elif [[ $mode == runtime ]]; then
         mkdir -p "$tmp/expected/$(dirname "$path")"
         git -C "$root/feeds/qmodem" show "HEAD:$path" > "$tmp/expected/$path"
     done
-    sh "$(dirname "$0")/../patches/packages/fix-qmodem-monotonic-clock.sh" "$tmp/expected"
-    sh "$(dirname "$0")/../patches/packages/fix-qmodem-boot-scan.sh" "$tmp/expected"
+    sh "$(dirname "$0")/../../patches/qmodem/apply.sh" "$tmp/expected"
     for path in "$scanner" "$init"; do
         cmp -s "$tmp/expected/$path" "$root/feeds/qmodem/$path" || {
             echo "::error::QModem 存在限定修复之外的改动：$path" >&2; exit 1;

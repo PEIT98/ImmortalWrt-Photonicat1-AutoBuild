@@ -11,7 +11,7 @@ setup() {
     mkdir -p "$TEST_TMP/feed/application/qmodem/files/etc/init.d"
     git -C "$FEED" show HEAD:application/qmodem/files/etc/init.d/qmodem_init > "$TEST_TMP/feed/application/qmodem/files/etc/init.d/qmodem_init"
     scanner="$src/modem_scand.c"
-    patch="$ROOT/scripts/patches/packages/fix-qmodem-monotonic-clock.sh"
+    patch="$ROOT/patches/qmodem/fix-qmodem-monotonic-clock.sh"
     # Queue tests must not read or change the host UCI configuration.
     printf '#!/bin/sh\nexit 1\n' > "$TEST_TMP/bin/uci"
     chmod +x "$TEST_TMP/bin/uci"
@@ -67,7 +67,7 @@ test_runtime_check_allows_only_the_expected_clock_patch() {
     reject bash "$check" runtime "$TEST_TMP/root"
     apply_patch
     reject bash "$check" runtime "$TEST_TMP/root"
-    ok sh "$ROOT/scripts/patches/packages/fix-qmodem-boot-scan.sh" "$feed"
+    ok sh "$ROOT/patches/qmodem/fix-qmodem-boot-scan.sh" "$feed"
     ok bash "$check" runtime "$TEST_TMP/root"
     cp "$scanner" "$TEST_TMP/valid-scanner"
     printf '\n/* unexpected scanner change */\n' >> "$scanner"

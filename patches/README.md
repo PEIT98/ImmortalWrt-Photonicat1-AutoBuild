@@ -1,14 +1,14 @@
 # 补丁分类
 
-这里保存补丁原文件和需要插入上游源码的片段。执行补丁的脚本位于 [scripts/patches/](../scripts/README.md#补丁脚本)，由构建流程调用。
+这里保存补丁原文件、插入片段及集中管理的 [QM 修复](qmodem/README.md)。其余补丁执行脚本位于 [scripts/patches/](../scripts/README.md#补丁脚本)，由构建流程调用。
 
 | 分类 | 文件 | 用途与接入位置 |
 | --- | --- | --- |
 | 内核 / USB 串口 | [999-add-TD-TECH-option-id.patch](kernel/999-add-TD-TECH-option-id.patch) | 为 `3466` 的指定接口增加 `option` 驱动匹配；由 `scripts/build/prepare.sh` 复制到 Rockchip `patches-6.12/` |
 | 无线 / ath11k | [999-photonicat-nfa765-e108-firmware.patch](wireless/999-photonicat-nfa765-e108-firmware.patch) | 仅为 NFA765 hw2.1 `105b:e108` 选择专用固件；由 `scripts/build/bundle-nfa765-e108.sh` 安装到 mac80211 的 `patches/ath11k/` |
 | 存储 / Rockchip | [swrt-upgrade-partitions.sh](storage/swrt-upgrade-partitions.sh) | 分区比较函数片段，由 `scripts/patches/storage/enable-emmc-autogrow.sh` 插入升级脚本，保留已扩大的根分区 |
-| QModem / 启动扫描 | [boot-usb-scan.sh](qmodem/boot-usb-scan.sh) | 函数片段，由 `scripts/patches/packages/fix-qmodem-boot-scan.sh` 插入官方 QM 启动脚本，等待网卡就绪并按需补扫一次 |
+| QModem / 计时与启动扫描 | [qmodem/](qmodem/README.md) | 两项修复及启动片段集中保存，构建统一调用 `patches/qmodem/apply.sh` |
 
-`storage/` 和 `qmodem/` 中的 `.sh` 是供插入的函数片段，不单独运行。USB 启动扫描并入 QM 已有启动入口，不新增独立后台服务。
+`storage/` 中的 `.sh` 及 `qmodem/boot-usb-scan.sh` 是供插入的函数片段，不单独运行。USB 启动扫描并入 QM 已有启动入口，不新增独立后台服务。
 
 来源：TD-TECH 保留西瓜皮原版；NFA765 说明见 [固件目录](../firmware/nfa765-e108/README.md)；存储片段基于 SlAlot/ImmortalWrt_Photonicat1 `ae655185`，许可证为 AGPL-3.0-only。

@@ -11,11 +11,11 @@
 | [release/](release/) | 写入固件身份、生成发布说明 |
 | [patches/wireless/](patches/wireless/) | 无线驱动与默认频段补丁脚本 |
 | [patches/storage/](patches/storage/) | eMMC 扩容及升级兼容补丁脚本 |
-| [patches/packages/](patches/packages/) | 软件包名称、依赖、编译兼容及计时修复脚本 |
+| [patches/packages/](patches/packages/) | 软件包名称、依赖和编译兼容修复脚本 |
 | [lib/](lib/) | 公共文本补丁函数，不单独运行 |
 | [tests/](tests/) | 回归测试；`fixtures/` 为测试数据，`common.sh` 和 `disk_keepalive_harness.sh` 为测试辅助文件 |
 
-补丁原文件与插入片段统一放在根目录 [patches/](../patches/README.md)。插件内部脚本保留在各自 `packages/` 中；设备开机脚本保留在 `files/` 的系统路径中。
+补丁原文件与插入片段统一放在根目录 [patches/](../patches/README.md)；QM 计时和启动扫描修复的执行脚本、片段及统一入口集中在 [patches/qmodem/](../patches/qmodem/README.md)。插件内部脚本保留在各自 `packages/` 中；设备开机脚本保留在 `files/` 的系统路径中。
 
 ## 构建、检查与发布
 
@@ -41,8 +41,7 @@
 | 软件包 | [fix-istore-25.12.sh](patches/packages/fix-istore-25.12.sh) | 显式固定 iStore 包名并检查 taskd 等依赖 |
 | 软件包 | [fix-luajit-riscv-provider.sh](patches/packages/fix-luajit-riscv-provider.sh) | 在 armv8/aarch64 上修复 LuaJIT 虚拟包自依赖 |
 | 软件包 | [fix-qmodem-ndisc6-source.sh](patches/packages/fix-qmodem-ndisc6-source.sh) | 修复已知旧版 ndisc6 的下载与编译兼容 |
-| 软件包 | [fix-qmodem-monotonic-clock.sh](patches/packages/fix-qmodem-monotonic-clock.sh) | 扫描延时和超时使用单调时钟，防止联网校时回拨使任务长时间等待 |
-| 软件包 | [fix-qmodem-boot-scan.sh](patches/packages/fix-qmodem-boot-scan.sh) | 等待 USB 模组网卡和扫描后台就绪，15 秒后仍未识别时补扫一次 |
+| QModem | [统一修复入口](../patches/qmodem/apply.sh) | 集中应用扫描计时和开机等待、15 秒条件补扫；文件均位于 [patches/qmodem/](../patches/qmodem/README.md) |
 | 软件包 | [fix-weechat-provider.sh](patches/packages/fix-weechat-provider.sh) | 使用已有的 WeeChat 默认提供者，避免 Kconfig 自递归 |
 
 [lib/patch.sh](lib/patch.sh) 提供源码锚点检查、临时副本修改与写回函数。电源插件内的 `patch-common.sh` 保持独立副本，插件复制到源码树后可以自行构建。
