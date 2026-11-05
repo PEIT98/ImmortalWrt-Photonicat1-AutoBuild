@@ -100,9 +100,8 @@ jobs:
           sh ../scripts/patches/packages/fix-luajit-riscv-provider.sh .
           ./scripts/feeds update -i packages
           sh ../scripts/patches/packages/fix-qmodem-ndisc6-source.sh feeds/qmodem/application/ndisc6/Makefile
-          # 验证计时、启动扫描与仅限 FM350 的自动 APN 修复；不覆盖 QM 配置。
+          # 验证计时与仅限 FM350 的自动 APN 修复；不覆盖 QM 配置。
           bash ../scripts/tests/test_qmodem_clock.sh feeds/qmodem
-          bash ../scripts/tests/test_qmodem_boot_scan.sh feeds/qmodem
           bash ../scripts/tests/test_qmodem_fm350_apn.sh feeds/qmodem
           sh ../patches/qmodem/apply.sh feeds/qmodem
           sh ../scripts/patches/packages/fix-weechat-provider.sh .
@@ -166,7 +165,7 @@ jobs:
           grep -Fxq 'PKG_BUILD_DEPENDS:=luci-base/host' package/luci-app-photonicat-power/Makefile
           echo '单一光影猫电源包将提供 MCU 服务、页面、电池状态和中文翻译。'
 
-      - name: 检查 QModem 限定修复
+      - name: 检查 QModem 计时与 FM350 APN 修复
         run: |
           bash scripts/checks/verify-qmodem-feeds.sh runtime "$GITHUB_WORKSPACE/immortalwrt"
           sh -n immortalwrt/files/etc/uci-defaults/99-mwan3-disable

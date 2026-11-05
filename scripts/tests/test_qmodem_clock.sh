@@ -69,8 +69,6 @@ test_runtime_check_allows_only_the_expected_qmodem_fixes() {
     reject bash "$check" runtime "$TEST_TMP/root"
     apply_patch
     reject bash "$check" runtime "$TEST_TMP/root"
-    ok sh "$ROOT/patches/qmodem/fix-qmodem-boot-scan.sh" "$feed"
-    reject bash "$check" runtime "$TEST_TMP/root"
     ok sh "$ROOT/patches/qmodem/fix-fm350-auto-apn.sh" "$feed"
     ok bash "$check" runtime "$TEST_TMP/root"
     local dial="$feed/application/qmodem/files/usr/share/qmodem/modem_dial.sh"
