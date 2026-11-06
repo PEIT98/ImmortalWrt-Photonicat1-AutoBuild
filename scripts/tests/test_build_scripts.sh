@@ -212,4 +212,21 @@ EDIT
     ok sh "$TEST_TMP/project/edit.sh" "$TEST_TMP/source"; assert_eq 'replaced changed' "$(cat "$TEST_TMP/source")"
     ok sh "$TEST_TMP/project/edit.sh" "$TEST_TMP/source"; assert_eq 'replaced changed' "$(cat "$TEST_TMP/source")"
 }
+test_official_quickstart_integration() {
+    local installer="$ROOT/scripts/build/install-istore-quickstart.sh"
+    assert_file "$installer"
+    bash -n "$installer" "$ROOT/scripts/build/prepare.sh"
+    sh -n "$ROOT/files/etc/uci-defaults/98-pwrt-quickstart-safe"
+    assert_has "$installer" 'https://github.com/linkease/nas-packages.git'
+    assert_has "$installer" 'https://github.com/linkease/nas-packages-luci.git'
+    assert_has "$installer" 'interfaceconfig'
+    assert_has "$ROOT/scripts/build/prepare.sh" 'install-istore-quickstart.sh'
+    assert_has "$ROOT/photonicat1.config" 'CONFIG_PACKAGE_quickstart=y'
+    assert_has "$ROOT/photonicat1.config" 'CONFIG_PACKAGE_luci-app-quickstart=y'
+    assert_has "$ROOT/scripts/checks/verify-config.sh" 'CONFIG_PACKAGE_quickstart'
+    assert_has "$ROOT/scripts/checks/verify-config.sh" 'CONFIG_PACKAGE_luci-app-quickstart'
+    assert_has "$ROOT/files/etc/uci-defaults/98-pwrt-quickstart-safe" '/etc/init.d/startdhns disable'
+    assert_has "$ROOT/files/etc/config/network" "option device 'eth0'"
+    assert_has "$ROOT/files/etc/config/network" "list ports 'eth1'"
+}
 run_tests "$@"

@@ -8,7 +8,7 @@
 | --- | --- |
 | 5G / 网络 | 官方 QModem stable（Next 界面）+ Generic、mwan3（默认关闭）、OpenClash（内置 Meta 内核）、Travelmate、SQM/CAKE |
 | 系统界面 | Aurora 主题及设置、顶部设备状态、光影猫电池与电源管理（电源控制实验性）、CPU 调频、ttyd |
-| 应用与管理 | iStore、Docker / Compose / Dockerman、文件管理、在线升级、定时重启、UPnP |
+| 应用与管理 | iStore 商店、iStoreOS 官方 QuickStart 首页与网口配置、Docker / Compose / Dockerman、文件管理、在线升级、定时重启、UPnP |
 | 存储与工具 | eMMC 自动扩容、DiskMan、USB 硬盘保活（默认关闭）、Bandix Plus（流量统计默认关闭）、常用诊断工具 |
 | 驱动支持 | USB 模组数据与 AT 串口、板载 SDIO 及多种 PCIe 无线网卡、TD-TECH 串口补丁、NFA765 E108 专用固件 |
 
@@ -29,6 +29,16 @@ QModem 跟随官方 `stable` 分支，保留计时修复；采用西瓜皮原生
 
 以上为首次刷入或恢复出厂的默认值；保留配置升级时沿用已有网络、无线及密码设置。
 频段回退依据驱动能力，热点实际启动仍需真机验证；旧默认主机名会迁移为 `Pwrt`，自定义主机名保留。
+
+## iStoreOS 官方首页和网口配置
+
+从 [LinkEase 官方 UI](https://github.com/linkease/nas-packages-luci/tree/main/luci/luci-app-quickstart) 与 [官方后端](https://github.com/linkease/nas-packages/tree/master/network/services/quickstart) 获取原版 QuickStart，而非 SlAlot 的定制首页。
+
+- 首页：`/cgi-bin/luci/admin/quickstart`。
+- 网口配置：`网络 → 网口配置`（`/cgi-bin/luci/admin/network/interfaceconfig`），官方界面可手动调整 WAN/LAN。
+- 保留 Pwrt 的 `eth0=WAN`、`eth1=LAN`、`172.16.0.1`，不动 QModem、Aurora 和已有网络默认配置。
+- 首次启动只禁用 QuickStart 附带的 `startdhns` 自动网络重配置服务，保留 QuickStart 本体和手动网口管理；可按需自行重新启用。
+- 更改 WAN/LAN 可能让管理页面断线。建议用有线连接操作，先备份 `/etc/config/network`；实际网页兼容性及断网恢复需真机验证。
 
 ## 编译与下载
 
@@ -61,5 +71,6 @@ QModem 跟随官方 `stable` 分支，保留计时修复；采用西瓜皮原生
 - **2026-10-17**：文件管理、Aurora 设置、Travelmate 无线中继、SQM/CAKE。
 
 - **2026-11-03**：USB 硬盘保活（默认关闭，支持稳定标识和可选 USB 防挂起）。
+- **2026-11-06**：iStoreOS 官方 QuickStart 首页与网口配置。
 
 </details>

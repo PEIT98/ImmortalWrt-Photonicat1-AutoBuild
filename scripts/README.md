@@ -22,6 +22,7 @@
 | 分类 | 脚本 | 作用 |
 | --- | --- | --- |
 | 构建 | [prepare.sh](build/prepare.sh) | 继承设备参考配置，准备 Feeds、本地插件、覆盖文件和补丁 |
+| 构建 | [install-istore-quickstart.sh](build/install-istore-quickstart.sh) | 获取 LinkEase 官方 QuickStart 前端和后端包，检查首页与网口路由，保持插件独立 |
 | 构建 | [select-packages.sh](build/select-packages.sh) | Feeds 安装后应用根目录 `photonicat1.config` 的覆盖项 |
 | 构建 | [bundle-nfa765-e108.sh](build/bundle-nfa765-e108.sh) | 校验并内置 E108 专用固件，安装对应 ath11k 补丁 |
 | 构建 | [bundle-openclash-core.sh](build/bundle-openclash-core.sh) | 获取、验证并内置 OpenClash Meta 内核 |
@@ -55,6 +56,10 @@
 5. 检查 ndisc6，准备构建工具并显式构建主机 `ucode`，验证无线默认值后再编译固件，收集短文件名镜像并生成发布说明。
 
 编译仅由 Actions 手动触发；普通提交不会启动编译。完整 `.config` 由流程生成并上传为 `photonicat1-build-config`，根目录仅维护覆盖配置。
+
+## iStoreOS QuickStart
+
+仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`；启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，禁用自动 `uciChange` 服务 `startdhns`，不影响手动网口管理。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。
 
 ## 回归测试
 

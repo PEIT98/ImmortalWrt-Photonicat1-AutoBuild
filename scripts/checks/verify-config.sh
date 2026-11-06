@@ -64,6 +64,8 @@ need=(
   CONFIG_PACKAGE_bash
   CONFIG_PACKAGE_luci-compat
   CONFIG_PACKAGE_luci-app-store
+  CONFIG_PACKAGE_quickstart
+  CONFIG_PACKAGE_luci-app-quickstart
   CONFIG_PACKAGE_luci-lib-taskd
   CONFIG_PACKAGE_luci-lib-xterm
   CONFIG_PACKAGE_taskd

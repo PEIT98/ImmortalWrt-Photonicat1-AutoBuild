@@ -1,0 +1,8 @@
+#!/bin/sh
+# 禁止官方 startdhns 辅助服务在每次网络重载时自动 uciChange。
+# 保留 QuickStart 主服务、首页和手动 WAN/LAN 配置。
+if [ -x /etc/init.d/startdhns ]; then
+    /etc/init.d/startdhns disable >/dev/null 2>&1 || true
+    /etc/init.d/startdhns stop >/dev/null 2>&1 || true
+fi
+exit 0

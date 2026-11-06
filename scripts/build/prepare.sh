@@ -77,6 +77,9 @@ else
 fi
 
 
+# iStoreOS 官方 QuickStart（首页与网口配置），仅安装官方功能包。
+bash "$(dirname "$0")/install-istore-quickstart.sh" "$SRC"
+
 # iStore 官方软件中心。只引入软件包定义，随固件源码一起编译；
 # 不使用在线安装脚本，也不替换 ImmortalWrt 的 APK 仓库。
 if grep -Eq '^src-git istore ' "$SRC/feeds.conf.default"; then

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# 功能：只从 iStoreOS/LinkEase 官方源引入 QuickStart 首页与网口管理。
+# 不覆盖默认网络，不替换 Aurora、QModem 和其他插件。
+set -euo pipefail
+
+SRC="${1:?用法: install-istore-quickstart.sh IMMORTALWRT_SRC}"
+test -f "$SRC/Makefile" || { echo '::error::ImmortalWrt 路径不正确' >&2; exit 1; }
+BACKEND_DST="$SRC/package/quickstart"
+LUCI_DST="$SRC/package/luci-app-quickstart"
+for dst in "$BACKEND_DST" "$LUCI_DST"; do
+  if [ -e "$dst" ] || [ -L "$dst" ]; then
+    echo "::error::QuickStart 目标目录已存在，禁止覆盖：$dst" >&2
+    exit 1
+  fi
+done
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+git clone --quiet --depth 1 --branch master https://github.com/linkease/nas-packages.git "$TMP/nas"
+git clone --quiet --depth 1 --branch main https://github.com/linkease/nas-packages-luci.git "$TMP/nas-luci"
+BACKEND="$TMP/nas/network/services/quickstart"
+LUCI="$TMP/nas-luci/luci/luci-app-quickstart"
+test -f "$BACKEND/Makefile"
+test -f "$BACKEND/files/quickstart.init"
+test -f "$LUCI/Makefile"
+test -f "$LUCI/luasrc/controller/quickstart.lua"
+test -f "$LUCI/root/usr/share/luci/menu.d/luci-app-quickstart.json"
+grep -Fq 'PKG_NAME:=quickstart' "$BACKEND/Makefile"
+grep -Fq 'luci-app-store' "$LUCI/Makefile"
+grep -Fq 'entry({"admin", "network", "interfaceconfig"}' "$LUCI/luasrc/controller/quickstart.lua" || {
+  echo '::error::官方 QuickStart 网口配置入口已变更，停止集成' >&2
+  exit 1
+}
+grep -Fq '"admin/quickstart/*"' "$LUCI/root/usr/share/luci/menu.d/luci-app-quickstart.json" || {
+  echo '::error::官方 QuickStart 首页入口已变更，停止集成' >&2
+  exit 1
+}
+mkdir -p "$BACKEND_DST" "$LUCI_DST"
+cp -a "$BACKEND/." "$BACKEND_DST/"
+cp -a "$LUCI/." "$LUCI_DST/"
+
+# ImmortalWrt 25.12 的 LuCI 包名明确写死，仅改本地构建副本。
+if grep -Eq '^(LUCI_NAME|PKG_NAME)[[:space:]]*[:?+]?=' "$LUCI_DST/Makefile"; then
+  echo '::error::QuickStart 上游包名定义已变化，需重新检查' >&2
+  exit 1
+fi
+awk '
+  $0 == "include $(TOPDIR)/rules.mk" {
+    n++
+    print
+    print "LUCI_NAME:=luci-app-quickstart"
+    print "PKG_NAME:=luci-app-quickstart"
+    next
+  }
+  { print }
+  END { if (n != 1) exit 1 }
+' "$LUCI_DST/Makefile" > "$TMP/quickstart.Makefile"
+cp "$TMP/quickstart.Makefile" "$LUCI_DST/Makefile"
+grep -Fxq 'LUCI_NAME:=luci-app-quickstart' "$LUCI_DST/Makefile"
+grep -Fxq 'PKG_NAME:=luci-app-quickstart' "$LUCI_DST/Makefile"
+echo "官方 iStoreOS QuickStart：首页与网口配置已就位"
+echo "  nas-packages: $(git -C "$TMP/nas" rev-parse --short HEAD)"
+echo "  nas-packages-luci: $(git -C "$TMP/nas-luci" rev-parse --short HEAD)"
