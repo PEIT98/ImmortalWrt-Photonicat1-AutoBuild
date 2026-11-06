@@ -19,11 +19,6 @@ need=(
   CONFIG_PACKAGE_kmod-qmi_wwan_q
   CONFIG_PACKAGE_kmod-qmi_wwan_f
   CONFIG_PACKAGE_kmod-qmi_wwan_s
-  CONFIG_PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT
-  CONFIG_PACKAGE_luci-app-qmodem_VENDOR_MHI_PCIe_DRIVER
-  CONFIG_PACKAGE_kmod-pcie_mhi
-  CONFIG_PACKAGE_luci-app-qmodem_INCLUDE_ADD_MTK_T7XX_SUPPORT
-  CONFIG_PACKAGE_kmod-mtk-t7xx
   CONFIG_PACKAGE_umbim
   CONFIG_PACKAGE_qmodem_INCLUDE_SEAL
   CONFIG_PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
@@ -204,6 +199,11 @@ absent=(
   CONFIG_PACKAGE_kmod-usb-net-qmi-wwan-fibocom
   CONFIG_PACKAGE_kmod-usb-net-qmi-wwan-quectel
   CONFIG_PACKAGE_uqmi
+  CONFIG_PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT
+  CONFIG_PACKAGE_luci-app-qmodem_VENDOR_MHI_PCIe_DRIVER
+  CONFIG_PACKAGE_kmod-pcie_mhi
+  CONFIG_PACKAGE_luci-app-qmodem_INCLUDE_ADD_MTK_T7XX_SUPPORT
+  CONFIG_PACKAGE_kmod-mtk-t7xx
   CONFIG_PACKAGE_luci-app-qmodem_GENERIC_MHI_PCIe_DRIVER
   CONFIG_PACKAGE_luci-app-qmodem_NSS_MHI_PCIe_DRIVER
   CONFIG_PACKAGE_qmodem-sipd
@@ -216,7 +216,7 @@ for key in "${absent[@]}"; do
     failed=1
   fi
 done
-# 官方 stable 与 Generic 共用后端；核对西瓜皮的厂家 QMI、PCIe 组合及 USB/AT 驱动。
+# 官方 stable 与 Generic 共用后端；保留厂家 USB QMI、USB/AT 和 PCIe Wi-Fi，关闭模组 PCIe 驱动。
 if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1

@@ -34,27 +34,28 @@ elif [[ $mode == menus ]]; then
         if [[ -s $tmp/shared ]]; then cat "$tmp/shared" >&2; echo '::error::上游插件安装文件重名' >&2; exit 1; fi
     done
 elif [[ $mode == runtime ]]; then
-    # 精确核对计时和开机扫描修复，拨号及其余源码保持官方提交。
+    # 精确核对计时、USB 默认值和扫描范围，拨号及其余源码保持官方提交。
     scanner=application/modem_scan/src/modem_scand.c
     init=application/qmodem/files/etc/init.d/qmodem_init
-    fragment=application/qmodem/files/usr/share/qmodem/fixes/boot-scan.sh
+    hotplug=application/qmodem/files/etc/hotplug.d/net/20-modem-net
+    defaults=application/qmodem/files/etc/uci-defaults/99-qmodem-usb
     git -C "$root/feeds/qmodem" diff --exit-code HEAD -- \
         application/qmodem application/modem_scan application/quectel_CM_5G_M driver \
-        ":!$scanner" ":!$init" ":!$fragment"
+        ":!$scanner" ":!$init" ":!$hotplug" ":!$defaults"
     tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-    for path in "$scanner" "$init"; do
+    for path in "$scanner" "$init" "$hotplug"; do
         mkdir -p "$tmp/expected/$(dirname "$path")"
         git -C "$root/feeds/qmodem" show "HEAD:$path" > "$tmp/expected/$path"
     done
     sh "$(dirname "$0")/../../patches/qmodem/apply.sh" "$tmp/expected"
-    for path in "$scanner" "$init" "$fragment"; do
+    for path in "$scanner" "$init" "$hotplug" "$defaults"; do
         cmp -s "$tmp/expected/$path" "$root/feeds/qmodem/$path" || {
             echo "::error::QModem 存在限定修复之外的改动：$path" >&2; exit 1;
         }
     done
     extra=$(git -C "$root/feeds/qmodem" ls-files --others --exclude-standard -- \
         application/qmodem application/modem_scan application/quectel_CM_5G_M driver \
-        ":!$fragment")
+        ":!$defaults")
     [[ -z $extra ]] || { echo "::error::QModem 运行源码存在额外文件：$extra" >&2; exit 1; }
 else
     echo '::error::未知 Feeds 校验模式' >&2; exit 1

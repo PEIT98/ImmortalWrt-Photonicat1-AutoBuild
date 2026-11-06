@@ -1,33 +1,15 @@
-# QModem 修复
+# QModem USB 适配
 
-QM 计时、开机网卡等待及条件补扫统一放在此目录；基于官方 `stable` 分支，调用官方扫描入口，拨号使用上游逻辑。
+模组插槽仅使用 USB；M.2 E-key 的 PCIe 用于 Wi-Fi。QModem 基于官方 `stable`，扫描和 AT 工具设置参考西瓜皮项目的 [首启脚本](https://github.com/zzzz0317/immortalwrt-xgp-auto-build/blob/127c70512101b870ea481850cb6357311a65f8ac/files/etc/uci-defaults/zzzz-custom)。保留 Next、Generic 界面及上游拨号逻辑。
 
-Feed 分支由 [scripts/build/prepare.sh](../../scripts/build/prepare.sh) 设置，插件与驱动选项由 [photonicat1.config](../../photonicat1.config) 管理。保留 Next 和 Generic 界面；`stable` 使用 `sms-tool_q` 与 `sms-forwarder-next`，驱动和拨号选择沿用上游的 `luci-app-qmodem_*` 配置名。
+## 文件与调用
 
-## 模组驱动
-
-驱动组合对齐西瓜皮项目的 [prepare.sh](https://github.com/zzzz0317/immortalwrt-xgp-auto-build/blob/main/prepare.sh) 与 [xgp.config](https://github.com/zzzz0317/immortalwrt-xgp-auto-build/blob/main/xgp.config)，源码继续来自官方 QModem `stable` 和 ImmortalWrt `openwrt-25.12`，不复制西瓜皮固件中的二进制模块。
-
-| 类型 | 选择与用途 |
+| 文件 | 作用 |
 | --- | --- |
-| USB QMI | `kmod-qmi_wwan_q`（移远）、`kmod-qmi_wwan_f`（广和通）、`kmod-qmi_wwan_s`（芯讯通） |
-| PCIe | `kmod-pcie_mhi`（厂家 MHI）、`kmod-mtk-t7xx` 与 `umbim`（联发科 T7xx） |
-| USB MBIM / ECM / NCM / RNDIS | 保留 ImmortalWrt 对应驱动；按模组实际 USB 模式绑定 |
-| 拨号 | 保留 Tom 定制 `quectel-CM-5G-M` 与现有 Next、Generic 界面 |
-| 通用 QMI | 关闭 `kmod-usb-net-qmi-wwan` 及另一套 fibocom、quectel 变体，避免与所选厂家驱动重叠；同步关闭会强制带回通用驱动的 `uqmi` |
-
-驱动选项集中在 [photonicat1.config](../../photonicat1.config)，由 [verify-config.sh](../../scripts/checks/verify-config.sh) 在 `make defconfig` 后核对，防止依赖重新启用通用 QMI 或丢失厂家、PCIe 驱动。现有 QM 修复仍由下方统一入口管理，不增加运行时解绑脚本。
-
-FM350 在 USB RNDIS 模式下使用 `rndis_host`，T99W368 在 USB MBIM 模式下使用 `cdc_mbim`；上述 QMI 和 PCIe 选项不会把它们切换成其他 USB 模式。驱动选择对齐不代表“拨号成功但无网络”已修复，仍需真机确认地址、网关与路由。
-
-## 计时与开机扫描
-
-| 文件 | 用途 |
-| --- | --- |
-| [apply.sh](apply.sh) | 构建与源码检查共用的统一入口，应用计时和开机扫描修复 |
-| [fix-qmodem-monotonic-clock.sh](fix-qmodem-monotonic-clock.sh) | 使用单调时钟，防止校时回拨卡住扫描队列和超时等待 |
-| [fix-qmodem-boot-scan.sh](fix-qmodem-boot-scan.sh) | 将开机等待和条件补扫接入 `qmodem_init`，跳过同次开机的重复预设扫描 |
-| [boot-scan.sh](boot-scan.sh) | 等待网卡稳定，调用 `modem_scanc scan all`；未识别时 15 秒后补扫一次 |
+| [apply.sh](apply.sh) | 构建和源码校验共用入口，应用计时修复与 USB 适配 |
+| [fix-qmodem-monotonic-clock.sh](fix-qmodem-monotonic-clock.sh) | 保留单调时钟修复，避免系统校时回拨卡住扫描队列和超时等待 |
+| [fix-qmodem-usb.sh](fix-qmodem-usb.sh) | 原生开机延时扫描限定为 USB，网卡热插拔跳过 PCIe，安装下方默认值 |
+| [usb-defaults.sh](usb-defaults.sh) | 安装为 `/etc/uci-defaults/99-qmodem-usb`，首启设置原生扫描和 AT 工具 |
 
 从仓库根目录执行：
 
@@ -35,11 +17,33 @@ FM350 在 USB RNDIS 模式下使用 `rndis_host`，T99W368 在 USB MBIM 模式�
 sh patches/qmodem/apply.sh immortalwrt/feeds/qmodem
 ```
 
-保留现有插件、串口、手填 APN、PDP 编号、PCIe 和热插拔配置；APN 处理沿用上游逻辑。公共文本处理函数继续使用 [scripts/lib/patch.sh](../../scripts/lib/patch.sh)。
+旧网卡稳定等待和条件补扫片段及对应测试已移除。补丁执行脚本仅在构建主机运行，公共文本处理函数使用 [scripts/lib/patch.sh](../../scripts/lib/patch.sh)。
 
-开机先启动官方扫描守护进程及准备 PCIe 驱动，再异步等待至少 15 秒；已有更长的 `start_delay` 仍生效。随后检查候选网卡是否连续 3 秒稳定，最多额外等 15 秒，再扫描 USB 和 PCIe。首次扫描 15 秒后检查识别结果：没有有效模组，或仍有候选网卡未被识别结果覆盖时，补扫全部总线一次。已识别的模组需具备名称、`enabled` 状态和有效 AT 字符设备；部分识别也会补扫。
+## 原生扫描与 AT 工具
 
-`block_auto_probe=1` 时不执行开机扫描；手动启动、重启服务和热插拔沿用上游逻辑。仅替换开机扫描调度，不新增独立服务，不写死槽位。运行片段安装于 `/usr/share/qmodem/fixes/boot-scan.sh`，由 `qmodem_init` 加载。以上是两次全扫描的上限，上游扫描器原有的单个模组探测重试仍保留。
+| 设置 | 默认值与行为 |
+| --- | --- |
+| `start_delay` | `15`，采用上游开机延时扫描；服务本身仍立即启动 |
+| `enable_usb_scan` | `1`，保留上游 USB 扫描调度 |
+| `enable_pcie_scan` / `try_preset_pcie` | 均为 `0`，不扫描或预探测 PCIe 模组槽位 |
+| `at_tool` | `1`，使用 `sms_tool_q`；USB `3466:3301`（TD-TECH / MT5700）沿用西瓜皮例外，删除此项并退回 `tom_modem` |
 
-回归检查：[计时与源码校验](../../scripts/tests/test_qmodem_clock.sh) · [开机扫描](../../scripts/tests/test_qmodem_boot_scan.sh)。源码校验仅允许计时、开机入口及指定扫描片段，拨号脚本及其余运行源码保持官方版本。`apply.sh` 及 `fix-*.sh` 仅在构建主机执行；普通提交不会启动编译。
+上游 `boot()` 的延时入口和启用 USB 扫描后的入口均保留，均只发送 USB 扫描请求；队列去重和单模组重试仍由官方扫描器处理。不增加网卡稳定检测、条件补扫、独立服务、固定槽位或串口排序。网卡热插拔只接受 USB；USB 原有的热插拔延时和处理逻辑保留。
 
+首启默认值只提交 `qmodem` 的上述字段，不修改 APN、PDP、模组 AT 端口、数据网卡或拨号开关。TD-TECH 的例外仅切换 AT 工具，不关闭拨号。不引入西瓜皮的固定槽位、PCIe T99W373 禁拨规则或 QM-mwan 联动；mwan3 继续默认关闭。
+
+## 驱动范围
+
+驱动选择集中在 [photonicat1.config](../../photonicat1.config)，由 [verify-config.sh](../../scripts/checks/verify-config.sh) 在 `make defconfig` 后核对。
+
+| 类型 | 处理 |
+| --- | --- |
+| USB QMI | 保留厂家 `kmod-qmi_wwan_q/f/s` 与 Tom 定制 `quectel-CM-5G-M`；关闭重复的通用 QMI 和 `uqmi` |
+| USB MBIM / ECM / NCM / RNDIS | 保留对应 USB 网卡驱动和 `umbim`，按模组实际 USB 模式绑定 |
+| USB AT 串口 | 保留 `option`、`qcserial` 等和 [TD-TECH 内核补丁](../kernel/999-add-TD-TECH-option-id.patch)，端口选择沿用官方规则 |
+| 模组 PCIe | 关闭 QM 的 PCIe、厂家 MHI、T7xx 选项及 `kmod-pcie_mhi`、`kmod-mtk-t7xx` |
+| PCIe Wi-Fi | 保留 ath11k、ath12k、rtw89 等现有驱动；系统 `mhi-bus`、`qrtr-mhi` 继续由 Wi-Fi 依赖选择 |
+
+FM350 的 USB RNDIS 使用 `rndis_host`，USB T99W368 的 MBIM 使用 `cdc_mbim`。本次切换扫描和 AT 设置不代表“拨号成功但无网络”已经真机验证修复。
+
+回归检查：[USB 初始化与热插拔](../../scripts/tests/test_qmodem_usb.sh) · [计时与运行源码校验](../../scripts/tests/test_qmodem_clock.sh)。源码校验只允许计时、USB 扫描范围和指定默认值，其余运行源码保持官方版本；普通提交不会触发编译。
