@@ -55,12 +55,6 @@ need=(
   CONFIG_PACKAGE_luci-app-travelmate
   CONFIG_PACKAGE_luci-i18n-travelmate-zh-cn
   CONFIG_PACKAGE_travelmate
-  CONFIG_PACKAGE_luci-app-sqm
-  CONFIG_PACKAGE_luci-i18n-sqm-zh-cn
-  CONFIG_PACKAGE_sqm-scripts
-  CONFIG_PACKAGE_kmod-sched-cake
-  CONFIG_PACKAGE_kmod-ifb
-  CONFIG_PACKAGE_tc-full
   CONFIG_PACKAGE_bash
   CONFIG_PACKAGE_luci-compat
   CONFIG_PACKAGE_luci-app-store
@@ -78,8 +72,6 @@ need=(
   CONFIG_PACKAGE_docker
   CONFIG_PACKAGE_dockerd
   CONFIG_PACKAGE_docker-compose
-  CONFIG_PACKAGE_luci-app-bandix-plus
-  CONFIG_PACKAGE_bandix-plus
   CONFIG_PACKAGE_luci-app-diskman
   CONFIG_PACKAGE_luci-app-diskman_INCLUDE_lsblk
   CONFIG_PACKAGE_usbutils
@@ -170,6 +162,11 @@ for key in "${need[@]}"; do
   fi
 done
 absent=(
+  CONFIG_PACKAGE_luci-app-sqm
+  CONFIG_PACKAGE_luci-i18n-sqm-zh-cn
+  CONFIG_PACKAGE_sqm-scripts
+  CONFIG_PACKAGE_luci-app-bandix-plus
+  CONFIG_PACKAGE_bandix-plus
   CONFIG_PACKAGE_luci-app-statistics
   CONFIG_PACKAGE_luci-i18n-statistics-zh-cn
   CONFIG_PACKAGE_collectd
@@ -223,5 +220,5 @@ if [ "$failed" -ne 0 ]; then
   echo '::error::软件包配置校验未通过，请查看丢失的项目，并下载构建配置 Artifact 排查缺失依赖。' >&2
   exit 1
 fi
-echo '光影猫一代必选配置通过：现有插件及驱动、文件管理、Aurora 设置、Travelmate 和 SQM/CAKE 均已保留。'
+echo '光影猫一代必选配置通过：现有插件及驱动、文件管理、Aurora 设置、Travelmate 和 QuickStart 均已保留；SQM/Bandix Plus 已移除。'
 

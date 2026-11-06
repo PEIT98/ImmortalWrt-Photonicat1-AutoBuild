@@ -6,10 +6,10 @@
 
 | 分类 | 内置功能 |
 | --- | --- |
-| 5G / 网络 | 官方 QModem stable（Next 界面）+ Generic、mwan3（默认关闭）、OpenClash（内置 Meta 内核）、Travelmate、SQM/CAKE |
+| 5G / 网络 | 官方 QModem stable（Next 界面）+ Generic、mwan3（默认关闭）、OpenClash（内置 Meta 内核）、Travelmate |
 | 系统界面 | Aurora 主题及设置、顶部设备状态、光影猫电池与电源管理（电源控制实验性）、CPU 调频、ttyd |
-| 应用与管理 | iStore 商店、iStoreOS 官方 QuickStart 首页与网口配置、Docker / Compose / Dockerman、文件管理、在线升级、定时重启、UPnP |
-| 存储与工具 | eMMC 自动扩容、DiskMan、USB 硬盘保活（默认关闭）、Bandix Plus（流量统计默认关闭）、常用诊断工具 |
+| 应用与管理 | iStore 商店、iStoreOS 官方 QuickStart 首页、网口配置与局域网设备管理、Docker / Compose / Dockerman、文件管理、在线升级、定时重启、UPnP |
+| 存储与工具 | eMMC 自动扩容、DiskMan、USB 硬盘保活（默认关闭）、常用诊断工具 |
 | 驱动支持 | USB 模组数据与 AT 串口、板载 SDIO 及多种 PCIe 无线网卡、TD-TECH 串口补丁、NFA765 E108 专用固件 |
 
 QModem 跟随官方 `stable` 分支，保留计时修复；采用西瓜皮原生 15 秒延时扫描，仅处理 USB 模组，默认使用 `sms_tool_q`，TD-TECH 保留 `tom_modem` 兼容例外。模组 PCIe 驱动关闭，M.2 E-key 的 PCIe Wi-Fi 保留。拨号使用上游逻辑，菜单为“移动网络”，Generic 保持自有复刻的 `main` 分支并共用 QM 后台。mwan3 按需手动配置并启用。
@@ -30,12 +30,13 @@ QModem 跟随官方 `stable` 分支，保留计时修复；采用西瓜皮原生
 以上为首次刷入或恢复出厂的默认值；保留配置升级时沿用已有网络、无线及密码设置。
 频段回退依据驱动能力，热点实际启动仍需真机验证；旧默认主机名会迁移为 `Pwrt`，自定义主机名保留。
 
-## iStoreOS 官方首页和网口配置
+## iStoreOS 官方首页、网口配置与局域网设备管理
 
 从 [LinkEase 官方 UI](https://github.com/linkease/nas-packages-luci/tree/main/luci/luci-app-quickstart) 与 [官方后端](https://github.com/linkease/nas-packages/tree/master/network/services/quickstart) 获取原版 QuickStart，而非 SlAlot 的定制首页。
 
 - 首页：`/cgi-bin/luci/admin/quickstart`。
 - 网口配置：`网络 → 网口配置`（`/cgi-bin/luci/admin/network/interfaceconfig`），官方界面可手动调整 WAN/LAN。
+- 局域网设备管理：首页“已连接设备”中的“设备管理”（`/cgi-bin/luci/admin/quickstart/devicemanagement`），查看设备、静态地址和流量；限速、浮动网关属于官方页面的可选功能，需相应插件。
 - 保留 Pwrt 的 `eth0=WAN`、`eth1=LAN`、`172.16.0.1`，不动 QModem、Aurora 和已有网络默认配置。
 - 首次启动只禁用 QuickStart 附带的 `startdhns` 自动网络重配置服务，保留 QuickStart 本体和手动网口管理；可按需自行重新启用。
 - 更改 WAN/LAN 可能让管理页面断线。建议用有线连接操作，先备份 `/etc/config/network`；实际网页兼容性及断网恢复需真机验证。
@@ -64,13 +65,13 @@ QModem 跟随官方 `stable` 分支，保留计时修复；采用西瓜皮原生
 仅在**新增插件**时更新此处；日常修复、配置调整和已不使用的功能不写历史记录。
 
 - **2026-10-12**：Aurora 主题、ttyd 网页终端。
-- **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、Bandix Plus、DiskMan、定时重启、UPnP。
+- **2026-10-13**：iStore、Docker / Docker Compose / Dockerman、DiskMan、定时重启、UPnP。
 - **2026-10-15**：光影猫一代电源管理（实验性，仅连接兼容 MCU Socket）。
 - **2026-10-17**：QModem Generic（引用 PEIT98 自有复刻仓库 `main`，与官方 QModem Next 共存）。
 - **2026-10-17**：在线升级（完整本地插件，适配本仓库光影猫固件）。
-- **2026-10-17**：文件管理、Aurora 设置、Travelmate 无线中继、SQM/CAKE。
+- **2026-10-17**：文件管理、Aurora 设置、Travelmate 无线中继。
 
 - **2026-11-03**：USB 硬盘保活（默认关闭，支持稳定标识和可选 USB 防挂起）。
-- **2026-11-06**：iStoreOS 官方 QuickStart 首页与网口配置。
+- **2026-11-06**：iStoreOS 官方 QuickStart 首页、网口配置与局域网设备管理。
 
 </details>

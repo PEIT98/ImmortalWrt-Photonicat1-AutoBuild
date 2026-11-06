@@ -213,35 +213,6 @@ sh -n "$INFO_RPC"
 jq -e -s 'length == 1 and (.[0]|type) == "object"' "$SRC/files/usr/share/rpcd/acl.d/luci-photonicat1-info.json" >/dev/null
 test -f "$SRC/files/www/luci-static/resources/view/status/include/99_photonicat1_info.js" || exit 1
 
-# Bandix Plus 是多接口版本。只从上游源码提取两个 OpenWrt 包，
-# 不将原版单网口 Bandix 的 eBPF/限速规则强加于设备。
-BANDIX_TMP="$(mktemp -d)"
-trap 'rm -rf "$BANDIX_TMP"' EXIT
-git clone --quiet --depth 1 --branch main https://github.com/timsaya/openwrt-bandix-plus.git "$BANDIX_TMP/core"
-git clone --quiet --depth 1 --branch main https://github.com/timsaya/luci-app-bandix-plus.git "$BANDIX_TMP/luci"
-CORE_DST="$SRC/package/photonicat-bandix-plus"
-LUCI_DST="$SRC/package/luci-app-bandix-plus"
-mkdir -p "$CORE_DST" "$LUCI_DST"
-cp -a "$BANDIX_TMP/core/openwrt-bandix-plus/." "$CORE_DST/"
-cp -a "$BANDIX_TMP/luci/luci-app-bandix-plus/." "$LUCI_DST/"
-test -f "$CORE_DST/Makefile" && test -f "$LUCI_DST/Makefile" || exit 1
-# luci.mk infers LUCI_NAME/PKG_NAME from the folder name. The former
-# package/photonicat-luci-app-bandix-plus registered an incorrect package name.
-# Keep the actual luci-app-bandix-plus directory name to match config selection.
-grep -Fq '# call BuildPackage' "$LUCI_DST/Makefile" || { echo "::error::Bandix LuCI Makefile 缺少包扫描标记" >&2; exit 1; }
-
-# 官方默认启用 eBPF 流量服务。光影猫有 QModem/mwan3 多 WAN，
-# 为避免首次启动改变数据转发，预置关闭；在 LuCI 配好接口后手动启用。
-BANDIX_CONFIG="$CORE_DST/files/bandix_plus.config"
-test -f "$BANDIX_CONFIG" || exit 1
-if ! grep -Fq "option enable_traffic '1'" "$BANDIX_CONFIG"; then
-  echo "::error::Bandix Plus 默认配置格式变化，请重新确认安全关闭开关" >&2
-  exit 1
-fi
-sed -i "s/option enable_traffic '1'/option enable_traffic '0'/" "$BANDIX_CONFIG"
-grep -Fq "option enable_traffic '0'" "$BANDIX_CONFIG" || exit 1
-echo 'Bandix Plus 前/后端已加入：首次默认不启用流量挂钩和限速。'
-
 # 西瓜皮原版 TD-TECH (3466) USB option 串口内核补丁（保持原内容不修改）。
 # kmod-usb-serial-option 由 select-packages.sh 选择；此处仅安装内核补丁源码。
 # 必须确保 Rockchip 目标仍使用 Linux 6.12；如升级到新内核则明确报错，

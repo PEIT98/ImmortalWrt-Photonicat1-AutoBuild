@@ -25,6 +25,7 @@ test -f "$BACKEND/files/quickstart.init"
 test -f "$LUCI/Makefile"
 test -f "$LUCI/luasrc/controller/quickstart.lua"
 test -f "$LUCI/root/usr/share/luci/menu.d/luci-app-quickstart.json"
+test -f "$LUCI/htdocs/luci-static/quickstart/index.js"
 grep -Fq 'PKG_NAME:=quickstart' "$BACKEND/Makefile"
 grep -Fq 'luci-app-store' "$LUCI/Makefile"
 grep -Fq 'entry({"admin", "network", "interfaceconfig"}' "$LUCI/luasrc/controller/quickstart.lua" || {
@@ -33,6 +34,14 @@ grep -Fq 'entry({"admin", "network", "interfaceconfig"}' "$LUCI/luasrc/controlle
 }
 grep -Fq '"admin/quickstart/*"' "$LUCI/root/usr/share/luci/menu.d/luci-app-quickstart.json" || {
   echo '::error::官方 QuickStart 首页入口已变更，停止集成' >&2
+  exit 1
+}
+grep -Fq '/devicemanagement' "$LUCI/htdocs/luci-static/quickstart/index.js" || {
+  echo '::error::官方 QuickStart 局域网设备页面已变更，停止集成' >&2
+  exit 1
+}
+grep -Fq '/lanctrl/listDevices/' "$LUCI/htdocs/luci-static/quickstart/index.js" || {
+  echo '::error::官方 QuickStart 局域网设备接口已变更，停止集成' >&2
   exit 1
 }
 mkdir -p "$BACKEND_DST" "$LUCI_DST"

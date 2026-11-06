@@ -22,7 +22,7 @@
 | 分类 | 脚本 | 作用 |
 | --- | --- | --- |
 | 构建 | [prepare.sh](build/prepare.sh) | 继承设备参考配置，准备 Feeds、本地插件、覆盖文件和补丁 |
-| 构建 | [install-istore-quickstart.sh](build/install-istore-quickstart.sh) | 获取 LinkEase 官方 QuickStart 前端和后端包，检查首页与网口路由，保持插件独立 |
+| 构建 | [install-istore-quickstart.sh](build/install-istore-quickstart.sh) | 获取 LinkEase 官方 QuickStart 前后端，检查首页、网口及局域网设备路由和接口 |
 | 构建 | [select-packages.sh](build/select-packages.sh) | Feeds 安装后应用根目录 `photonicat1.config` 的覆盖项 |
 | 构建 | [bundle-nfa765-e108.sh](build/bundle-nfa765-e108.sh) | 校验并内置 E108 专用固件，安装对应 ath11k 补丁 |
 | 构建 | [bundle-openclash-core.sh](build/bundle-openclash-core.sh) | 获取、验证并内置 OpenClash Meta 内核 |
@@ -59,7 +59,7 @@
 
 ## iStoreOS QuickStart
 
-仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`；启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，禁用自动 `uciChange` 服务 `startdhns`，不影响手动网口管理。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。
+仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`。首页包含局域网设备管理入口（`/admin/quickstart/devicemanagement`），构建脚本检查页面路由与设备列表 API；启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，禁用自动 `uciChange` 服务 `startdhns`，不影响手动网口管理。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。
 
 ## 回归测试
 
@@ -90,7 +90,7 @@ bash scripts/tests/test_online_upgrade.sh
 
 网络、品牌和无线名称见 [首页](../README.md#默认网络设置)。保留配置升级时沿用已有网络、无线、密码和自定义主机名。QM 使用西瓜皮的原生 15 秒延时扫描及 AT 工具设置，扫描和网卡热插拔仅处理 USB 模组；TD-TECH 保留 `tom_modem` 例外，不关闭拨号。旧网卡稳定等待和条件补扫已移除，计时修复保留；USB 拨号、串口探测及热插拔时序沿用上游逻辑。模组 PCIe 驱动关闭，PCIe Wi-Fi 及依赖保留。ndisc6 保留构建兼容修复。独立菜单文件将显示名称设为“移动网络”。mwan3 保留上游默认配置，首启关闭服务及自启动。
 
-本地插件完整源码位于 [packages/](../packages/)；电源与软件源设置、CPU 调频、在线升级和硬盘保活的说明见首页对应链接。文件管理、Travelmate 和 SQM 使用官方软件源；Aurora 设置使用主题作者源码。
+本地插件完整源码位于 [packages/](../packages/)；电源与软件源设置、CPU 调频、在线升级和硬盘保活的说明见首页对应链接。文件管理和 Travelmate 使用官方软件源；Aurora 设置使用主题作者源码。
 
 Aurora 更新源由 [99-aurora-update-source](../files/etc/uci-defaults/99-aurora-update-source) 在首启时登记：使用配置插件自带签名公钥，默认添加作者的 APK snapshots 源；已有 Aurora 源和其他软件源保持原样。首启不联网刷新索引，需要升级时在软件包页面更新列表。
 
