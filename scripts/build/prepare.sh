@@ -180,7 +180,7 @@ MWAN_DEFAULT="$SRC/files/etc/uci-defaults/99-mwan3-disable"
 test -f "$MWAN_DEFAULT"
 chmod 755 "$MWAN_DEFAULT"
 sh -n "$MWAN_DEFAULT"
-echo 'QModem：使用官方启动扫描和拨号逻辑，仅保留计时修复；mwan3 默认关闭。'
+echo 'QModem：开机等待网卡后全扫描，未识别时 15 秒后补扫；保留计时修复与原生拨号，mwan3 默认关闭。'
 
 # Aurora 官方源码根目录直接包含 Makefile，直接作为 OpenWrt 本地软件包编译。
 # 该软件包含自身的 UCI 首启默认主题设置，无须添加重复脚本。

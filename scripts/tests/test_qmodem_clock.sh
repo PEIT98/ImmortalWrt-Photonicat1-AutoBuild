@@ -68,7 +68,14 @@ test_runtime_check_allows_only_the_expected_qmodem_fixes() {
     # A missed build hook must not silently ship the unpatched scanner.
     reject bash "$check" runtime "$TEST_TMP/root"
     apply_patch
+    reject bash "$check" runtime "$TEST_TMP/root"
+    ok sh "$ROOT/patches/qmodem/apply.sh" "$feed"
     ok bash "$check" runtime "$TEST_TMP/root"
+    local fragment="$feed/application/qmodem/files/usr/share/qmodem/fixes/boot-scan.sh"
+    cp "$fragment" "$TEST_TMP/valid-fragment"
+    printf '\n# unexpected boot scan change\n' >> "$fragment"
+    reject bash "$check" runtime "$TEST_TMP/root"
+    cp "$TEST_TMP/valid-fragment" "$fragment"
     local dial="$feed/application/qmodem/files/usr/share/qmodem/modem_dial.sh"
     cp "$dial" "$TEST_TMP/valid-dial"
     printf '\n# unexpected dial change\n' >> "$dial"
