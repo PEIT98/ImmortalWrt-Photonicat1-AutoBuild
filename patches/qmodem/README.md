@@ -1,6 +1,8 @@
 # QModem 修复
 
-QM 计时及 FM350 自动 APN 修复统一放在此目录；启动扫描使用官方逻辑。
+QM 计时及 FM350 自动 APN 修复统一放在此目录；基于官方 `stable` 分支，启动扫描使用官方逻辑。
+
+Feed 分支由 [scripts/build/prepare.sh](../../scripts/build/prepare.sh) 设置，插件与驱动选项由 [photonicat1.config](../../photonicat1.config) 管理。保留 Next 和 Generic 界面；`stable` 使用 `sms-tool_q` 与 `sms-forwarder-next`，驱动和拨号选择沿用上游的 `luci-app-qmodem_*` 配置名。
 
 | 文件 | 用途 |
 | --- | --- |

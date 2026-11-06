@@ -11,7 +11,9 @@ if [[ $mode == dependencies ]]; then
     }
     next_deps=$(dependencies "$next/Makefile")
     generic_deps=$(dependencies "$generic/Makefile")
-    for dep in qmodem qmodem-smsd sms-forwarder-next luci-base; do grep -Fxq "$dep" <<< "$next_deps"; done
+    # stable 使用 sms-tool_q；Next 的短信接口随界面安装，不依赖 main 的 qmodem-smsd。
+    for dep in qmodem sms-forwarder-next luci-base; do grep -Fxq "$dep" <<< "$next_deps"; done
+    test -f "$root/feeds/qmodem/application/sms-tool_q/Makefile"
     for dep in qmodem luci-base; do grep -Fxq "$dep" <<< "$generic_deps"; done
     version=$(awk '/^QMODEM_VERSION[[:space:]]*:?=/ {n++;s=$0;sub(/^[^=]*=[[:space:]]*/,"",s);split(s,a,/[[:space:]]/);print a[1]}END{if(n!=1)exit 1}' "$root/feeds/qmodem/version.mk")
     [[ $version =~ ^[0-9]+(\.[0-9]+)*(_(alpha|beta|pre|rc)[0-9]*)?$ ]] || { echo '::error::QModem 版本不适用于 APK' >&2; exit 1; }

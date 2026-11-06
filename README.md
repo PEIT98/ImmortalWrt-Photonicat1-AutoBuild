@@ -6,13 +6,13 @@
 
 | 分类 | 内置功能 |
 | --- | --- |
-| 5G / 网络 | 官方 QModem Next + Generic、mwan3（默认关闭）、OpenClash（内置 Meta 内核）、Travelmate、SQM/CAKE |
+| 5G / 网络 | 官方 QModem stable（Next 界面）+ Generic、mwan3（默认关闭）、OpenClash（内置 Meta 内核）、Travelmate、SQM/CAKE |
 | 系统界面 | Aurora 主题及设置、顶部设备状态、光影猫电池与电源管理（电源控制实验性）、CPU 调频、ttyd |
 | 应用与管理 | iStore、Docker / Compose / Dockerman、文件管理、在线升级、定时重启、UPnP |
 | 存储与工具 | eMMC 自动扩容、DiskMan、USB 硬盘保活（默认关闭）、Bandix Plus（流量统计默认关闭）、常用诊断工具 |
 | 驱动支持 | USB 模组数据与 AT 串口、板载 SDIO 及多种 PCIe 无线网卡、TD-TECH 串口补丁、NFA765 E108 专用固件 |
 
-QModem 使用官方启动扫描，保留计时修复及仅针对 FM350 的自动 APN 补全。菜单为“移动网络”，Generic 共用其后台。mwan3 按需手动配置并启用。
+QModem 跟随官方 `stable` 分支，使用官方启动扫描，保留计时修复及仅针对 FM350 的自动 APN 补全。菜单为“移动网络”，Generic 保持自有复刻的 `main` 分支并共用 QM 后台。mwan3 按需手动配置并启用。
 
 ## 默认网络设置
 
@@ -46,7 +46,7 @@ QModem 使用官方启动扫描，保留计时修复及仅针对 FM350 的自动
 - 系统管理：[光影猫管理与软件源](packages/luci-app-photonicat-power/README.md) · [CPU 调频](packages/luci-app-cpufreq/README.md) · [在线升级](packages/luci-app-online-upgrade/README.md)
 - 存储与固件：[eMMC 扩容](docs/STORAGE-RECOVERY.md) · [USB 硬盘保活](packages/luci-app-swrt-disk-keepalive/README.md) · [NFA765 E108 固件](firmware/nfa765-e108/README.md)
 
-参考与来源：[光影猫设备配置](https://github.com/a757814283/ImmortalWrt_Photonicat1) · [官方 QModem](https://github.com/FUjr/QModem) · [PEIT98 Generic](https://github.com/PEIT98/luci-app-qmodem-generic)（复刻自 [LianXia233](https://github.com/LianXia233/luci-app-qmodem-generic)）。
+参考与来源：[光影猫设备配置](https://github.com/a757814283/ImmortalWrt_Photonicat1) · [官方 QModem stable](https://github.com/FUjr/QModem/tree/stable) · [PEIT98 Generic](https://github.com/PEIT98/luci-app-qmodem-generic)（复刻自 [LianXia233](https://github.com/LianXia233/luci-app-qmodem-generic)）。
 
 <details>
 <summary>新增插件记录</summary>

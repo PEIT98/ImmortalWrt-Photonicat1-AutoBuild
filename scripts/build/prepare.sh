@@ -32,12 +32,12 @@ test -f "$SRC/Makefile"
 cp -f "$REF/.config" "$SRC/.config"
 cp -f "$REF/feeds.conf.default" "$SRC/feeds.conf.default"
 
-# 官方 QModem main + PEIT98 自有 Generic main，构建时直接拉取。
+# 官方 QModem stable + PEIT98 自有 Generic main，构建时直接拉取。
 # 保留官方 Next 界面；Generic 后续修复在自有复刻仓库维护。
 if grep -Eq '^src-git qmodem ' "$SRC/feeds.conf.default"; then
-  sed -i -E 's#^src-git qmodem .*#src-git qmodem https://github.com/FUjr/QModem.git;main#' "$SRC/feeds.conf.default"
+  sed -i -E 's#^src-git qmodem .*#src-git qmodem https://github.com/FUjr/QModem.git;stable#' "$SRC/feeds.conf.default"
 else
-  printf '\nsrc-git qmodem https://github.com/FUjr/QModem.git;main\n' >> "$SRC/feeds.conf.default"
+  printf '\nsrc-git qmodem https://github.com/FUjr/QModem.git;stable\n' >> "$SRC/feeds.conf.default"
 fi
 
 # Generic 从 PEIT98 复刻仓库拉取，交给 Feeds 递归扫描嵌套软件包。
@@ -264,6 +264,6 @@ echo 'TD-TECH 3466 USB 串口补丁已按西瓜皮原版加入 Rockchip Linux 6.
 
 # 使用本次上游检测源码设置频段顺序、Pwrt SSID 和 WPA2 密码。
 bash "$(dirname "$0")/../patches/wireless/wifi-band-order.sh" "$SRC"
-echo '准备完成：已加载光影猫配置、官方 QModem main、Generic main 与 OpenClash 源（插件选择在 feeds 安装后进行）'
+echo '准备完成：已加载光影猫配置、官方 QModem stable、Generic main 与 OpenClash 源（插件选择在 feeds 安装后进行）'
 echo '已排除旧 ModemBand、旧短信、PassWall、SmartDNS、ZeroTier'
 echo '首次使用：在官方 QModem 页面扫描并拨号；多 WAN 策略按需手动配置。'
