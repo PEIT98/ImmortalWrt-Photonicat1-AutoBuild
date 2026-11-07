@@ -312,6 +312,9 @@ jobs:
           grep -F '# CONFIG_RUBY_ENABLE_YJIT is not set' .config
           df -h .
 
+      - name: 编译前预检官方内核 ABI
+        run: bash scripts/build/official-kernel-abi.sh check-config immortalwrt official-abi
+
       - name: Upload resolved config
         if: always()
         uses: actions/upload-artifact@v4
@@ -323,6 +326,9 @@ jobs:
             immortalwrt/feeds.conf.default
             immortalwrt/tmp/.packageinfo
             immortalwrt/tmp/.config-package.in
+            official-abi/official.config
+            official-abi/kernel-package
+            official-abi/preflight/
             photonicat-defconfig.log
           include-hidden-files: true
           retention-days: 14
