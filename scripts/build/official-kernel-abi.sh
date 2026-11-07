@@ -40,10 +40,12 @@ case "$mode" in
     tmp=$(mktemp "${config}.official-abi.XXXXXX")
     trap 'rm -f "$tmp"' EXIT
     # 其余硬件/插件选择仍取参考配置；内核构建开关以官方发布配置为准。
+    # ALL_KMODS 影响模块全集及 ABI，需保留；ALL_NONSHARED 是用户态批量选包
+    # 开关，沿用参考配置，避免把 kselftests-bpf 等 buildbot 测试包带入构建。
     awk '
       function kernel_key(k) {
         return k ~ /^CONFIG_KERNEL_/ || k == "CONFIG_ALL_KMODS" ||
-          k == "CONFIG_ALL_NONSHARED" || k == "CONFIG_DWARVES" ||
+          k == "CONFIG_DWARVES" ||
           k == "CONFIG_REPRODUCIBLE_DEBUG_INFO"
       }
       function key_of(s, k) {

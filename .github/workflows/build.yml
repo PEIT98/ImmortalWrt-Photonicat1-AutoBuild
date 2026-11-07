@@ -85,7 +85,9 @@ jobs:
 
       - name: 锁定官方光影猫内核源码和 ABI
         shell: bash
-        run: bash scripts/build/official-kernel-abi.sh pin immortalwrt official-abi
+        run: |
+          bash scripts/tests/test_official_kernel_abi.sh
+          bash scripts/build/official-kernel-abi.sh pin immortalwrt official-abi
 
       - name: 准备光影猫配置与 QModem
         run: bash scripts/build/prepare.sh "$GITHUB_WORKSPACE/photonicat-reference" "$GITHUB_WORKSPACE/immortalwrt" "$GITHUB_WORKSPACE/files" "$GITHUB_WORKSPACE/official-abi"

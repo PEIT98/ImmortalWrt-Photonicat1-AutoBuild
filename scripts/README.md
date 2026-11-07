@@ -22,7 +22,7 @@
 | 分类 | 脚本 | 作用 |
 | --- | --- | --- |
 | 构建 | [prepare.sh](build/prepare.sh) | 继承设备参考配置，准备 Feeds、本地插件、覆盖文件和补丁 |
-| 构建 | [official-kernel-abi.sh](build/official-kernel-abi.sh) | 锁定官方源码和内核配置；生成匹配的 APK kmods 源；镜像完成后核对 kernel 包与 `.vermagic` |
+| 构建 | [official-kernel-abi.sh](build/official-kernel-abi.sh) | 锁定官方源码、内核配置及全部内核模块；用户态选包沿用参考配置；生成 APK kmods 源并核对 kernel 包与 `.vermagic` |
 | 构建 | [install-istore-quickstart.sh](build/install-istore-quickstart.sh) | 获取 LinkEase 官方 QuickStart 前后端，检查首页、网口及局域网设备路由和接口 |
 | 构建 | [select-packages.sh](build/select-packages.sh) | Feeds 安装后应用根目录 `photonicat1.config` 的覆盖项 |
 | 构建 | [bundle-nfa765-e108.sh](build/bundle-nfa765-e108.sh) | 校验并内置 E108 专用固件，安装对应 ath11k 补丁 |
@@ -50,7 +50,7 @@
 
 ## 调用顺序
 
-1. `build/official-kernel-abi.sh` 从官方发布记录锁定源码和内核配置；`build/prepare.sh` 保留参考插件和 TD-TECH 模块补丁，并生成 `files/etc/apk/repositories.d/pwrt-kmods.list`。软件源镜像切换会一起处理该列表。
+1. 先运行 `tests/test_official_kernel_abi.sh`，再由 `build/official-kernel-abi.sh` 从官方发布记录锁定源码和内核配置，保留官方 `ALL_KMODS`，但不复制用户态全量选包开关 `ALL_NONSHARED`，避免意外构建 `kselftests-bpf` 等测试套件；`build/prepare.sh` 保留参考插件和 TD-TECH 模块补丁，并生成 `files/etc/apk/repositories.d/pwrt-kmods.list`。软件源镜像切换会一起处理该列表。
 2. 将板载 SDIO 和 PCIe 放入同一个 ath10k 包（官方两包共用 `ath10k_core.ko`）；更新 Feeds 后处理 LuaJIT、ndisc6、WeeChat 兼容，验证并修复 QM 计时与开机扫描，再刷新索引并安装 Feeds。
 3. 检查 QM/Generic，处理 iStore 包名；`build/select-packages.sh` 应用插件选择。
 4. 执行 `make defconfig`，由 `checks/verify-config.sh` 检查，再生成固件身份、内置文件并下载源码。

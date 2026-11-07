@@ -6,8 +6,8 @@ setup() {
     META="$TEST_TMP/official-abi"
     mkdir -p "$SRC" "$META" "$TEST_TMP/bin"
     SCRIPT="$ROOT/scripts/build/official-kernel-abi.sh"
-    printf 'CONFIG_PACKAGE_qmodem=y\nCONFIG_KERNEL_DEBUG_INFO_BTF=n\nCONFIG_KERNEL_OLD=y\nCONFIG_ALL_KMODS=n\n' > "$SRC/.config"
-    printf 'CONFIG_KERNEL_DEBUG_INFO_BTF=y\n# CONFIG_KERNEL_OLD is not set\nCONFIG_ALL_KMODS=y\nCONFIG_KERNEL_BUILD_USER="buildbot"\n' > "$META/config.buildinfo"
+    printf 'CONFIG_PACKAGE_qmodem=y\nCONFIG_KERNEL_DEBUG_INFO_BTF=n\nCONFIG_KERNEL_OLD=y\nCONFIG_ALL_KMODS=n\n# CONFIG_ALL_NONSHARED is not set\n' > "$SRC/.config"
+    printf 'CONFIG_KERNEL_DEBUG_INFO_BTF=y\n# CONFIG_KERNEL_OLD is not set\nCONFIG_ALL_KMODS=y\nCONFIG_ALL_NONSHARED=y\nCONFIG_PACKAGE_kselftests-bpf=m\nCONFIG_KERNEL_BUILD_USER="buildbot"\n' > "$META/config.buildinfo"
     printf 'kernel-6.12.112~4ce22fc78523e0739bdb12c4ffdd2e26-r1.apk\n' > "$META/kernel-package"
     cat > "$TEST_TMP/bin/curl" <<'CURL'
 #!/bin/sh
@@ -33,6 +33,20 @@ test_merge_preserves_plugins_and_replaces_kernel_options() {
     assert_not_has "$SRC/.config" 'CONFIG_KERNEL_OLD=y'
     ok bash "$SCRIPT" merge "$SRC" "$META"
     assert_eq 1 "$(grep -c '^CONFIG_KERNEL_BUILD_USER=' "$SRC/.config")"
+}
+test_merge_preserves_userspace_selection_without_buildbot_test_packages() {
+    ok bash "$SCRIPT" merge "$SRC" "$META"
+    assert_has "$SRC/.config" '# CONFIG_ALL_NONSHARED is not set'
+    assert_not_has "$SRC/.config" 'CONFIG_ALL_NONSHARED=y'
+    assert_not_has "$SRC/.config" 'CONFIG_PACKAGE_kselftests-bpf='
+    assert_has "$SRC/.config" 'CONFIG_ALL_KMODS=y'
+    assert_has "$SRC/.config" 'CONFIG_KERNEL_DEBUG_INFO_BTF=y'
+    assert_has "$SRC/.config" 'CONFIG_PACKAGE_qmodem=y'
+    # 只阻止从官方 buildbot 配置带入选包开关，用户明确的选包仍保留。
+    printf 'CONFIG_ALL_NONSHARED=y\nCONFIG_PACKAGE_kselftests-bpf=y\n' > "$SRC/.config"
+    ok bash "$SCRIPT" merge "$SRC" "$META"
+    assert_has "$SRC/.config" 'CONFIG_ALL_NONSHARED=y'
+    assert_has "$SRC/.config" 'CONFIG_PACKAGE_kselftests-bpf=y'
 }
 test_pin_uses_official_revision_and_kernel_package() {
     cat > "$TEST_TMP/bin/curl" <<'CURL'
