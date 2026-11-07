@@ -5,4 +5,9 @@ if [ -x /etc/init.d/startdhns ]; then
     /etc/init.d/startdhns disable >/dev/null 2>&1 || true
     /etc/init.d/startdhns stop >/dev/null 2>&1 || true
 fi
+# 首次启动就写入持久开机链接；上游 09-quickstart 只在包升级时启用。
+if [ -x /etc/init.d/quickstart ]; then
+    /etc/init.d/quickstart enable || exit 1
+    /etc/init.d/quickstart start || exit 1
+fi
 exit 0

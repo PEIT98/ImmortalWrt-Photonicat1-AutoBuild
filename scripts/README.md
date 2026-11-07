@@ -59,7 +59,7 @@
 
 ## iStoreOS QuickStart
 
-仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`。首页包含局域网设备管理入口（`/admin/quickstart/devicemanagement`），构建脚本检查页面路由与设备列表 API，并将 NAS 菜单移到“服务”及隐藏网络设置向导；启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，禁用自动 `uciChange` 服务 `startdhns`，不影响手动网口管理。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。
+仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`。首页包含局域网设备管理入口（`/admin/quickstart/devicemanagement`），构建脚本检查页面路由与设备列表 API，并将 NAS 菜单移到“服务”及隐藏网络设置向导；启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，持久启用 QuickStart 主服务、禁用自动 `uciChange` 服务 `startdhns`；LuCI 菜单不再依赖后台进程启动时序，重启后首页、网口配置及局域网设备入口仍可见。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。
 
 ## 回归测试
 

@@ -27,6 +27,14 @@ test -f "$LUCI/luasrc/controller/quickstart.lua"
 test -f "$LUCI/root/usr/share/luci/menu.d/luci-app-quickstart.json"
 test -f "$LUCI/htdocs/luci-static/quickstart/index.js"
 grep -Fq 'PKG_NAME:=quickstart' "$BACKEND/Makefile"
+grep -Fq '    if luci.sys.call("pgrep quickstart >/dev/null") == 0 then' "$LUCI/luasrc/controller/quickstart.lua" || {
+  echo '::error::官方 QuickStart 菜单进程守卫已变更，停止集成' >&2
+  exit 1
+}
+grep -Fq 'if [ "$PKG_UPGRADE" = 1 ]; then' "$BACKEND/files/quickstart.uci-default" || {
+  echo '::error::官方 QuickStart 启用条件已变更，停止集成' >&2
+  exit 1
+}
 grep -Fq 'luci-app-store' "$LUCI/Makefile"
 grep -Fq 'entry({"admin", "network", "interfaceconfig"}' "$LUCI/luasrc/controller/quickstart.lua" || {
   echo '::error::官方 QuickStart 网口配置入口已变更，停止集成' >&2
@@ -85,6 +93,26 @@ awk '
 cp "$TMP/quickstart.controller.lua" "$LUCI_DST/luasrc/controller/quickstart.lua"
 grep -Fq '"admin", "services", "nas", "raid"' "$LUCI_DST/luasrc/controller/quickstart.lua"
 grep -Fq '"admin", "network", "interfaceconfig"' "$LUCI_DST/luasrc/controller/quickstart.lua"
+
+# 菜单必须在 LuCI 首次生成索引时可见，不依赖稍后启动的后台进程。
+# 保留现有菜单整理结果，仅删除进程守卫及其回退分支。
+awk '
+  $0 == "    if luci.sys.call(\"pgrep quickstart >/dev/null\") == 0 then" { guard++; next }
+  $0 == "    else" { maybe_else=1; next }
+  maybe_else && $0 == "        entry({\"admin\", \"quickstart\"}, call(\"redirect_fallback\")).leaf = true" {
+    fallback++; maybe_else=0; drop_end=1; next
+  }
+  maybe_else { print "    else"; maybe_else=0 }
+  drop_end && $0 == "    end" { closed++; drop_end=0; next }
+  { print }
+  END { if (guard != 1 || fallback != 1 || closed != 1 || maybe_else || drop_end) exit 1 }
+' "$LUCI_DST/luasrc/controller/quickstart.lua" > "$TMP/quickstart.stable-menu.lua"
+cp "$TMP/quickstart.stable-menu.lua" "$LUCI_DST/luasrc/controller/quickstart.lua"
+if grep -Fq 'pgrep quickstart' "$LUCI_DST/luasrc/controller/quickstart.lua"; then
+  echo '::error::QuickStart 菜单仍依赖后台进程，停止集成' >&2
+  exit 1
+fi
+grep -Fq 'entry({"admin", "network", "interfaceconfig"}' "$LUCI_DST/luasrc/controller/quickstart.lua"
 
 # ImmortalWrt 25.12 的 LuCI 包名明确写死，仅改本地构建副本。
 if grep -Eq '^(LUCI_NAME|PKG_NAME)[[:space:]]*[:?+]?=' "$LUCI_DST/Makefile"; then
