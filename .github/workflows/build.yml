@@ -33,7 +33,7 @@ jobs:
       - name: Checkout workflow
         uses: actions/checkout@v4
 
-      - name: Checkout latest ImmortalWrt 25.12
+      - name: Checkout ImmortalWrt 25.12
         uses: actions/checkout@v4
         with:
           repository: immortalwrt/immortalwrt
@@ -74,7 +74,7 @@ jobs:
             lrzsz mkisofs msmtp musl-tools ninja-build patch pkgconf python3 python3-pyelftools \
             python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig \
             texinfo unzip vim wget xmlto xxd zlib1g-dev zstd python3-ply python3-docutils re2c \
-            fdisk f2fs-tools bsdextrautils libjson-c-dev
+            fdisk f2fs-tools bsdextrautils libjson-c-dev dwarves
           sudo apt-get clean
           df -h /
 
@@ -83,10 +83,14 @@ jobs:
         shell: bash
         run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
 
-      - name: 准备光影猫配置与 QModem
-        run: bash scripts/build/prepare.sh "$GITHUB_WORKSPACE/photonicat-reference" "$GITHUB_WORKSPACE/immortalwrt" "$GITHUB_WORKSPACE/files"
+      - name: 锁定官方光影猫内核源码和 ABI
+        shell: bash
+        run: bash scripts/build/official-kernel-abi.sh pin immortalwrt official-abi
 
-      - name: 启用板载 QCA9377 SDIO 并保留 PCIe
+      - name: 准备光影猫配置与 QModem
+        run: bash scripts/build/prepare.sh "$GITHUB_WORKSPACE/photonicat-reference" "$GITHUB_WORKSPACE/immortalwrt" "$GITHUB_WORKSPACE/files" "$GITHUB_WORKSPACE/official-abi"
+
+      - name: 保留板载 SDIO 与 PCIe 共用的 ath10k 驱动包
         run: |
           sh scripts/patches/wireless/enable-qca9377-ath10k-sdio.sh "$GITHUB_WORKSPACE/immortalwrt"
           grep -Fq 'ATH10K ATH10K_PCI ATH10K_SDIO' immortalwrt/package/kernel/mac80211/ath.mk
@@ -443,6 +447,9 @@ jobs:
             echo '::warning::并行编译失败且空间尚充足，尝试单线程 V=s 定位真实错误'
             make -j1 V=s
           fi
+
+      - name: 核验官方内核 ABI 与驱动源
+        run: bash scripts/build/official-kernel-abi.sh verify immortalwrt official-abi
 
       - name: Report compiler cache
         if: always()

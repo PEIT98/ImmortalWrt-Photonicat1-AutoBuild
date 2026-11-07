@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 功能：准备参考硬件配置、官方软件源、固件覆盖文件和内核补丁。
+# 功能：准备参考硬件配置、官方内核配置、固件覆盖文件和内核补丁。
 set -euo pipefail
 
 # 子进程隔离补丁临时目录和退出清理，保留 prepare 自身的清理逻辑。
@@ -26,11 +26,13 @@ END { if(n!=1 || closed!=1 || !((old==1 && new==0) || (old==0 && new==1))) exit 
 REF="${1:?缺少光影猫参考仓库路径}"
 SRC="${2:?缺少 ImmortalWrt 源码路径}"
 OVERLAY="${3:?缺少项目 files 覆盖目录}"
+OFFICIAL_ABI="${4:?缺少官方内核元数据目录}"
 test -f "$REF/.config"
 test -f "$REF/feeds.conf.default"
 test -f "$SRC/Makefile"
 cp -f "$REF/.config" "$SRC/.config"
 cp -f "$REF/feeds.conf.default" "$SRC/feeds.conf.default"
+bash "$(dirname "$0")/official-kernel-abi.sh" merge "$SRC" "$OFFICIAL_ABI"
 
 # 官方 QModem stable + PEIT98 自有 Generic main，构建时直接拉取。
 # 保留官方 Next 界面；Generic 后续修复在自有复刻仓库维护。
@@ -213,7 +215,8 @@ sh -n "$INFO_RPC"
 jq -e -s 'length == 1 and (.[0]|type) == "object"' "$SRC/files/usr/share/rpcd/acl.d/luci-photonicat1-info.json" >/dev/null
 test -f "$SRC/files/www/luci-static/resources/view/status/include/99_photonicat1_info.js" || exit 1
 
-# 西瓜皮原版 TD-TECH (3466) USB option 串口内核补丁（保持原内容不修改）。
+# 西瓜皮原版 TD-TECH (3466) USB option 串口模块补丁（保持原内容不修改）。
+# option.ko 是模块；最终 kernel 包/.vermagic 必须和官方 ABI 一致。
 # kmod-usb-serial-option 由 select-packages.sh 选择；此处仅安装内核补丁源码。
 # 必须确保 Rockchip 目标仍使用 Linux 6.12；如升级到新内核则明确报错，
 # 避免补丁被放进错误目录而悄然失效。

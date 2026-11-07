@@ -22,6 +22,7 @@
 | 分类 | 脚本 | 作用 |
 | --- | --- | --- |
 | 构建 | [prepare.sh](build/prepare.sh) | 继承设备参考配置，准备 Feeds、本地插件、覆盖文件和补丁 |
+| 构建 | [official-kernel-abi.sh](build/official-kernel-abi.sh) | 锁定官方源码和内核配置；生成镜像后校验 kernel 包与 `.vermagic` |
 | 构建 | [install-istore-quickstart.sh](build/install-istore-quickstart.sh) | 获取 LinkEase 官方 QuickStart 前后端，检查首页、网口及局域网设备路由和接口 |
 | 构建 | [select-packages.sh](build/select-packages.sh) | Feeds 安装后应用根目录 `photonicat1.config` 的覆盖项 |
 | 构建 | [bundle-nfa765-e108.sh](build/bundle-nfa765-e108.sh) | 校验并内置 E108 专用固件，安装对应 ath11k 补丁 |
@@ -49,11 +50,11 @@
 
 ## 调用顺序
 
-1. `build/prepare.sh` 准备参考配置、本地插件、TD-TECH、存储与无线默认值。
-2. 启用板载 SDIO；更新 Feeds 后处理 LuaJIT、ndisc6、WeeChat 兼容，验证并修复 QM 计时与开机扫描，再刷新索引并安装 Feeds。
+1. `build/official-kernel-abi.sh` 从官方发布记录锁定源码和内核配置；`build/prepare.sh` 保留参考插件和 TD-TECH 模块补丁。
+2. 将板载 SDIO 和 PCIe 放入同一个 ath10k 包（官方两包共用 `ath10k_core.ko`）；更新 Feeds 后处理 LuaJIT、ndisc6、WeeChat 兼容，验证并修复 QM 计时与开机扫描，再刷新索引并安装 Feeds。
 3. 检查 QM/Generic，处理 iStore 包名；`build/select-packages.sh` 应用插件选择。
 4. 执行 `make defconfig`，由 `checks/verify-config.sh` 检查，再生成固件身份、内置文件并下载源码。
-5. 检查 ndisc6，准备构建工具并显式构建主机 `ucode`，验证无线默认值后再编译固件，收集短文件名镜像并生成发布说明。
+5. 检查 ndisc6，准备构建工具并显式构建主机 `ucode`，验证无线默认值后编译固件；正式发布前核对生成的 kernel 包、`.vermagic` 和官方 kmods 目录。ABI 不一致时停止发布。
 
 编译仅由 Actions 手动触发；普通提交不会启动编译。完整 `.config` 由流程生成并上传为 `photonicat1-build-config`，根目录仅维护覆盖配置。
 
@@ -66,6 +67,7 @@
 | 范围 | 测试入口 |
 | --- | --- |
 | 构建与依赖 | [test_build_scripts.sh](tests/test_build_scripts.sh)、[test_build_dependencies.sh](tests/test_build_dependencies.sh) |
+| 官方内核 ABI | [test_official_kernel_abi.sh](tests/test_official_kernel_abi.sh)；模拟参考配置、官方配置及内核包不匹配 |
 | QM 扫描计时 | [test_qmodem_clock.sh](tests/test_qmodem_clock.sh)；需要官方 QM Feed、C 编译器和 json-c 开发库 |
 | QM USB 初始化 | [test_qmodem_usb.sh](tests/test_qmodem_usb.sh)；检查原生延时扫描、PCIe Wi-Fi 排除、AT 默认值、TD-TECH 例外和补丁失败保护 |
 | 无线与固件 | [test_wifi_defaults.sh](tests/test_wifi_defaults.sh)、[test_nfa765_e108.sh](tests/test_nfa765_e108.sh)；需要对应 ImmortalWrt 源码树 |
