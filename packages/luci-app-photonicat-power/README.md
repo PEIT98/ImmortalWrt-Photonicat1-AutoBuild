@@ -56,6 +56,6 @@ MCU 服务使用 [photonicat/rockchip_rk3568_pcat_manager](https://github.com/ph
 
 软件包镜像与“在线升级”中的 GitHub 固件下载源分别保存。
 
-QuickStart 首页保留状态展示，但旧版“软件源配置”入口及其写入接口已屏蔽，防止将 ImmortalWrt 软件包地址改为 OpenWrt。首页签名探测兼容 APK 仓库的 `.sig` 文件。iStore 的四条独立索引在固件覆盖文件中登记；Aurora 使用作者发布的签名索引。GitHub 固件下载代理只用于在线升级，不能当作 APK 索引。官方 `kmods` 包是否可用仍取决于本机内核 ABI 和对应目录是否发布。
+QuickStart 首页保留状态展示，但旧版“软件源配置”入口及其写入接口已屏蔽，防止将 ImmortalWrt 软件包地址改为 OpenWrt。首页签名探测兼容 APK 仓库的 `.sig` 文件。iStore 的四条独立索引在固件覆盖文件中登记；Aurora 使用作者发布的签名索引。官方 kmods 索引由构建阶段根据锁定的 ABI 写入 `pwrt-kmods.list`，可随光影猫管理切换镜像。GitHub 固件下载代理只用于在线升级，不能当作 APK 索引；内核 ABI 不匹配时，APK 仍会拒绝安装驱动。
 
 镜像地址参见 [ImmortalWrt 官方镜像列表](https://downloads.immortalwrt.org/acknowledgements.html)；系统中文默认值参见 [99-default-settings-chinese](https://github.com/immortalwrt/immortalwrt/blob/openwrt-25.12/package/emortal/default-settings/files/99-default-settings-chinese)。本功能只切换下载地址，各镜像提供的软件包范围与上游同步情况有关。

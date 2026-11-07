@@ -153,6 +153,8 @@ echo '光影猫管理：单一软件包提供 Aurora 设备状态、电池与电
 # 不引入参考仓库的 Wi-Fi 密码、静态 USB0 拨号与其它网络预设。
 mkdir -p "$SRC/files"
 cp -a "$OVERLAY/." "$SRC/files/"
+# 官方 kmods 索引跟随本次锁定的发布 ABI；光影猫管理仍可切换其镜像域名。
+bash "$(dirname "$0")/official-kernel-abi.sh" feed "$SRC" "$OFFICIAL_ABI"
 
 # 在 preinit 挂载 overlay 前扩容；同时允许后续升级保留扩大的分区边界。
 AUTOGROW="$SRC/files/usr/libexec/swrt-autogrow"

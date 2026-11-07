@@ -3,7 +3,7 @@
 set -euo pipefail
 
 fail() { echo "::error::$*" >&2; exit 1; }
-mode=${1:?需要 pin、merge 或 verify}
+mode=${1:?需要 pin、merge、feed 或 verify}
 src=${2:?需要 ImmortalWrt 源码目录}
 metadata=${3:?需要官方元数据目录}
 base=${PWRT_OFFICIAL_TARGET_URL:-https://downloads.immortalwrt.org/releases/25.12-SNAPSHOT/targets/rockchip/armv8}
@@ -68,6 +68,21 @@ case "$mode" in
     mv "$tmp" "$config"
     trap - EXIT
     echo '已保留光影猫软件包，并以官方内核配置覆盖参考配置。'
+    ;;
+  feed)
+    expected=$(cat "$metadata/kernel-package")
+    [[ $expected =~ ^kernel-([0-9][0-9.]*)~([0-9a-f]{32})-r[0-9]+\.apk$ ]] || fail '官方内核包名称无效'
+    version=${BASH_REMATCH[1]}
+    abi=${BASH_REMATCH[2]}
+    dest=$src/files/etc/apk/repositories.d
+    mkdir -p "$dest"
+    tmp=$(mktemp "$dest/.pwrt-kmods.XXXXXX")
+    trap 'rm -f "$tmp"' EXIT
+    printf '%s\n' "$base/kmods/$version-1-$abi/packages.adb" > "$tmp"
+    chmod 644 "$tmp"
+    mv "$tmp" "$dest/pwrt-kmods.list"
+    trap - EXIT
+    echo "已加入官方 kmods 源：$version-1-$abi"
     ;;
   verify)
     expected=$(cat "$metadata/kernel-package")

@@ -71,6 +71,17 @@ GIT
     assert_eq 'kernel-6.12.112~4ce22fc78523e0739bdb12c4ffdd2e26-r1.apk' "$(cat "$META/kernel-package")"
     assert_has "$OUT" '官方源码：r38263-84b665b5de'
 }
+test_feed_uses_pinned_kernel_and_is_switchable() {
+    ok bash "$SCRIPT" feed "$SRC" "$META"
+    local feed="$SRC/files/etc/apk/repositories.d/pwrt-kmods.list"
+    assert_eq 'https://downloads.immortalwrt.org/releases/25.12-SNAPSHOT/targets/rockchip/armv8/kmods/6.12.112-1-4ce22fc78523e0739bdb12c4ffdd2e26/packages.adb' "$(cat "$feed")"
+    assert_eq 644 "$(stat -c %a "$feed")"
+    ok bash "$SCRIPT" feed "$SRC" "$META"
+    assert_eq 1 "$(wc -l < "$feed")"
+    printf 'kernel-bad-version.apk\n' > "$META/kernel-package"
+    reject bash "$SCRIPT" feed "$SRC" "$META"
+    assert_has "$feed" '/6.12.112-1-4ce22fc78523e0739bdb12c4ffdd2e26/'
+}
 test_verify_rejects_wrong_abi_and_accepts_matching_abi() {
     local dir="$SRC/bin/targets/rockchip/armv8/packages" vermagic_dir="$SRC/build_dir/target-aarch64_generic_musl/linux-rockchip_armv8/linux-6.12.112"
     mkdir -p "$dir" "$vermagic_dir"

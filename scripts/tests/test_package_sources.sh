@@ -231,4 +231,12 @@ test_permissions_and_package() {
     local extra="$ROOT/files/etc/apk/repositories.d/pwrt-istore.list"
     assert_eq 4 "$(grep -c '^https://istore[.]istoreos[.]com/repo-apk/' "$extra")"
 }
+test_official_kmods_feed_follows_selected_mirror() {
+    local kmods="$PHOTONICAT_PACKAGE_ROOT/etc/apk/repositories.d/pwrt-kmods.list"
+    printf '%s\n' 'https://downloads.immortalwrt.org/releases/25.12-SNAPSHOT/targets/rockchip/armv8/kmods/6.12.112-1-4ce22fc78523e0739bdb12c4ffdd2e26/packages.adb' > "$kmods"
+    engine_ok set '{"source":"nju"}'
+    assert_has "$kmods" 'https://mirror.nju.edu.cn/immortalwrt/releases/25.12-SNAPSHOT/targets/rockchip/armv8/kmods/6.12.112-1-4ce22fc78523e0739bdb12c4ffdd2e26/packages.adb'
+    engine_ok set '{"source":"official"}'
+    assert_has "$kmods" 'https://downloads.immortalwrt.org/releases/25.12-SNAPSHOT/targets/rockchip/armv8/kmods/6.12.112-1-4ce22fc78523e0739bdb12c4ffdd2e26/packages.adb'
+}
 run_tests "$@"
