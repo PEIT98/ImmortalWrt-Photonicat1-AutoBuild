@@ -14,7 +14,8 @@ esac
 root_hash="$(awk -F: '$1 == "root" { print $2; found=1; exit } END { if (!found) exit 1 }' /etc/shadow)"
 case "$root_hash" in
 	''|'!'|'!!'|'*')
-		printf '%s\n%s\n' 'photonicat' 'photonicat' | passwd root >/dev/null
+		# QuickStart 的 shadow-utils 可能提供另一版 passwd；BusyBox 支持管道输入。
+		printf '%s\n%s\n' 'photonicat' 'photonicat' | /bin/busybox passwd root >/dev/null
 		# passwd 返回成功后再次核对，避免首次启动留下无密码 root。
 		awk -F: '$1 == "root" && $2 != "" && $2 != "!" && $2 != "!!" && $2 != "*" { ok=1 } END { exit !ok }' /etc/shadow
 		;;

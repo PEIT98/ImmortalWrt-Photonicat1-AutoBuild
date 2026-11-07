@@ -174,6 +174,46 @@ UCI
         esac
     done
 }
+test_brand_uses_busybox_passwd_and_preserves_existing_password() {
+    mkdir -p "$TEST_TMP/bin"
+    cat > "$TEST_TMP/bin/uci" <<'UCI'
+#!/bin/sh
+[ "$*" = '-q get system.@system[0].hostname' ] && echo Pwrt
+UCI
+    cat > "$TEST_TMP/bin/passwd" <<'SHADOW'
+#!/bin/sh
+echo 'unexpected shadow passwd' >> "$TEST_PASSWD_LOG"
+exit 1
+SHADOW
+    cat > "$TEST_TMP/bin/busybox" <<'BUSYBOX'
+#!/bin/sh
+[ "$*" = 'passwd root' ] || exit 1
+read -r first
+read -r second
+[ "$first" = photonicat ] && [ "$second" = photonicat ] || exit 1
+printf 'root:hash-set:0:0:0:0:0:0:\n' > "$TEST_SHADOW"
+echo 'busybox passwd' >> "$TEST_PASSWD_LOG"
+BUSYBOX
+    chmod +x "$TEST_TMP/bin/uci" "$TEST_TMP/bin/passwd" "$TEST_TMP/bin/busybox"
+    sed -e "s#/etc/shadow#$TEST_TMP/shadow#g" \
+        -e "s#/bin/busybox#$TEST_TMP/bin/busybox#g" \
+        "$ROOT/files/etc/uci-defaults/99-photonicat-brand" > "$TEST_TMP/brand.sh"
+    local field
+    for field in '' '!' '!!' '*'; do
+        printf 'root:%s:0:0:0:0:0:0:\n' "$field" > "$TEST_TMP/shadow"
+        : > "$TEST_TMP/passwd.log"
+        ok env PATH="$TEST_TMP/bin:$PATH" TEST_SHADOW="$TEST_TMP/shadow" \
+            TEST_PASSWD_LOG="$TEST_TMP/passwd.log" sh "$TEST_TMP/brand.sh"
+        assert_has "$TEST_TMP/shadow" 'root:hash-set:'
+        assert_eq 'busybox passwd' "$(cat "$TEST_TMP/passwd.log")"
+    done
+    printf 'root:$6$custom:0:0:0:0:0:0:\n' > "$TEST_TMP/shadow"
+    : > "$TEST_TMP/passwd.log"
+    ok env PATH="$TEST_TMP/bin:$PATH" TEST_SHADOW="$TEST_TMP/shadow" \
+        TEST_PASSWD_LOG="$TEST_TMP/passwd.log" sh "$TEST_TMP/brand.sh"
+    assert_has "$TEST_TMP/shadow" 'root:$6$custom:'
+    assert_eq '' "$(cat "$TEST_TMP/passwd.log")"
+}
 test_invalid_override_does_not_write() {
     mkdir -p "$TEST_TMP/project/scripts/build" "$TEST_TMP/project/scripts/lib"
     cp "$ROOT/scripts/build/select-packages.sh" "$TEST_TMP/project/scripts/build/"
