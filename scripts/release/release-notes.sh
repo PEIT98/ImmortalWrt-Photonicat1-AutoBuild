@@ -41,9 +41,9 @@ test -f "$dir/build-sources.txt"
   echo '- iStoreOS 官方 QuickStart：首页、网口配置和局域网设备管理'
   echo '- 新增固件版本与 Docker 存储状态卡片'
   echo '- Docker 存储仅检测提示，不会自动挂载、迁移、格式化或修改防火墙' 
-  echo '- QModem 使用官方扫描、串口识别、拨号及默认厂商 QMI 驱动；接口名自动生成'
+  echo '- QModem 使用官方扫描、串口识别、拨号及默认厂商 QMI 驱动；FM350 自动 APN 从当前 PDP 读取，接口名自动生成'
   echo '- mwan3 使用官方默认配置，首启关闭服务；多 WAN 策略按需手动配置'
-  echo '- QM 不附加恢复或网络改写脚本；需清除旧 APN 和串口等设置时，刷机请选择不保留配置'
+  echo '- QM 不附加恢复或网络改写脚本；FM350 手动 APN 仍优先，需清除旧 APN 和串口等设置时，刷机请选择不保留配置'
   echo
   echo '<details><summary>源码版本</summary>'
   echo
