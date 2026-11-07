@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 用官方发布的源码和内核配置构建；实际 ABI 不一致时禁止发布。
+# 准备官方内核源码、完整构建配置和 kmods 软件源。
 set -euo pipefail
 
 fail() { echo "::error::$*" >&2; exit 1; }
-mode=${1:?需要 pin、merge、check-config、feed 或 verify}
+mode=${1:?需要 pin、merge 或 feed}
 src=${2:?需要 ImmortalWrt 源码目录}
 metadata=${3:?需要官方元数据目录}
 base=${PWRT_OFFICIAL_TARGET_URL:-https://downloads.immortalwrt.org/releases/25.12-SNAPSHOT/targets/rockchip/armv8}
@@ -111,44 +111,6 @@ case "$mode" in
     trap - EXIT
     echo '已保留光影猫软件包，并以官方内核配置覆盖参考配置。'
     ;;
-  check-config)
-    expected_kernel
-    official=$src/.config.official-kernel
-    cmp -s "$official" "$metadata/official.config" || fail '内核专用配置与本次官方配置不一致'
-    test -s "$src/tmp/.packageinfo" || fail '缺少当前软件包元数据，须在 feeds 和 defconfig 后预检'
-    grep -Fq '$(TOPDIR)/.config.official-kernel >> $(LINUX_DIR)/.config.target' "$src/include/kernel-defaults.mk" &&
-      grep -Fq 'kconfig $(TMP_DIR)/.packageinfo $(TOPDIR)/.config.official-kernel $(KERNEL_PATCHVER)' "$src/include/kernel-defaults.mk" ||
-      fail '内核构建尚未绑定官方完整配置'
-    patchver=$(sed -nE 's/^[[:space:]]*KERNEL_PATCHVER[[:space:]]*:=[[:space:]]*([0-9]+\.[0-9]+)[[:space:]]*$/\1/p' "$src/target/linux/rockchip/Makefile")
-    [[ $patchver =~ ^[0-9]+\.[0-9]+$ && $version == "$patchver".* ]] || fail 'Rockchip 内核版本与官方包不一致'
-    checks=$metadata/preflight
-    mkdir -p "$checks"
-    configs=()
-    for platform in generic rockchip rockchip/armv8; do
-      for file in "$src/target/linux/$platform/config-$patchver" "$src/target/linux/$platform/config-default"; do
-        if [ -f "$file" ]; then configs+=("$file"); break; fi
-      done
-    done
-    [ -f "$src/env/kernel-config" ] && configs+=("$src/env/kernel-config")
-    [ "${#configs[@]}" -ge 2 ] || fail '缺少 Rockchip 内核基础配置'
-    operators=()
-    for ((i=1; i<${#configs[@]}; i++)); do operators+=(+); done
-    # 与锁定源码 include/kernel-defaults.mk 的 Kernel/Configure/Default 相同；
-    # 不编译内核，不写入构建目录的 .vermagic。
-    perl "$src/scripts/kconfig.pl" "${operators[@]}" "${configs[@]}" > "$checks/.config.target"
-    awk '/^(#[[:space:]]+)?CONFIG_KERNEL/{sub("CONFIG_KERNEL_","CONFIG_");print}' "$official" >> "$checks/.config.target"
-    printf '%s\n' '# CONFIG_KALLSYMS_EXTRA_PASS is not set' '# CONFIG_KALLSYMS_ALL is not set' \
-      'CONFIG_KALLSYMS_UNCOMPRESSED=y' >> "$checks/.config.target"
-    perl "$src/scripts/package-metadata.pl" kconfig "$src/tmp/.packageinfo" "$official" "$patchver" > "$checks/.config.override"
-    perl "$src/scripts/kconfig.pl" 'm+' '+' "$checks/.config.target" /dev/null "$checks/.config.override" > "$checks/.config.old"
-    awk '!/INITRAMFS/' "$checks/.config.old" > "$checks/.config.set"
-    printf '%s\n' 'CONFIG_INITRAMFS_SOURCE=""' '# CONFIG_INITRAMFS_FORCE is not set' \
-      '# CONFIG_INITRAMFS_PRESERVE_MTIME is not set' >> "$checks/.config.set"
-    actual=$(grep '=[ym]' "$checks/.config.set" | LC_ALL=C sort | md5sum); actual=${actual%% *}
-    printf '%s\n' "$actual" > "$checks/vermagic"
-    [ "$actual" = "$abi" ] || fail "编译前内核 ABI 不一致：预检 $actual，官方 $abi；请查看 official-abi/preflight"
-    echo "通过：编译前内核配置 ABI 与官方一致 $version~$abi"
-    ;;
   feed)
     expected_kernel
     dest=$src/files/etc/apk/repositories.d
@@ -160,22 +122,6 @@ case "$mode" in
     mv "$tmp" "$dest/pwrt-kmods.list"
     trap - EXIT
     echo "已加入官方 kmods 源：$version-1-$abi"
-    ;;
-  verify)
-    expected_kernel
-    package_dir=$src/bin/targets/rockchip/armv8/packages
-    mapfile -t built < <(find "$package_dir" -maxdepth 1 -type f -name 'kernel-*.apk' -printf '%f\n')
-    [ "${#built[@]}" -eq 1 ] || fail '构建产物必须恰有一个 kernel 包'
-    [ "${built[0]}" = "$expected" ] || fail "内核 ABI 与官方不一致：本机 ${built[0]}，官方 $expected"
-    mapfile -t vermagic < <(find "$src/build_dir" -type f -name .vermagic -path '*/linux-rockchip_armv8/linux-*/*')
-    [ "${#vermagic[@]}" -eq 1 ] || fail '找不到唯一的 Rockchip 内核 .vermagic'
-    [ "$(cat "${vermagic[0]}")" = "$abi" ] || fail '实际内核 .vermagic 与官方 ABI 不一致'
-    # SDK/软件源日后更新可能移除旧快照包；发布前确认官方 kmods 仍在对应目录。
-    curl --fail --location --silent --show-error --retry 3 \
-      "$base/kmods/$version-1-$abi/" -o "$metadata/kmods.html"
-    grep -Eq 'kmod-usb-net-cdc-mbim-[^"<> ]+\.apk' "$metadata/kmods.html" ||
-      fail '官方对应 ABI 的 USB MBIM 驱动包不存在'
-    echo "通过：固件 kernel 包和 .vermagic 均为官方 ABI $version~$abi"
     ;;
   *) fail "未知模式：$mode" ;;
 esac

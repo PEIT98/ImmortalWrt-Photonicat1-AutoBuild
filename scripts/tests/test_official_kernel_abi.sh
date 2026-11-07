@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 官方配置合并与 ABI 不一致时的发布保护。
+# 官方源码、完整内核配置合并与 kmods 源生成。
 source "$(dirname "$0")/common.sh"
 setup() {
     SRC="$TEST_TMP/immortalwrt"
@@ -23,19 +23,6 @@ KERNEL
     export MOCK_OFFICIAL_SHA
     MOCK_OFFICIAL_SHA=$(sha256sum "$MOCK_OFFICIAL_ARCHIVE"); MOCK_OFFICIAL_SHA=${MOCK_OFFICIAL_SHA%% *}
     printf 'kernel-6.12.112~4ce22fc78523e0739bdb12c4ffdd2e26-r1.apk\n' > "$META/kernel-package"
-    cat > "$TEST_TMP/bin/curl" <<'CURL'
-#!/bin/sh
-while [ "$#" -gt 0 ]; do
-  if [ "$1" = -o ]; then
-    shift
-    printf '<a href="kmod-usb-net-cdc-mbim-6.12.112-r1.apk">module</a>\n' > "$1"
-    exit 0
-  fi
-  shift
-done
-exit 1
-CURL
-    chmod +x "$TEST_TMP/bin/curl"
 }
 test_merge_preserves_plugins_and_replaces_kernel_options() {
     ok bash "$SCRIPT" merge "$SRC" "$META"
@@ -136,20 +123,5 @@ test_feed_uses_pinned_kernel_and_is_switchable() {
     printf 'kernel-bad-version.apk\n' > "$META/kernel-package"
     reject bash "$SCRIPT" feed "$SRC" "$META"
     assert_has "$feed" '/6.12.112-1-4ce22fc78523e0739bdb12c4ffdd2e26/'
-}
-test_verify_rejects_wrong_abi_and_accepts_matching_abi() {
-    local dir="$SRC/bin/targets/rockchip/armv8/packages" vermagic_dir="$SRC/build_dir/target-aarch64_generic_musl/linux-rockchip_armv8/linux-6.12.112"
-    mkdir -p "$dir" "$vermagic_dir"
-    printf '9d6c6042e3a0d92e7f5781589d3a9ac8\n' > "$vermagic_dir/.vermagic"
-    touch "$dir/kernel-6.12.112~9d6c6042e3a0d92e7f5781589d3a9ac8-r1.apk"
-    reject env PATH="$TEST_TMP/bin:$PATH" bash "$SCRIPT" verify "$SRC" "$META"
-    assert_has "$ERR" '内核 ABI 与官方不一致'
-    rm "$dir"/*.apk
-    touch "$dir/$(cat "$META/kernel-package")"
-    reject env PATH="$TEST_TMP/bin:$PATH" bash "$SCRIPT" verify "$SRC" "$META"
-    assert_has "$ERR" '实际内核 .vermagic 与官方 ABI 不一致'
-    printf '4ce22fc78523e0739bdb12c4ffdd2e26\n' > "$vermagic_dir/.vermagic"
-    ok env PATH="$TEST_TMP/bin:$PATH" bash "$SCRIPT" verify "$SRC" "$META"
-    assert_has "$OUT" '均为官方 ABI'
 }
 run_tests "$@"

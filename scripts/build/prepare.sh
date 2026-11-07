@@ -227,7 +227,7 @@ jq -e -s 'length == 1 and (.[0]|type) == "object"' "$SRC/files/usr/share/rpcd/ac
 test -f "$SRC/files/www/luci-static/resources/view/status/include/99_photonicat1_info.js" || exit 1
 
 # 西瓜皮原版 TD-TECH (3466) USB option 串口模块补丁（保持原内容不修改）。
-# option.ko 是模块；最终 kernel 包/.vermagic 必须和官方 ABI 一致。
+# option.ko 是模块；这里保留 TD-TECH USB ID 补丁。
 # kmod-usb-serial-option 由 select-packages.sh 选择；此处仅安装内核补丁源码。
 # 必须确保 Rockchip 目标仍使用 Linux 6.12；如升级到新内核则明确报错，
 # 避免补丁被放进错误目录而悄然失效。

@@ -22,7 +22,7 @@
 | 分类 | 脚本 | 作用 |
 | --- | --- | --- |
 | 构建 | [prepare.sh](build/prepare.sh) | 继承设备参考配置，准备 Feeds、本地插件、覆盖文件和补丁 |
-| 构建 | [official-kernel-abi.sh](build/official-kernel-abi.sh) | 校验并提取官方 ImageBuilder 完整配置，独立用于内核构建；固件安装包沿用项目选择；编译前预检 ABI，编译后核对 kernel 包与 `.vermagic` |
+| 构建 | [official-kernel-abi.sh](build/official-kernel-abi.sh) | 校验并提取官方 ImageBuilder 完整配置，独立用于内核构建；固件安装包沿用项目选择；生成官方 kmods 源 |
 | 构建 | [install-istore-quickstart.sh](build/install-istore-quickstart.sh) | 获取 LinkEase 官方 QuickStart 前后端，检查首页、网口及局域网设备路由和接口 |
 | 构建 | [select-packages.sh](build/select-packages.sh) | Feeds 安装后应用根目录 `photonicat1.config` 的覆盖项 |
 | 构建 | [bundle-nfa765-e108.sh](build/bundle-nfa765-e108.sh) | 校验并内置 E108 专用固件，安装对应 ath11k 补丁 |
@@ -53,11 +53,11 @@
 1. 先运行 `tests/test_official_kernel_abi.sh`，再由 `build/official-kernel-abi.sh` 锁定官方源码，核对 ImageBuilder 归档 SHA256 并提取完整 `.config`。`config.buildinfo` 是精简配置，单独合并 `KERNEL_*`、`ALL_KMODS` 无法消除参考配置里显式关闭的驱动项；内核生成规则的开关及模块选择改为读取 `.config.official-kernel`，固件安装包仍读取项目 `.config`，不带入官方 `ALL_NONSHARED` 和测试套件。`build/prepare.sh` 保留参考插件和 TD-TECH 模块补丁，并生成 `files/etc/apk/repositories.d/pwrt-kmods.list`。软件源镜像切换会一起处理该列表。
 2. 将板载 SDIO 和 PCIe 放入同一个 ath10k 包（官方两包共用 `ath10k_core.ko`）；更新 Feeds 后处理 LuaJIT、ndisc6、WeeChat 兼容，验证并修复 QM 计时与开机扫描，再刷新索引并安装 Feeds。
 3. 检查 QM/Generic，处理 iStore 包名；`build/select-packages.sh` 应用插件选择。
-4. 执行 `make defconfig`，由 `checks/verify-config.sh` 检查。随后 `official-kernel-abi.sh check-config` 用当前包元数据和上游 `kconfig.pl` 预计算内核 ABI；与官方不符时在正式编译前停止，诊断配置随 `photonicat1-build-config` 上传。通过后再生成固件身份、内置文件并下载源码。
-5. 检查 ndisc6，准备构建工具并显式构建主机 `ucode`，验证无线默认值后编译固件；正式发布前核对生成的 kernel 包、`.vermagic` 和官方 kmods 目录。ABI 不一致时停止发布。
+4. 执行 `make defconfig`，由 `checks/verify-config.sh` 检查，再生成固件身份、内置文件并下载源码。保留配置 Artifact 供排查。
+5. 检查 ndisc6，准备构建工具并显式构建主机 `ucode`，验证无线默认值后编译固件；编译成功后收集镜像并发布。已移除编译前、编译后的官方 ABI 比对，以及发布前的官方 kmods 目录可用性检查。
 
 编译仅由 Actions 手动触发；普通提交不会启动编译。完整 `.config` 由流程生成并上传为 `photonicat1-build-config`，根目录仅维护覆盖配置。
-官方 kmods 列表仅提供安装候选；目前已刷入的旧固件若 ABI 不匹配，APK 仍会拒绝安装驱动。下次编译只有通过官方 ABI 校验才会发布新固件。
+官方 kmods 列表仅提供安装候选；构建和发布不再额外比较本机与官方 ABI，驱动安装时仍由 APK 检查依赖兼容性。官方源码与完整内核配置的准备、下载文件完整性校验继续保留。
 
 ## iStoreOS QuickStart
 
@@ -68,7 +68,7 @@
 | 范围 | 测试入口 |
 | --- | --- |
 | 构建与依赖 | [test_build_scripts.sh](tests/test_build_scripts.sh)、[test_build_dependencies.sh](tests/test_build_dependencies.sh) |
-| 官方内核 ABI | [test_official_kernel_abi.sh](tests/test_official_kernel_abi.sh)；检查完整配置归档校验、独立内核输入、原有选包保留及 ABI 不匹配保护 |
+| 官方内核准备 | [test_official_kernel_abi.sh](tests/test_official_kernel_abi.sh)；检查完整配置归档校验、独立内核输入、原有选包保留和 kmods 源生成 |
 | QM 扫描计时 | [test_qmodem_clock.sh](tests/test_qmodem_clock.sh)；需要官方 QM Feed、C 编译器和 json-c 开发库 |
 | QM USB 初始化 | [test_qmodem_usb.sh](tests/test_qmodem_usb.sh)；检查原生延时扫描、PCIe Wi-Fi 排除、AT 默认值、TD-TECH 例外和补丁失败保护 |
 | 无线与固件 | [test_wifi_defaults.sh](tests/test_wifi_defaults.sh)、[test_nfa765_e108.sh](tests/test_nfa765_e108.sh)；需要对应 ImmortalWrt 源码树 |

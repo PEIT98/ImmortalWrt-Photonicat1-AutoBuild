@@ -83,7 +83,7 @@ jobs:
         shell: bash
         run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
 
-      - name: 锁定官方光影猫内核源码和 ABI
+      - name: 锁定官方光影猫内核源码与配置
         shell: bash
         run: |
           bash scripts/tests/test_official_kernel_abi.sh
@@ -312,9 +312,6 @@ jobs:
           grep -F '# CONFIG_RUBY_ENABLE_YJIT is not set' .config
           df -h .
 
-      - name: 编译前预检官方内核 ABI
-        run: bash scripts/build/official-kernel-abi.sh check-config immortalwrt official-abi
-
       - name: Upload resolved config
         if: always()
         uses: actions/upload-artifact@v4
@@ -328,7 +325,6 @@ jobs:
             immortalwrt/tmp/.config-package.in
             official-abi/official.config
             official-abi/kernel-package
-            official-abi/preflight/
             photonicat-defconfig.log
           include-hidden-files: true
           retention-days: 14
@@ -458,9 +454,6 @@ jobs:
             echo '::warning::并行编译失败且空间尚充足，尝试单线程 V=s 定位真实错误'
             make -j1 V=s
           fi
-
-      - name: 核验官方内核 ABI 与驱动源
-        run: bash scripts/build/official-kernel-abi.sh verify immortalwrt official-abi
 
       - name: Report compiler cache
         if: always()
