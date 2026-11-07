@@ -51,6 +51,7 @@ need=(
   CONFIG_PACKAGE_luci-app-filemanager
   CONFIG_PACKAGE_luci-i18n-filemanager-zh-cn
   CONFIG_PACKAGE_luci-app-aurora-config
+  CONFIG_PACKAGE_luci-app-aurora-upgrade
   CONFIG_PACKAGE_luci-i18n-aurora-config-zh-cn
   CONFIG_PACKAGE_luci-app-travelmate
   CONFIG_PACKAGE_luci-i18n-travelmate-zh-cn

@@ -1,0 +1,8 @@
+{
+  "admin/system/aurora/update": {
+    "title": "Aurora 更新",
+    "order": 20,
+    "action": { "type": "view", "path": "aurora/update" },
+    "depends": { "acl": [ "luci-app-aurora-upgrade" ] }
+  }
+}

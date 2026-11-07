@@ -97,3 +97,5 @@ bash scripts/tests/test_online_upgrade.sh
 
 Aurora 更新源由 [99-aurora-update-source](../files/etc/uci-defaults/99-aurora-update-source) 在首启时登记：使用配置插件自带签名公钥，默认添加作者的 APK snapshots 源；已有 Aurora 源和其他软件源保持原样。四条 iStore 独立索引在 [pwrt-istore.list](../files/etc/apk/repositories.d/pwrt-istore.list) 中登记。首启不联网刷新索引，需要升级时在软件包页面更新列表。
 
+作者源无法访问时，系统 → Aurora Theme Design → Aurora 更新提供 [GitHub Release 下载入口](../packages/luci-app-aurora-upgrade/README.md)，默认使用固件在线升级同款加速地址，可切换 GitHub 官方地址；只处理 Aurora 主题和设置，并核对 SHA256。
+

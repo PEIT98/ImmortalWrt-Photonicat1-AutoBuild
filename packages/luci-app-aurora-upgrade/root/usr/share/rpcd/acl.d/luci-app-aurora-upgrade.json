@@ -1,0 +1,7 @@
+{
+  "luci-app-aurora-upgrade": {
+    "description": "Check and install verified Aurora GitHub releases",
+    "read": { "ubus": { "luci.aurora_update": [ "status" ] } },
+    "write": { "ubus": { "luci.aurora_update": [ "check", "install", "set_source" ] } }
+  }
+}

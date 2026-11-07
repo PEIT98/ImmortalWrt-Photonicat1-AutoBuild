@@ -1,0 +1,134 @@
+#!/bin/sh
+# Aurora GitHub Release fallback. The author-signed APK feed remains untouched.
+set -eu
+umask 077
+ROOT=${AURORA_UPDATE_ROOT:-}
+DIR=$ROOT/tmp/aurora-update
+CONFIG=$ROOT/etc/config
+MODE=${1:-status}
+MAX_PACKAGE_BYTES=20971520
+
+reply_error() { jq -nc --arg message "$1" '{ok:false,message:$message}'; exit 1; }
+source=$(uci -c "$CONFIG" -q get aurora_update.main.source 2>/dev/null || true)
+case "$source" in proxy|github) ;; *) source=proxy ;; esac
+[ ! -L "$DIR" ] || reply_error '更新临时目录无效'
+mkdir -p "$DIR"
+[ "$(stat -c %u "$DIR")" = "$(id -u)" ] || reply_error '更新临时目录所有者无效'
+chmod 700 "$DIR"
+
+lock() {
+  exec 9>"$DIR/lock"
+  flock -n 9 || reply_error 'Aurora 更新任务正在运行'
+}
+installed_version() {
+  apk list -I "$1" 2>/dev/null | awk -v p="$1-" 'index($1,p)==1 {print substr($1,length(p)+1);exit}'
+}
+transport_url() {
+  case "$source" in
+    proxy) printf 'https://gh-proxy.com/%s' "$1" ;;
+    github) printf '%s' "$1" ;;
+  esac
+}
+fetch() {
+  curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+    --connect-timeout 5 --max-time 14 --max-filesize "$2" \
+    -H 'User-Agent: Pwrt-Aurora-Update/1.0' -o "$3" "$(transport_url "$1")"
+}
+status() {
+  [ -s "$DIR/releases.json" ] && cached=$(cat "$DIR/releases.json") || cached='null'
+  theme=$(installed_version luci-theme-aurora)
+  config=$(installed_version luci-app-aurora-config)
+  theme_new=$(printf '%s' "$cached" | jq -r '.packages["luci-theme-aurora"].version // empty')
+  config_new=$(printf '%s' "$cached" | jq -r '.packages["luci-app-aurora-config"].version // empty')
+  theme_up=false; config_up=false
+  if [ -n "$theme_new" ] && { [ -z "$theme" ] || [ "$(apk version -t "$theme" "$theme_new" 2>/dev/null)" = '<' ]; }; then theme_up=true; fi
+  if [ -n "$config_new" ] && { [ -z "$config" ] || [ "$(apk version -t "$config" "$config_new" 2>/dev/null)" = '<' ]; }; then config_up=true; fi
+  jq -nc --arg source "$source" \
+    --arg theme "$theme" --arg config "$config" \
+    --argjson theme_up "$theme_up" --argjson config_up "$config_up" --argjson releases "$cached" \
+    '{ok:true,source:$source,installed:{"luci-theme-aurora":$theme,"luci-app-aurora-config":$config},
+      upgradeable:{"luci-theme-aurora":$theme_up,"luci-app-aurora-config":$config_up},releases:$releases}'
+}
+validate_release() {
+  # Only the two named upstream repositories and their canonical release assets.
+  jq -e --arg repo "$1" --arg pkg "$2" --argjson limit "$MAX_PACKAGE_BYTES" '
+    select(type=="object" and .draft==false and .prerelease==false) |
+    .tag_name as $tag |
+    select($tag|type=="string" and test("^v[0-9]+(\\.[0-9]+){1,3}$")) |
+    [ .assets[] |
+      select(.name|type=="string" and startswith($pkg+"-") and
+        test("-r[0-9]+\\.apk$")) |
+      select(.size|type=="number" and .>0 and .<=$limit and floor==.) |
+      select(.digest|type=="string" and test("^sha256:[0-9a-f]{64}$")) |
+      select(.browser_download_url==("https://github.com/eamonxg/"+$repo+
+        "/releases/download/"+$tag+"/"+.name)) |
+      {name,size,sha256:(.digest|sub("^sha256:";"")),url:.browser_download_url,
+       version:(.name|ltrimstr($pkg+"-")|rtrimstr(".apk"))}
+    ] | select(length==1) | .[0] | .+{package:$pkg,tag:$tag}
+  ' "$3"
+}
+check() {
+  lock
+  tmp=$(mktemp -d "$DIR/check.XXXXXX") || reply_error '无法创建临时目录'
+  trap 'rm -rf "$tmp"' EXIT HUP INT TERM
+  for pkg in luci-theme-aurora luci-app-aurora-config; do
+    repo=$pkg
+    api="https://api.github.com/repos/eamonxg/$repo/releases/latest"
+    fetch "$api" 1048576 "$tmp/$pkg.api" 2>"$tmp/network.log" || reply_error "无法获取 $pkg 发布信息，请切换 GitHub 官方或加速源重试"
+    validate_release "$repo" "$pkg" "$tmp/$pkg.api" >"$tmp/$pkg.json" || reply_error "$pkg 缺少可信的 APK 与 SHA256 发布信息"
+  done
+  jq -n --arg source "$source" \
+    --slurpfile theme "$tmp/luci-theme-aurora.json" \
+    --slurpfile config "$tmp/luci-app-aurora-config.json" \
+    '{source:$source,packages:{"luci-theme-aurora":$theme[0],"luci-app-aurora-config":$config[0]}}' >"$tmp/releases.json"
+  mv "$tmp/releases.json" "$DIR/releases.json"
+  status
+}
+set_source() {
+  lock
+  request=$(head -c 4097)
+  [ "${#request}" -le 4096 ] || reply_error '请求过长'
+  choice=$(printf '%s' "$request" | jq -ser 'select(length==1)|.[0]|.source|select(.=="proxy" or .=="github")') || reply_error '更新源无效'
+  uci -c "$CONFIG" set "aurora_update.main.source=$choice" &&
+    uci -c "$CONFIG" commit aurora_update || reply_error '更新源保存失败'
+  source=$choice
+  rm -f "$DIR/releases.json"
+  status
+}
+install() {
+  lock
+  request=$(head -c 4097)
+  [ "${#request}" -le 4096 ] || reply_error '请求过长'
+  pkg=$(printf '%s' "$request" | jq -ser 'select(length==1)|.[0]|.package|
+    select(.=="luci-theme-aurora" or .=="luci-app-aurora-config")') || reply_error '不支持的软件包'
+  [ -s "$DIR/releases.json" ] || reply_error '请先检查更新'
+  [ "$(jq -r '.source' "$DIR/releases.json")" = "$source" ] || reply_error '更新源已变化，请重新检查'
+  release=$(jq -ec --arg pkg "$pkg" '.packages[$pkg]|select(.package==$pkg and
+    (.sha256|test("^[0-9a-f]{64}$")) and (.name|endswith(".apk")))' "$DIR/releases.json") || reply_error '发布信息无效，请重新检查'
+  old=$(installed_version "$pkg")
+  version=$(printf '%s' "$release" | jq -r '.version')
+  if [ -n "$old" ]; then
+    [ "$(apk version -t "$old" "$version" 2>/dev/null)" = '<' ] || reply_error '当前已是相同或更新版本，禁止回退'
+  fi
+  url=$(printf '%s' "$release" | jq -r '.url')
+  case "$url" in "https://github.com/eamonxg/$pkg/releases/download/"*) ;; *) reply_error '下载地址无效' ;; esac
+  tmp=$(mktemp -d "$DIR/install.XXXXXX") || reply_error '无法创建临时目录'
+  trap 'rm -rf "$tmp"' EXIT HUP INT TERM
+  fetch "$url" "$MAX_PACKAGE_BYTES" "$tmp/aurora.apk" 2>"$tmp/network.log" || reply_error '下载失败，请切换更新源重试'
+  size=$(printf '%s' "$release" | jq -r '.size')
+  [ "$(stat -c %s "$tmp/aurora.apk")" = "$size" ] || reply_error '下载文件大小与 GitHub 发布信息不符'
+  sha=$(sha256sum "$tmp/aurora.apk"); expected=$(printf '%s' "$release" | jq -r '.sha256')
+  [ "${sha%% *}" = "$expected" ] || reply_error 'SHA256 校验失败，已停止安装'
+  apk add --allow-untrusted "$tmp/aurora.apk" >"$tmp/apk.log" 2>&1 || reply_error 'APK 安装失败，请查看系统日志'
+  [ "$(installed_version "$pkg")" = "$version" ] || reply_error 'APK 安装后版本不符，请检查软件包管理器'
+  rm -f "$DIR/releases.json"
+  jq -nc --arg package "$pkg" --arg version "$version" '{ok:true,package:$package,version:$version,message:"更新完成，刷新页面后生效"}'
+}
+
+case "$MODE" in
+  status) status ;;
+  check) check ;;
+  install) install ;;
+  set_source|set-source) set_source ;;
+  *) reply_error '不支持的操作' ;;
+esac

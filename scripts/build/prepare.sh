@@ -199,6 +199,15 @@ test -f "$AURORA_CONFIG_DIR/po/zh_Hans/aurora-config.po"
 # 上游预生成的现代 JS 不适合旧 jsmin；保留上游关闭二次压缩的设置。
 grep -Fxq 'LUCI_MINIFY_JS:=0' "$AURORA_CONFIG_DIR/Makefile"
 
+# GitHub Release 更新入口独立于作者签名 feed，保留上游主题和设置插件原码。
+AURORA_UPGRADE_SRC="$(cd "$(dirname "$0")/../.." && pwd)/packages/luci-app-aurora-upgrade"
+AURORA_UPGRADE_DST="$SRC/package/luci-app-aurora-upgrade"
+test -f "$AURORA_UPGRADE_SRC/Makefile" || { echo '::error::Aurora 更新插件不存在' >&2; exit 1; }
+test ! -e "$AURORA_UPGRADE_DST" || { echo '::error::Aurora 更新插件目标目录已存在' >&2; exit 1; }
+mkdir -p "$AURORA_UPGRADE_DST"
+cp -a "$AURORA_UPGRADE_SRC/." "$AURORA_UPGRADE_DST/"
+sh -n "$AURORA_UPGRADE_DST/root/usr/libexec/aurora-update" "$AURORA_UPGRADE_DST/root/usr/libexec/rpcd/luci.aurora_update"
+
 # 首启离线登记作者更新源；签名公钥直接使用 Aurora 配置包内置文件。
 # 不在开机阶段刷新软件索引，避免因外网未就绪阻塞启动。
 test -s "$AURORA_CONFIG_DIR/root/usr/share/aurora/feed/eamonxg.pem"

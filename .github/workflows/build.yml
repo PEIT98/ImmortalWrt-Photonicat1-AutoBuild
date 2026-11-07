@@ -187,6 +187,9 @@ jobs:
           test -f package/luci-app-aurora-config/Makefile
           test -x package/luci-app-aurora-config/root/usr/libexec/rpcd/luci.aurora
           grep -Fxq 'LUCI_MINIFY_JS:=0' package/luci-app-aurora-config/Makefile
+          test -x package/luci-app-aurora-upgrade/root/usr/libexec/aurora-update
+          diff -r ../packages/luci-app-aurora-upgrade package/luci-app-aurora-upgrade
+          bash ../scripts/tests/test_aurora_upgrade.sh
 
       - name: 核对光影猫在线升级
         working-directory: immortalwrt
@@ -291,7 +294,7 @@ jobs:
             exit 1
           fi
           echo '===== 核对上游插件是否被注册为目标包 ====='
-          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic sms-tool_q sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd quickstart luci-app-quickstart luci-app-cpufreq luci-app-photonicat-power luci-app-filemanager luci-app-aurora-config luci-app-travelmate; do
+          for pkg in qmodem luci-app-qmodem-next luci-app-qmodem-generic sms-tool_q sms-forwarder-next luci-app-online-upgrade luci-app-store luci-lib-taskd taskd quickstart luci-app-quickstart luci-app-cpufreq luci-app-photonicat-power luci-app-filemanager luci-app-aurora-config luci-app-aurora-upgrade luci-app-travelmate; do
             if grep -Fxq "Package: $pkg" tmp/.packageinfo; then
               echo "registered: $pkg"
             else

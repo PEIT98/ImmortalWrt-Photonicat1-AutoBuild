@@ -14,7 +14,7 @@ while [ $# -gt 0 ]; do
 done
 action=$1; key=$2
 package=${key%%.*}; package=${package%%=*}
-case "$package" in photonicat_packages|swrt_upgrade) ;; *) exit 1 ;; esac
+case "$package" in photonicat_packages|swrt_upgrade|aurora_update) ;; *) exit 1 ;; esac
 file="$config/$package"; delta="$staging/$package"
 values='{}'
 if [ -f "$file" ]; then

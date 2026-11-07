@@ -1,0 +1,10 @@
+#!/bin/sh
+case "$1" in
+  list) printf '%s\n' '{"status":{},"check":{},"install":{"package":""},"set_source":{"source":""}}' ;;
+  call)
+    case "$2" in
+      status|check|install|set_source) /usr/libexec/aurora-update "$2" ;;
+      *) printf '%s\n' '{"ok":false,"message":"不支持的操作"}' ;;
+    esac
+    ;;
+esac
