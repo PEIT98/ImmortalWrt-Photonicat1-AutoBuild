@@ -1,7 +1,10 @@
 #!/bin/sh
 # A private staged UCI subset; no host configuration is read or committed.
 set -eu
-root=${PHOTONICAT_PACKAGE_ROOT:-${SWRT_UPGRADE_ROOT:-}}
+root=${PHOTONICAT_PACKAGE_ROOT:-${SWRT_UPGRADE_ROOT:-${AURORA_UPDATE_ROOT:-}}}
+case "$root" in
+    ''|/) echo 'mock UCI requires a private test root' >&2; exit 1 ;;
+esac
 config="$root/etc/config"
 staging="$root/global-uci"
 while [ $# -gt 0 ]; do

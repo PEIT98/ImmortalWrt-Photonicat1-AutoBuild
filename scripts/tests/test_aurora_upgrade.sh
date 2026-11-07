@@ -80,6 +80,7 @@ test_default_proxy_check_and_install() {
 test_switch_to_github_and_recheck() {
     engine_ok check
     engine_ok set_source '{"source":"github"}'
+    [[ -d "$AURORA_UPDATE_ROOT/global-uci" ]] || fail 'UCI staging escaped Aurora test root'
     assert_absent "$AURORA_UPDATE_ROOT/tmp/aurora-update/releases.json"
     engine_reject install '{"package":"luci-theme-aurora"}'
     : > "$AURORA_UPDATE_ROOT/urls"
@@ -87,6 +88,15 @@ test_switch_to_github_and_recheck() {
     if grep -Ev '^https://api.github.com/' "$AURORA_UPDATE_ROOT/urls"; then fail 'check used wrong host'; fi
     engine_ok install '{"package":"luci-theme-aurora"}'
     assert_has "$AURORA_UPDATE_ROOT/urls" 'https://github.com/eamonxg/luci-theme-aurora/releases/download/'
+}
+
+test_uci_mock_requires_a_private_root() {
+    reject env -u PHOTONICAT_PACKAGE_ROOT -u SWRT_UPGRADE_ROOT -u AURORA_UPDATE_ROOT \
+        sh "$AURORA_UPDATE_ROOT/bin/uci" -c "$AURORA_UPDATE_ROOT/etc/config" \
+        set 'aurora_update.main.source=github'
+    reject env PHOTONICAT_PACKAGE_ROOT=/ \
+        sh "$AURORA_UPDATE_ROOT/bin/uci" -c "$AURORA_UPDATE_ROOT/etc/config" \
+        set 'aurora_update.main.source=github'
 }
 
 test_untrusted_or_broken_asset_never_installs() {

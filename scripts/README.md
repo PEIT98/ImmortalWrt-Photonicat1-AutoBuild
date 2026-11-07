@@ -75,6 +75,7 @@
 | eMMC 与升级分区 | [test_autogrow.sh](tests/test_autogrow.sh)、[test_storage_integration.sh](tests/test_storage_integration.sh)、[test_autogrow_real.sh](tests/test_autogrow_real.sh) |
 | USB 硬盘保活 | [test_disk_keepalive.sh](tests/test_disk_keepalive.sh)、[前端测试](tests/test_disk_keepalive_frontend.cjs) |
 | 在线升级 | [test_online_upgrade.sh](tests/test_online_upgrade.sh)、[前端测试](tests/test_online_upgrade_frontend.js) |
+| Aurora 更新 | [test_aurora_upgrade.sh](tests/test_aurora_upgrade.sh)；验证源切换、下载校验及安装；共享 UCI 模拟器识别 Aurora 临时根目录，禁止缺少根目录时写入主机路径 |
 | 电源界面与软件源 | [顶部状态](tests/test_photonicat_header.js)、[状态后台](tests/test_photonicat_header_backend.js)、[软件源后台](tests/test_package_sources.sh)、[软件源前端](tests/test_package_sources_frontend.js) |
 
 从仓库根目录运行，例如：
