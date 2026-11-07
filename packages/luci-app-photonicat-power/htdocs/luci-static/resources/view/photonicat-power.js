@@ -81,7 +81,7 @@ return view.extend({
             packageReady = packageLoaded = true;
             packageAvailable = data.supported === true;
             if (!keepSelection) packageSource.value = data.source;
-            var actual = Object.assign({ mixed: '混合软件源', custom: '自定义软件源', cernet: '旧 cernet 源' }, packageNames);
+            var actual = Object.assign({ mixed: '混合软件源', custom: '自定义软件源' }, packageNames);
             packageNote.textContent = '当前：' + (actual[data.actual] || '未识别') + '。';
             if (!packageAvailable) packageNote.textContent += '未找到可切换的系统源，请到软件包管理检查地址后刷新状态。';
             else packageNote.textContent += data.pending ? '保存后应用所选镜像。' : '更新列表及下载软件包均使用此源。';

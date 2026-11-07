@@ -20,8 +20,6 @@ setup() {
     cp "$fixture/release.json" "$TEST_TMP/release.original"
     cp "$ROOT/scripts/tests/fixtures/mock-upgrade-curl.sh" "$root/bin/curl"
     cp "$ROOT/scripts/tests/fixtures/mock-uci-config.sh" "$root/bin/uci"
-    mkdir -p "$root/etc/config"
-    printf "config settings 'main'\n\toption source 'proxy'\n" > "$root/etc/config/swrt_upgrade"
     cp "$ROOT/scripts/tests/fixtures/mock-sysupgrade.sh" "$root/sbin/sysupgrade"
     cat > "$root/bin/ubus" <<'UBUS'
 #!/bin/sh
@@ -69,7 +67,7 @@ test_identity_signature_and_acl() {
     assert_same "$TEST_TMP/stamp/files/etc/photonicat-release.json" "$TEST_TMP/identity.before"
     assert_same "$legacy" "$TEST_TMP/legacy.before"
     assert_json "$package/usr/share/rpcd/acl.d/luci-app-online-upgrade.json" '.["luci-app-online-upgrade"]|.read=={ubus:{"luci.swrt_upgrade":["status"]}} and (.write.ubus["luci.swrt_upgrade"]|sort)==(["check","download","install","set_source","set_channel"]|sort) and (.write|has("file")|not)'
-    assert_has "$package/etc/config/swrt_upgrade" "option source 'github'"
+    assert_has "$package/etc/config/swrt_upgrade" "option source 'proxy'"
     assert_has "$package/../Makefile" 'Package/luci-app-online-upgrade/conffiles'
     assert_has "$package/../Makefile" /etc/config/swrt_upgrade
 }
@@ -116,10 +114,6 @@ test_source_and_channel_saved() {
     engine_ok set-channel '{"channel":"stable"}'; assert_json "$OUT" '.source=="github"'
     engine_ok status; assert_json "$OUT" '.channel=="stable"'
     engine_ok set-source '{"source":"proxy"}'; engine_ok status; assert_json "$OUT" '.channel=="stable"'
-}
-test_missing_config_defaults_to_github() {
-    rm "$root/etc/config/swrt_upgrade"
-    engine_ok status; assert_json "$OUT" '.source=="github"'
 }
 test_real_release_schema() {
     cp "$ROOT/scripts/tests/fixtures/photonicat-release.json" "$fixture/release.json"

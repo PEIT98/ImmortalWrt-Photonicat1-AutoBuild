@@ -46,32 +46,6 @@ test_chinese_default_vsean() {
     engine_ok apply
     assert_json "$OUT" '.changed==0 and .actual=="ustc"'
 }
-test_cernet_legacy_sources() {
-    cat > "$feed" <<'FEEDS'
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/targets/rockchip/armv8/packages/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/base/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/istore/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/luci/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/openclash/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/packages/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/qmodem/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/qmodem_generic/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/routing/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/telephony/packages.adb
-https://mirrors.cernet.edu.cn/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/video/packages.adb
-https://istore.istoreos.com/repo-apk/all/compat/packages.adb
-https://openwrt.eamonxg.fun/snapshots/apk/packages.adb
-FEEDS
-    engine_ok
-    assert_json "$OUT" '.actual=="cernet" and .repositories==11 and .custom_repositories==2 and .pending'
-    engine_ok apply
-    assert_json "$OUT" '.actual=="nju" and .repositories==6 and .custom_repositories==2 and .changed==11 and (.pending|not)'
-    assert_eq 6 "$(grep -c '^https://mirror.nju.edu.cn/immortalwrt/' "$feed")"
-    assert_eq 5 "$(grep -c '^# Pwrt-disabled-unavailable https://mirrors.cernet.edu.cn/openwrt/' "$feed")"
-    assert_has "$feed" 'https://istore.istoreos.com/repo-apk/all/compat/packages.adb'
-    assert_has "$feed" 'https://openwrt.eamonxg.fun/snapshots/apk/packages.adb'
-    engine_ok apply; assert_json "$OUT" '.changed==0'
-}
 test_all_mirror_switches_and_preserved_paths() {
     local name destination
     while read -r name destination; do

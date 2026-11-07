@@ -1,4 +1,4 @@
 config settings 'main'
-	option source 'github'
+	option source 'proxy'
 	option channel 'prerelease'
 	option keep_config '1'
