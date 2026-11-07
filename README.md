@@ -12,7 +12,6 @@
 | 存储与工具 | eMMC 自动扩容、DiskMan、USB 硬盘保活（默认关闭）、常用诊断工具 |
 | 驱动支持 | USB 模组数据与 AT 串口、板载 SDIO 及多种 PCIe 无线网卡、TD-TECH 串口补丁、NFA765 E108 专用固件 |
 
-QModem 跟随官方 `stable` 分支，保留计时修复；采用西瓜皮原生 15 秒延时扫描，仅处理 USB 模组，默认使用 `sms_tool_q`，TD-TECH 保留 `tom_modem` 兼容例外。模组 PCIe 驱动关闭，M.2 E-key 的 PCIe Wi-Fi 保留。拨号使用上游逻辑，菜单为“移动网络”，Generic 保持自有复刻的 `main` 分支并共用 QM 后台。mwan3 按需手动配置并启用。
 
 ## 默认网络设置
 
