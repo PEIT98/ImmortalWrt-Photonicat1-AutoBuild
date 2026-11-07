@@ -216,12 +216,15 @@ test_official_quickstart_integration() {
     local installer="$ROOT/scripts/build/install-istore-quickstart.sh"
     assert_file "$installer"
     bash -n "$installer" "$ROOT/scripts/build/prepare.sh"
-    sh -n "$ROOT/files/etc/uci-defaults/98-pwrt-quickstart-safe"
+    sh -n "$ROOT/files/etc/uci-defaults/98-pwrt-quickstart-safe" "$ROOT/files/etc/uci-defaults/99-photonicat-brand"
+    assert_has "$ROOT/files/etc/uci-defaults/99-photonicat-brand" 'root_hash='
     assert_has "$installer" 'https://github.com/linkease/nas-packages.git'
     assert_has "$installer" 'https://github.com/linkease/nas-packages-luci.git'
     assert_has "$installer" 'interfaceconfig'
     assert_has "$installer" '/devicemanagement'
     assert_has "$installer" '/lanctrl/listDevices/'
+    assert_has "$installer" '"admin", "services", "nas", "raid"'
+    assert_has "$installer" '"admin", "network_guide"'
     assert_has "$ROOT/scripts/build/prepare.sh" 'install-istore-quickstart.sh'
     assert_has "$ROOT/photonicat1.config" 'CONFIG_PACKAGE_quickstart=y'
     assert_has "$ROOT/photonicat1.config" 'CONFIG_PACKAGE_luci-app-quickstart=y'

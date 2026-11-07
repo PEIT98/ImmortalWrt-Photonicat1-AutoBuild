@@ -37,6 +37,7 @@ QModem 跟随官方 `stable` 分支，保留计时修复；采用西瓜皮原生
 - 首页：`/cgi-bin/luci/admin/quickstart`。
 - 网口配置：`网络 → 网口配置`（`/cgi-bin/luci/admin/network/interfaceconfig`），官方界面可手动调整 WAN/LAN。
 - 局域网设备管理：首页“已连接设备”中的“设备管理”（`/cgi-bin/luci/admin/quickstart/devicemanagement`），查看设备、静态地址和流量；限速、浮动网关属于官方页面的可选功能，需相应插件。
+- 网络设置向导不显示在主菜单；NAS 的 RAID / S.M.A.R.T. 入口位于“服务 → NAS”，旧页面路径仍可使用。
 - 保留 Pwrt 的 `eth0=WAN`、`eth1=LAN`、`172.16.0.1`，不动 QModem、Aurora 和已有网络默认配置。
 - 首次启动只禁用 QuickStart 附带的 `startdhns` 自动网络重配置服务，保留 QuickStart 本体和手动网口管理；可按需自行重新启用。
 - 更改 WAN/LAN 可能让管理页面断线。建议用有线连接操作，先备份 `/etc/config/network`；实际网页兼容性及断网恢复需真机验证。

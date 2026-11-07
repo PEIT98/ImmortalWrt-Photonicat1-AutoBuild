@@ -10,8 +10,13 @@ case "$hostname" in
 		;;
 esac
 
-# 使用系统自带 passwd 生成密码哈希；保留配置升级时不覆盖已设置的 root 密码。
-if awk -F: '$1 == "root" && $2 == "" { empty = 1 } END { exit !empty }' /etc/shadow; then
-	printf '%s\n%s\n' 'photonicat' 'photonicat' | passwd root >/dev/null
-fi
+# 仅为未设置密码的 root 写入默认值；保留配置升级时不覆盖已有密码。
+root_hash="$(awk -F: '$1 == "root" { print $2; found=1; exit } END { if (!found) exit 1 }' /etc/shadow)"
+case "$root_hash" in
+	''|'!'|'!!'|'*')
+		printf '%s\n%s\n' 'photonicat' 'photonicat' | passwd root >/dev/null
+		# passwd 返回成功后再次核对，避免首次启动留下无密码 root。
+		awk -F: '$1 == "root" && $2 != "" && $2 != "!" && $2 != "!!" && $2 != "*" { ok=1 } END { exit !ok }' /etc/shadow
+		;;
+esac
 exit 0
