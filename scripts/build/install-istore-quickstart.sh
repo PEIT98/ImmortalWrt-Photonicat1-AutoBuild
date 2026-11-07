@@ -66,6 +66,14 @@ mkdir -p "$BACKEND_DST" "$LUCI_DST"
 cp -a "$BACKEND/." "$BACKEND_DST/"
 cp -a "$LUCI/." "$LUCI_DST/"
 
+# 禁止 QuickStart 将 ImmortalWrt APK 源改写为 OpenWrt 镜像。
+# 页面状态仍保留；底层 POST 同样拦截，不能从旧页面或 API 绕过。
+"$(dirname "$0")/../patches/quickstart/disable-source-switch.sh" "$LUCI_DST"
+if ! grep -Fq 'if http.getenv("REQUEST_METHOD") == "POST" and' "$LUCI_DST/luasrc/controller/istore_backend.lua"; then
+  echo '::error::QuickStart 软件源写入防护未生效' >&2
+  exit 1
+fi
+
 # 仅调整本地构建副本的菜单：隐藏网络向导，NAS 移入「服务」。
 # 保留旧 NAS 和向导的无标题路由，避免官方首页内的链接失效。
 awk '

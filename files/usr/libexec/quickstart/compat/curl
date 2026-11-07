@@ -1,0 +1,19 @@
+#!/bin/sh
+# QuickStart 旧检查请求 .asc；ImmortalWrt APK 仓库发布 .sig。
+# 仅转换 base 签名探测；其它请求仍交给系统 curl。
+for arg in "$@"; do
+    case "$arg" in
+        https://*/base/packages.adb.asc|http://*/base/packages.adb.asc)
+            signed="${arg%.asc}.sig"
+            attempt=1
+            while [ "$attempt" -le 3 ]; do
+                /usr/bin/curl -fsSL --connect-timeout 4 --max-time 10 \
+                    -o /dev/null "$signed" && exit 0
+                attempt=$((attempt + 1))
+                [ "$attempt" -gt 3 ] || sleep 1
+            done
+            exit 1
+            ;;
+    esac
+done
+exec /usr/bin/curl "$@"

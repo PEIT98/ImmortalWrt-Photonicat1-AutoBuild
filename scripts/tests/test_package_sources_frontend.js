@@ -54,7 +54,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     const h = harness();
     assert.equal(h.writes().length, 0, 'Rendering must not change repositories');
     h.start(); await flush();
-    const expectedSources = ['nju', 'ustc', 'sjtu', 'zju', 'vsean', 'official'];
+    const expectedSources = ['official', 'nju', 'ustc', 'sjtu', 'zju', 'vsean'];
     assert.deepEqual(walk(h.root).filter(n => n.tag === 'option' && expectedSources.includes(n.value)).map(n => n.value), expectedSources);
     assert.equal(h.get('pcat-package-source').value, 'nju');
     assert.equal(h.get('pcat-package-save').disabled, false, 'Package settings work while the MCU is offline');

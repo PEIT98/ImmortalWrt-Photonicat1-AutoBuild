@@ -36,16 +36,16 @@ MCU 服务使用 [photonicat/rockchip_rk3568_pcat_manager](https://github.com/ph
 
 ### 软件包下载源
 
-“系统 → 光影猫管理 → 软件包下载源”默认使用 **南京大学加速镜像**，支持以下选择。保存后到软件包管理刷新列表，列表和软件包下载使用所选地址。
+“系统 → 光影猫管理 → 软件包下载源”默认使用 **ImmortalWrt 官方源**，可切换下列实际托管 ImmortalWrt APK 索引的镜像。保存后到软件包管理刷新列表。
 
 | 软件源 | 地址 |
 | --- | --- |
-| 南京大学（默认） | `https://mirror.nju.edu.cn/immortalwrt` |
+| 南京大学 | `https://mirror.nju.edu.cn/immortalwrt` |
 | 中国科学技术大学 | `https://mirrors.ustc.edu.cn/immortalwrt` |
 | 上海交通大学 | `https://mirror.sjtu.edu.cn/immortalwrt` |
 | 浙江大学 | `https://mirrors.zju.edu.cn/immortalwrt` |
 | VSEAN 国内镜像 | `https://mirrors.vsean.net/openwrt` |
-| ImmortalWrt 官方源 | `https://downloads.immortalwrt.org` |
+| ImmortalWrt 官方源（默认） | `https://downloads.immortalwrt.org` |
 
 - 识别上述软件源及 NJU、USTC、SJTU 的常见域名别名，保留版本、架构、目标、内核 ABI、仓库路径、标签和注释；第三方仓库保持原样。
 - 读取实际 APK 源配置，兼容主列表、`repositories.d` 与已有 OPKG 兼容源。不关闭签名或 HTTPS 校验，也不自动安装或升级软件包。
@@ -55,5 +55,7 @@ MCU 服务使用 [photonicat/rockchip_rk3568_pcat_manager](https://github.com/ph
 - 独立 RPC `luci.photonicat_packages getSettings/setSettings` 不依赖 MCU，读取权限与修改权限分开。
 
 软件包镜像与“在线升级”中的 GitHub 固件下载源分别保存。
+
+QuickStart 首页保留状态展示，但旧版“软件源配置”入口及其写入接口已屏蔽，防止将 ImmortalWrt 软件包地址改为 OpenWrt。首页签名探测兼容 APK 仓库的 `.sig` 文件。iStore 的四条独立索引在固件覆盖文件中登记；Aurora 使用作者发布的签名索引。GitHub 固件下载代理只用于在线升级，不能当作 APK 索引。官方 `kmods` 包是否可用仍取决于本机内核 ABI 和对应目录是否发布。
 
 镜像地址参见 [ImmortalWrt 官方镜像列表](https://downloads.immortalwrt.org/acknowledgements.html)；系统中文默认值参见 [99-default-settings-chinese](https://github.com/immortalwrt/immortalwrt/blob/openwrt-25.12/package/emortal/default-settings/files/99-default-settings-chinese)。本功能只切换下载地址，各镜像提供的软件包范围与上游同步情况有关。

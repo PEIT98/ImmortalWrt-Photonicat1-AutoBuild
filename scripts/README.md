@@ -59,7 +59,7 @@
 
 ## iStoreOS QuickStart
 
-仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`。首页包含局域网设备管理入口（`/admin/quickstart/devicemanagement`），构建脚本检查页面路由与设备列表 API，并将 NAS 菜单移到“服务”及隐藏网络设置向导；启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，持久启用 QuickStart 主服务、禁用自动 `uciChange` 服务 `startdhns`；LuCI 菜单不再依赖后台进程启动时序，重启后首页、网口配置及局域网设备入口仍可见。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。
+仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`。首页包含局域网设备管理入口（`/admin/quickstart/devicemanagement`），构建脚本检查页面路由与设备列表 API，并将 NAS 菜单移到“服务”及隐藏网络设置向导；`patches/quickstart/disable-source-switch.sh` 屏蔽旧切源页面和写入接口，首页仍展示网络状态；`files/usr/libexec/quickstart/compat/curl` 修正 APK `.asc` 探测为 `.sig`。启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，持久启用 QuickStart 主服务、禁用自动 `uciChange` 服务 `startdhns`；LuCI 菜单不再依赖后台进程启动时序，重启后首页、网口配置及局域网设备入口仍可见。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。
 
 ## 回归测试
 
@@ -92,5 +92,5 @@ bash scripts/tests/test_online_upgrade.sh
 
 本地插件完整源码位于 [packages/](../packages/)；电源与软件源设置、CPU 调频、在线升级和硬盘保活的说明见首页对应链接。文件管理和 Travelmate 使用官方软件源；Aurora 设置使用主题作者源码。
 
-Aurora 更新源由 [99-aurora-update-source](../files/etc/uci-defaults/99-aurora-update-source) 在首启时登记：使用配置插件自带签名公钥，默认添加作者的 APK snapshots 源；已有 Aurora 源和其他软件源保持原样。首启不联网刷新索引，需要升级时在软件包页面更新列表。
+Aurora 更新源由 [99-aurora-update-source](../files/etc/uci-defaults/99-aurora-update-source) 在首启时登记：使用配置插件自带签名公钥，默认添加作者的 APK snapshots 源；已有 Aurora 源和其他软件源保持原样。四条 iStore 独立索引在 [pwrt-istore.list](../files/etc/apk/repositories.d/pwrt-istore.list) 中登记。首启不联网刷新索引，需要升级时在软件包页面更新列表。
 

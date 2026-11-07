@@ -14,7 +14,7 @@ created_config=0
 error() { jq -nc --arg error "$1" '{ok:false,error:$error}'; exit 1; }
 read_source() {
     source="$(uci -c "$CONFIG" -q get photonicat_packages.main.source 2>/dev/null || true)"
-    case "$source" in nju|ustc|sjtu|zju|vsean|official) ;; *) source=nju ;; esac
+    case "$source" in nju|ustc|sjtu|zju|vsean|official) ;; *) source=official ;; esac
 }
 select_destination() {
     case "$source" in

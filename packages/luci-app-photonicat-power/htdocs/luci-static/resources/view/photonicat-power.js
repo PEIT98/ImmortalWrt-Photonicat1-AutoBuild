@@ -63,7 +63,7 @@ return view.extend({
             nju: '南京大学', ustc: '中国科学技术大学', sjtu: '上海交通大学',
             zju: '浙江大学', vsean: 'VSEAN 国内镜像', official: 'ImmortalWrt 官方源'
         };
-        var packageSources = [ 'nju', 'ustc', 'sjtu', 'zju', 'vsean', 'official' ];
+        var packageSources = [ 'official', 'nju', 'ustc', 'sjtu', 'zju', 'vsean' ];
         var packageSource = E('select', { id: 'pcat-package-source', 'class': 'cbi-input-select', disabled: '', 'aria-label': '软件包下载源' },
             packageSources.map(function(key) { return E('option', { value: key }, packageNames[key]); }));
         var packageNote = E('p', { 'class': 'pcat-muted', role: 'status' }, '正在读取软件源设置……');

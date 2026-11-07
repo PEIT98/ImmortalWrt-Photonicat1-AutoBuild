@@ -8,7 +8,7 @@ setup() {
     mkdir -p "$root"/{bin,etc/config,etc/apk/repositories.d,tmp/sysinfo,usr/share/photonicat,var/lock}
     cp "$app/root/usr/share/photonicat/package-sources.awk" "$root/usr/share/photonicat/"
     config="$root/etc/config/photonicat_packages"
-    printf "config settings 'main'\n\toption source 'nju'\n" > "$config"
+    printf "config settings 'main'\n\toption source 'official'\n" > "$config"
     printf 'ariaboard,photonicat\n' > "$root/tmp/sysinfo/board_name"
     feed="$root/etc/apk/repositories.d/distfeeds.list"
     cat > "$feed" <<'FEEDS'
@@ -30,7 +30,7 @@ engine_ok() { ok sh "$engine" "${1:-status}" <<<"${2:-}"; assert_json "$OUT" '.o
 engine_reject() { reject sh "$engine" "$1" <<<"$2"; assert_json "$OUT" '.ok==false'; }
 test_readonly_status() {
     engine_ok
-    assert_json "$OUT" '.source=="nju" and .actual=="official" and .repositories==3 and .custom_repositories==2 and .pending'
+    assert_json "$OUT" '.source=="official" and .actual=="official" and .repositories==3 and .custom_repositories==2 and (.pending|not)'
     assert_same "$config" "$TEST_TMP/config.before"; assert_same "$feed" "$TEST_TMP/original"
     assert_absent "$PHOTONICAT_PACKAGE_ROOT/unexpected-package-action"
 }
@@ -39,7 +39,7 @@ test_chinese_default_vsean() {
     sed '2,4s|https://downloads.immortalwrt.org|https://mirrors.vsean.net/openwrt|' "$TEST_TMP/original" > "$feed"
     engine_ok
     assert_json "$OUT" '.actual=="vsean" and .supported and .pending and .repositories==3'
-    engine_ok apply
+    engine_ok set '{"source":"nju"}'
     assert_json "$OUT" '.source=="nju" and .actual=="nju" and .changed==3 and (.pending|not)'
     engine_ok set '{"source":"ustc"}'
     assert_json "$OUT" '.source=="ustc" and .actual=="ustc" and .supported'
@@ -64,12 +64,27 @@ https://openwrt.eamonxg.fun/snapshots/apk/packages.adb
 FEEDS
     engine_ok
     assert_json "$OUT" '.actual=="cernet" and .repositories==11 and .custom_repositories==2 and .pending'
-    engine_ok apply
+    engine_ok set '{"source":"nju"}'
     assert_json "$OUT" '.actual=="nju" and .repositories==6 and .custom_repositories==2 and .changed==11 and (.pending|not)'
     assert_eq 6 "$(grep -c '^https://mirror.nju.edu.cn/immortalwrt/' "$feed")"
     assert_eq 5 "$(grep -c '^# Pwrt-disabled-unavailable https://mirrors.cernet.edu.cn/openwrt/' "$feed")"
     assert_has "$feed" 'https://istore.istoreos.com/repo-apk/all/compat/packages.adb'
     assert_has "$feed" 'https://openwrt.eamonxg.fun/snapshots/apk/packages.adb'
+    engine_ok apply; assert_json "$OUT" '.changed==0'
+}
+test_vsean_local_feeds_are_not_reenabled() {
+    cat > "$feed" <<'FEEDS'
+https://mirrors.vsean.net/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/base/packages.adb
+https://mirrors.vsean.net/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/istore/packages.adb
+https://mirrors.vsean.net/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/openclash/packages.adb
+https://mirrors.vsean.net/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/qmodem/packages.adb
+https://mirrors.vsean.net/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/qmodem_generic/packages.adb
+https://mirrors.vsean.net/openwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/video/packages.adb
+FEEDS
+    engine_ok apply
+    assert_json "$OUT" '.source=="official" and .actual=="official" and .repositories==1 and .changed==6'
+    assert_eq 1 "$(grep -c '^https://downloads.immortalwrt.org/' "$feed")"
+    assert_eq 5 "$(grep -c '^# Pwrt-disabled-unavailable https://mirrors.vsean.net/openwrt/' "$feed")"
     engine_ok apply; assert_json "$OUT" '.changed==0'
 }
 test_all_mirror_switches_and_preserved_paths() {
@@ -122,7 +137,7 @@ FEEDS
     assert_same "$TEST_TMP/custom-urls" "$TEST_TMP/custom-after"
 }
 test_factory_accelerator_paths_and_mode() {
-    engine_ok apply
+    engine_ok set '{"source":"nju"}'
     assert_json "$OUT" '.changed==3 and .actual=="nju"'
     sed '2,4s|https://downloads.immortalwrt.org|https://mirror.nju.edu.cn/immortalwrt|' "$TEST_TMP/original" > "$TEST_TMP/expected"
     assert_same "$feed" "$TEST_TMP/expected"
@@ -130,25 +145,26 @@ test_factory_accelerator_paths_and_mode() {
     assert_absent "$PHOTONICAT_PACKAGE_ROOT/unexpected-package-action"
 }
 test_saved_official_and_reboot() {
-    engine_ok apply
+    engine_ok set '{"source":"nju"}'
     engine_ok set '{"source":"official"}'
     assert_json "$OUT" '.source=="official"'; assert_same "$feed" "$TEST_TMP/original"
     engine_ok apply; assert_json "$OUT" '.changed==0'
     assert_has "$config" "option source 'official'"
 }
 test_idempotent_mtime() {
-    engine_ok apply
+    engine_ok set '{"source":"nju"}'
     local before; before=$(stat -c %y "$feed")
     engine_ok apply; assert_json "$OUT" '.changed==0'
     assert_eq "$before" "$(stat -c %y "$feed")"
 }
 test_new_distribution_list() {
-    engine_ok apply; cp "$TEST_TMP/original" "$feed"
+    engine_ok set '{"source":"nju"}'; cp "$TEST_TMP/original" "$feed"
     engine_ok; assert_json "$OUT" '.pending'
     engine_ok apply; engine_ok; assert_json "$OUT" '.actual=="nju"'
 }
 test_alternate_formats_and_opkg() {
     local root=$PHOTONICAT_PACKAGE_ROOT
+    engine_ok set '{"source":"nju"}'
     printf '@test https://downloads.immortalwrt.org/snapshots/packages/aarch64_generic/base\n' > "$root/etc/apk/repositories"
     printf 'https://mirrors.nju.edu.cn/immortalwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/luci/packages.adb\n' > "$root/etc/apk/repositories.d/extra.repositories"
     mkdir "$root/etc/opkg"
@@ -211,6 +227,8 @@ test_permissions_and_package() {
     assert_json "$app/root/usr/share/rpcd/acl.d/luci-app-photonicat-power.json" '.["luci-app-photonicat-power"]|.read.ubus["luci.photonicat_packages"]==["getSettings"] and .write.ubus["luci.photonicat_packages"]==["setSettings"]'
     for name in photonicat-package-source package-sources.awk photonicat_packages 99-photonicat-package-source; do assert_has "$app/Makefile" "$name"; done
     assert_has "$app/Makefile" '+jq-full +flock'
-    assert_has "$app/root/etc/config/photonicat_packages" "option source 'nju'"
+    assert_has "$app/root/etc/config/photonicat_packages" "option source 'official'"
+    local extra="$ROOT/files/etc/apk/repositories.d/pwrt-istore.list"
+    assert_eq 4 "$(grep -c '^https://istore[.]istoreos[.]com/repo-apk/' "$extra")"
 }
 run_tests "$@"

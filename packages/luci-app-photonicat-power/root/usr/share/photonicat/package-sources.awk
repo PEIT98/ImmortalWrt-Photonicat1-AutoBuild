@@ -16,7 +16,7 @@ function rewrite(token,    result, kind, recognized) {
             counts[kind]++
             # These five channels are local build feeds, not published indexes on
             # ImmortalWrt mirrors. Keep the original line as a comment for recovery.
-            if (kind == "cernet" && token ~ /\/packages\/aarch64_generic\/(istore|openclash|qmodem|qmodem_generic|video)\/packages[.]adb$/) {
+            if (token ~ /\/packages\/aarch64_generic\/(istore|openclash|qmodem|qmodem_generic|video)\/packages[.]adb$/) {
                 disable = 1
                 changed++
                 recognized = 1

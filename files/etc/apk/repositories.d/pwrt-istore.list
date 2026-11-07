@@ -1,0 +1,5 @@
+# iStore 软件中心独立索引；不替换 ImmortalWrt 系统源。
+https://istore.istoreos.com/repo-apk/all/store/packages.adb
+https://istore.istoreos.com/repo-apk/all/nas_luci/packages.adb
+https://istore.istoreos.com/repo-apk/all/meta/packages.adb
+https://istore.istoreos.com/repo-apk/aarch64_generic/nas/packages.adb

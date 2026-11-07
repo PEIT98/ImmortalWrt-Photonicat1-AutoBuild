@@ -1,2 +1,2 @@
 config settings 'main'
-	option source 'nju'
+	option source 'official'
