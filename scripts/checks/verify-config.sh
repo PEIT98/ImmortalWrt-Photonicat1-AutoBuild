@@ -6,6 +6,7 @@ need=(
   CONFIG_TARGET_rockchip_armv8_DEVICE_ariaboard_photonicat
   CONFIG_TARGET_ROOTFS_SQUASHFS
   CONFIG_PACKAGE_kmod-fs-ext4
+  CONFIG_PACKAGE_kmod-tls
   CONFIG_DEVEL
   CONFIG_CCACHE
   CONFIG_IMAGEOPT
