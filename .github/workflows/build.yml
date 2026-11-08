@@ -27,7 +27,7 @@ jobs:
       TZ: Asia/Shanghai
       # photonicat-cache-v2: bounded OpenWrt compiler object cache.
       CCACHE_DIR: ${{ github.workspace }}/immortalwrt/.ccache
-      CCACHE_MAXSIZE: 1536M
+      CCACHE_MAXSIZE: 4G
       CCACHE_COMPILERCHECK: content
     steps:
       - name: Checkout workflow
@@ -406,7 +406,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$CCACHE_DIR"
-          ccache --max-size 1536M
+          ccache --max-size "$CCACHE_MAXSIZE"
           ccache --zero-stats
           echo "Downloaded source cache hit: ${{ steps.download_cache.outputs.cache-hit }}"
           echo "Compiler cache hit: ${{ steps.compiler_cache.outputs.cache-hit }}"

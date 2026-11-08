@@ -79,10 +79,12 @@ case "$mode" in
     trap 'rm -f "$tmp"' EXIT
     # 其余硬件/插件选择仍取参考配置；内核构建开关以官方发布配置为准。
     # 完整官方配置另存为内核专用输入，避免参考配置的显式 kmod 禁用项和
-    # Docker 等用户态选包反向改变内核 ABI；ALL_NONSHARED 沿用参考配置。
+    # Docker 等用户态选包反向改变内核 ABI；不向主配置带入 ALL_KMODS，
+    # 避免额外构建全部模块及其依赖，主配置选包由 photonicat1.config 管理。
+    # ALL_NONSHARED 沿用参考配置。
     awk '
       function kernel_key(k) {
-        return k ~ /^CONFIG_KERNEL_/ || k == "CONFIG_ALL_KMODS" ||
+        return k ~ /^CONFIG_KERNEL_/ ||
           k == "CONFIG_DWARVES" ||
           k == "CONFIG_REPRODUCIBLE_DEBUG_INFO"
       }

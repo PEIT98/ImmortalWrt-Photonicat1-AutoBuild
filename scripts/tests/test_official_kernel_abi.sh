@@ -29,10 +29,12 @@ test_merge_preserves_plugins_and_replaces_kernel_options() {
     assert_has "$SRC/.config" 'CONFIG_PACKAGE_qmodem=y'
     assert_has "$SRC/.config" 'CONFIG_KERNEL_DEBUG_INFO_BTF=y'
     assert_has "$SRC/.config" '# CONFIG_KERNEL_OLD is not set'
-    assert_has "$SRC/.config" 'CONFIG_ALL_KMODS=y'
+    assert_has "$SRC/.config" 'CONFIG_ALL_KMODS=n'
+    assert_not_has "$SRC/.config" 'CONFIG_ALL_KMODS=y'
     assert_has "$SRC/.config" 'CONFIG_KERNEL_BUILD_USER="buildbot"'
     assert_not_has "$SRC/.config" 'CONFIG_KERNEL_OLD=y'
     assert_same "$META/official.config" "$SRC/.config.official-kernel"
+    assert_has "$SRC/.config.official-kernel" 'CONFIG_ALL_KMODS=y'
     assert_has "$SRC/include/kernel-defaults.mk" '$(TOPDIR)/.config.official-kernel >> $(LINUX_DIR)/.config.target'
     assert_has "$SRC/include/kernel-defaults.mk" 'kconfig $(TMP_DIR)/.packageinfo $(TOPDIR)/.config.official-kernel $(KERNEL_PATCHVER)'
     ok bash "$SCRIPT" merge "$SRC" "$META"
@@ -52,7 +54,7 @@ test_merge_preserves_userspace_selection_without_buildbot_test_packages() {
     assert_has "$SRC/.config" '# CONFIG_ALL_NONSHARED is not set'
     assert_not_has "$SRC/.config" 'CONFIG_ALL_NONSHARED=y'
     assert_not_has "$SRC/.config" 'CONFIG_PACKAGE_kselftests-bpf='
-    assert_has "$SRC/.config" 'CONFIG_ALL_KMODS=y'
+    assert_not_has "$SRC/.config" 'CONFIG_ALL_KMODS=y'
     assert_has "$SRC/.config" 'CONFIG_KERNEL_DEBUG_INFO_BTF=y'
     assert_has "$SRC/.config" 'CONFIG_PACKAGE_qmodem=y'
     # 只阻止从官方 buildbot 配置带入选包开关，用户明确的选包仍保留。
@@ -60,6 +62,20 @@ test_merge_preserves_userspace_selection_without_buildbot_test_packages() {
     ok bash "$SCRIPT" merge "$SRC" "$META"
     assert_has "$SRC/.config" 'CONFIG_ALL_NONSHARED=y'
     assert_has "$SRC/.config" 'CONFIG_PACKAGE_kselftests-bpf=y'
+}
+test_package_selection_keeps_official_kernel_and_requested_drivers() {
+    # 参考配置的全量编译开关也不能覆盖项目策略。
+    printf 'CONFIG_ALL_KMODS=y\nCONFIG_PACKAGE_qmodem=y\nCONFIG_PACKAGE_kmod-usb-net-rndis=y\nCONFIG_PACKAGE_kmod-ath11k-pci=y\n' > "$SRC/.config"
+    ok bash "$SCRIPT" merge "$SRC" "$META"
+    ok sh "$ROOT/scripts/build/select-packages.sh" "$SRC/.config"
+    assert_has "$SRC/.config" '# CONFIG_ALL_KMODS is not set'
+    assert_not_has "$SRC/.config" 'CONFIG_ALL_KMODS=y'
+    assert_has "$SRC/.config" 'CONFIG_PACKAGE_qmodem=y'
+    assert_has "$SRC/.config" 'CONFIG_PACKAGE_kmod-usb-net-rndis=y'
+    assert_has "$SRC/.config" 'CONFIG_PACKAGE_kmod-ath11k-pci=y'
+    assert_same "$META/official.config" "$SRC/.config.official-kernel"
+    assert_has "$SRC/.config.official-kernel" 'CONFIG_ALL_KMODS=y'
+    assert_has "$SRC/.config.official-kernel" 'CONFIG_KERNEL_DEBUG_INFO_BTF=y'
 }
 pin_tools() {
     cat > "$TEST_TMP/bin/curl" <<'CURL'

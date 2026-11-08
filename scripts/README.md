@@ -59,6 +59,8 @@
 编译仅由 Actions 手动触发；普通提交不会启动编译。完整 `.config` 由流程生成并上传为 `photonicat1-build-config`，根目录仅维护覆盖配置。
 官方 kmods 列表仅提供安装候选；构建和发布不再额外比较本机与官方 ABI，驱动安装时仍由 APK 检查依赖兼容性。官方源码与完整内核配置的准备、下载文件完整性校验继续保留。
 
+主配置通过 `photonicat1.config` 关闭 `ALL_KMODS`，不为未选中的驱动额外生成全量模块包；内核仍完整读取 `.config.official-kernel`，其中官方模块选择和 BTF 等设置保持原样。构建缓存上限统一由工作流的 `CCACHE_MAXSIZE=4G` 设置，初始化和恢复旧缓存后都使用这一容量。
+
 ## iStoreOS QuickStart
 
 仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`。首页包含局域网设备管理入口（`/admin/quickstart/devicemanagement`），构建脚本检查页面路由与设备列表 API，并将 NAS 菜单移到“服务”及隐藏网络设置向导；`patches/quickstart/disable-source-switch.sh` 屏蔽旧切源页面和写入接口，首页仍展示网络状态；`files/usr/libexec/quickstart/compat/curl` 修正 APK `.asc` 探测为 `.sig`。启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，持久启用 QuickStart 主服务、禁用自动 `uciChange` 服务 `startdhns`；LuCI 菜单不再依赖后台进程启动时序，重启后首页、网口配置及局域网设备入口仍可见。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。
@@ -99,4 +101,3 @@ bash scripts/tests/test_online_upgrade.sh
 Aurora 更新源由 [99-aurora-update-source](../files/etc/uci-defaults/99-aurora-update-source) 在首启时登记：使用配置插件自带签名公钥，默认添加作者的 APK snapshots 源；已有 Aurora 源和其他软件源保持原样。四条 iStore 独立索引在 [pwrt-istore.list](../files/etc/apk/repositories.d/pwrt-istore.list) 中登记。首启不联网刷新索引，需要升级时在软件包页面更新列表。
 
 作者源无法访问时，系统 → Aurora Theme Design → Aurora 更新提供 [GitHub Release 下载入口](../packages/luci-app-aurora-upgrade/README.md)，默认使用固件在线升级同款加速地址，可切换 GitHub 官方地址；只处理 Aurora 主题和设置，并核对 SHA256。
-
