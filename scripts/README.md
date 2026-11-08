@@ -61,6 +61,8 @@
 
 主配置通过 `photonicat1.config` 关闭 `ALL_KMODS`，不为未选中的驱动额外生成全量模块包；内核仍完整读取 `.config.official-kernel`，其中官方模块选择和 BTF 等设置保持原样。构建缓存上限统一由工作流的 `CCACHE_MAXSIZE=4G` 设置，初始化和恢复旧缓存后都使用这一容量。
 
+编译并发统一在工作流的“选择构建并发”步骤计算：使用实际 `nproc`，按可用内存预留 2GiB、每个任务估算 2GiB，至少一个任务且不超过 CPU 数。标准四核、16GB Runner 通常使用四线程；主机构建工具、主机 `ucode` 和固件编译共用 `BUILD_JOBS`，并在日志和 Actions 摘要记录资源与线程数。原有失败后单线程定位逻辑保留。
+
 ## iStoreOS QuickStart
 
 仅编译时从 LinkEase 官方拉取 UI 和后端两个包，安装到编译树的 `package/luci-app-quickstart`、`package/quickstart`。首页包含局域网设备管理入口（`/admin/quickstart/devicemanagement`），构建脚本检查页面路由与设备列表 API，并将 NAS 菜单移到“服务”及隐藏网络设置向导；`patches/quickstart/disable-source-switch.sh` 屏蔽旧切源页面和写入接口，首页仍展示网络状态；`files/usr/libexec/quickstart/compat/curl` 修正 APK `.asc` 探测为 `.sig`。启动保护在 `files/etc/uci-defaults/98-pwrt-quickstart-safe`，持久启用 QuickStart 主服务、禁用自动 `uciChange` 服务 `startdhns`；LuCI 菜单不再依赖后台进程启动时序，重启后首页、网口配置及局域网设备入口仍可见。选择项在 `photonicat1.config`，校验项在 `checks/verify-config.sh`。

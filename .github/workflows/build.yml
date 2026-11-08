@@ -414,6 +414,26 @@ jobs:
           du -sh immortalwrt/dl "$CCACHE_DIR" 2>/dev/null || true
           df -h immortalwrt
 
+      - name: 选择构建并发
+        shell: bash
+        run: |
+          set -euo pipefail
+          cpu_count="$(nproc)"
+          memory_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
+          # 预留 2GiB，每个并行任务按 2GiB 可用内存估算；不超过实际 CPU 数。
+          memory_jobs=$(( (memory_kib - 2097152) / 2097152 ))
+          [ "$memory_jobs" -ge 1 ] || memory_jobs=1
+          jobs="$cpu_count"
+          [ "$jobs" -le "$memory_jobs" ] || jobs="$memory_jobs"
+          echo "BUILD_JOBS=$jobs" >> "$GITHUB_ENV"
+          echo "Build resources: CPUs=$cpu_count, available RAM=$((memory_kib / 1024))MiB, jobs=$jobs"
+          {
+            echo '### Build parallelism'
+            echo "- Available CPUs: $cpu_count"
+            echo "- Available RAM: $((memory_kib / 1024)) MiB"
+            echo "- Parallel jobs: $jobs"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: 准备无线检查所需的主机工具
         working-directory: immortalwrt
         shell: bash
@@ -421,10 +441,8 @@ jobs:
           set -euo pipefail
           # 固件中的 ucode 是 ARM 程序；无线回归需要显式构建主机版本。
           # 先准备其构建工具，后续固件编译会复用这些产物。
-          jobs="$(nproc)"
-          [ "$jobs" -le 3 ] || jobs=3
-          make -j"$jobs" tools/install V=0
-          make package/utils/ucode/host/compile V=s
+          make -j"$BUILD_JOBS" tools/install V=0
+          make -j"$BUILD_JOBS" package/utils/ucode/host/compile V=s
           test -x staging_dir/hostpkg/bin/ucode
 
       - name: 核对 Pwrt 无线默认值
@@ -438,11 +456,8 @@ jobs:
           echo '===== 开始编译前的磁盘与内存 ====='
           df -h .
           free -h
-          # GitHub runners vary in available CPUs: use up to 3 jobs, never exceed nproc.
-          jobs="$(nproc)"
-          [ "$jobs" -le 3 ] || jobs=3
-          echo "Build concurrency: -j$jobs (capped at 3)"
-          if ! make -j"$jobs" V=0; then
+          echo "Build concurrency: -j$BUILD_JOBS (CPU and RAM based)"
+          if ! make -j"$BUILD_JOBS" V=0; then
             echo '===== 首次编译失败，检查剩余空间 ====='
             df -h .
             free -h
