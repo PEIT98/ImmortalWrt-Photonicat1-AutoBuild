@@ -9,6 +9,11 @@ on:
         type: boolean
         default: true
         required: true
+      keep_releases:
+        description: '发布成功后保留最近几个固件（含附件和标签）'
+        type: number
+        default: 5
+        required: true
 
 permissions:
   contents: read
@@ -32,6 +37,17 @@ jobs:
     steps:
       - name: Checkout workflow
         uses: actions/checkout@v4
+
+      - name: 检查发布保留数量
+        if: inputs.publish == true
+        shell: bash
+        env:
+          KEEP_RELEASES: ${{ inputs.keep_releases }}
+        run: |
+          [[ "$KEEP_RELEASES" =~ ^[1-9][0-9]*$ ]] || {
+            echo '::error::发布保留数量必须为正整数'
+            exit 1
+          }
 
       - name: Checkout ImmortalWrt 25.12
         uses: actions/checkout@v4
@@ -568,6 +584,9 @@ jobs:
     env:
       TZ: Asia/Shanghai
     steps:
+      - name: Checkout release scripts
+        uses: actions/checkout@v4
+
       - name: Download firmware artifact
         uses: actions/download-artifact@v4
         with:
@@ -596,3 +615,11 @@ jobs:
           files: release/*
           fail_on_unmatched_files: true
           generate_release_notes: false
+
+      - name: 清理旧固件发布、附件及标签
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP_RELEASES: ${{ inputs.keep_releases }}
+          CURRENT_RELEASE_TAG: ${{ steps.tag.outputs.name }}
+        run: bash scripts/release/prune-releases.sh "$KEEP_RELEASES" "$CURRENT_RELEASE_TAG"

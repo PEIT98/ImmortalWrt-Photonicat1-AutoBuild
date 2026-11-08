@@ -32,6 +32,7 @@
 | 检查 | [check-qmodem-ndisc6-build.sh](checks/check-qmodem-ndisc6-build.sh) | 检查 ndisc6 归档 SHA256、musl 编译和程序安装 |
 | 发布 | [stamp-firmware.sh](release/stamp-firmware.sh) | 为在线升级和 Release 写入相同的设备、标签和提交号 |
 | 发布 | [release-notes.sh](release/release-notes.sh) | 生成中文发布说明、源码信息和校验值 |
+| 发布 | [prune-releases.sh](release/prune-releases.sh) | 成功发布后按手动运行参数保留固件发布，同步清理旧附件和对应标签 |
 
 ## 补丁脚本
 
@@ -57,6 +58,7 @@
 5. 检查 ndisc6，准备构建工具并显式构建主机 `ucode`，验证无线默认值后编译固件；编译成功后收集镜像并发布。已移除编译前、编译后的官方 ABI 比对，以及发布前的官方 kmods 目录可用性检查。
 
 编译仅由 Actions 手动触发；普通提交不会启动编译。完整 `.config` 由流程生成并上传为 `photonicat1-build-config`，根目录仅维护覆盖配置。
+“运行工作流”中的 `keep_releases` 默认是 5，可填写其他正整数。只有编译并成功发布后才清理旧固件：本次发布计入数量，其余按发布时间保留最新版本，正式版和预发行版合并计数；旧 Release 的附件和对应标签同步删除。发布草稿、其他命名的 Release 和独立无发布标签不在清理范围；不发布、编译失败或上传失败时不执行。Actions 构建附件仍按原来的 14 天保留。本次修改配置不会立即清理已有发布。
 官方 kmods 列表仅提供安装候选；构建和发布不再额外比较本机与官方 ABI，驱动安装时仍由 APK 检查依赖兼容性。官方源码与完整内核配置的准备、下载文件完整性校验继续保留。
 
 主配置通过 `photonicat1.config` 关闭 `ALL_KMODS`，不为未选中的驱动额外生成全量模块包；内核仍完整读取 `.config.official-kernel`，其中官方模块选择和 BTF 等设置保持原样。构建缓存上限统一由工作流的 `CCACHE_MAXSIZE=4G` 设置，初始化和恢复旧缓存后都使用这一容量。
@@ -73,6 +75,7 @@
 | --- | --- |
 | 构建与依赖 | [test_build_scripts.sh](tests/test_build_scripts.sh)、[test_build_dependencies.sh](tests/test_build_dependencies.sh) |
 | 官方内核准备 | [test_official_kernel_abi.sh](tests/test_official_kernel_abi.sh)；检查完整配置归档校验、独立内核输入、原有选包保留和 kmods 源生成 |
+| 发布保留 | [test_release_retention.sh](tests/test_release_retention.sh)；隔离模拟发布列表与删除操作，验证保留数量、分页、本次发布保护和标签同步删除参数 |
 | QM 扫描计时 | [test_qmodem_clock.sh](tests/test_qmodem_clock.sh)；需要官方 QM Feed、C 编译器和 json-c 开发库 |
 | QM USB 初始化 | [test_qmodem_usb.sh](tests/test_qmodem_usb.sh)；检查原生延时扫描、PCIe Wi-Fi 排除、AT 默认值、TD-TECH 例外和补丁失败保护 |
 | 无线与固件 | [test_wifi_defaults.sh](tests/test_wifi_defaults.sh)、[test_nfa765_e108.sh](tests/test_nfa765_e108.sh)；需要对应 ImmortalWrt 源码树 |
