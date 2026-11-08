@@ -179,7 +179,8 @@ return view.extend({
                 E('p', {}, release.prerelease ? '这是预发行测试固件，可能包含尚未完成真机验证的改动。' : '这是正式发行固件。'),
                 E('p', {}, preserve ? '保留当前配置。旧配置可能覆盖新版默认设置。' : '不保留配置。完成后通过 172.16.0.1 重新设置密码、Wi-Fi 和拨号。'),
                 E('p', {}, '刷写会中断网络，请勿断电。额外安装的软件包和容器数据需另行备份。'),
-                E('label', { 'class': 'swrt-confirm-backup' }, [ acknowledged, ' 我已保存需要的配置和数据，确认现在升级。' ]),
+                E('label', { 'class': 'swrt-confirm-backup' }, [ acknowledged,
+                    E('span', { 'class': 'swrt-confirm-copy' }, '我已保存需要的配置和数据，确认现在升级。') ]),
                 E('div', { 'class': 'np-actions right' }, [
                     E('button', { type: 'button', 'class': 'np-btn', click: ui.hideModal }, '取消'), confirm
                 ])
@@ -195,7 +196,7 @@ return view.extend({
             ]);
         }
         root = E('div', { id: 'swrt-upgrade', 'class': 'np-root swrt-page' }, [
-            E('link', { rel: 'stylesheet', href: L.resource('swrt-upgrade.css') + '?v=2.0.0-3' }),
+            E('link', { rel: 'stylesheet', href: L.resource('swrt-upgrade.css') + '?v=2.0.0-6' }),
             E('div', { 'class': 'np-page-heading' }, [
                 E('div', {}, [ E('h2', { 'class': 'np-page-title' }, 'Pwrt 在线更新'),
                     E('p', { 'class': 'np-page-description' }, '光影猫一代 · PEIT98 仓库 · 支持正式与预发行固件') ]),

@@ -37,19 +37,20 @@
 #swrt-upgrade .swrt-keep[data-keep="0"]{border-color:var(--np-danger)}
 #swrt-upgrade .swrt-keep[data-keep="0"] .swrt-keep-state{color:var(--np-danger)}
 #swrt-upgrade .swrt-keep:focus-within{outline:2px solid var(--np-accent);outline-offset:3px}
-/* Keep the native checkmark visible when a theme hides plain checkbox inputs. */
-#swrt-upgrade input#swrt-keep-config{-webkit-appearance:checkbox!important;appearance:auto!important;display:block!important;position:static!important;inset:auto!important;transform:none!important;opacity:1!important;visibility:visible!important;clip:auto!important;clip-path:none!important;width:24px!important;height:24px!important;accent-color:var(--np-accent);margin:0!important;align-self:start;cursor:pointer}
+/* Both choices use native checkboxes; theme pseudo-elements otherwise anchor to the modal when position is static. */
+#swrt-upgrade input#swrt-keep-config,.swrt-upgrade-confirm .swrt-confirm-backup>input[type=checkbox]{-webkit-appearance:checkbox!important;appearance:auto!important;display:block!important;position:static!important;inset:auto!important;transform:none!important;opacity:1!important;visibility:visible!important;clip:auto!important;clip-path:none!important;width:24px!important;height:24px!important;accent-color:var(--np-accent);margin:0!important;align-self:start;flex-shrink:0;cursor:pointer}
+#swrt-upgrade input#swrt-keep-config::before,#swrt-upgrade input#swrt-keep-config::after,.swrt-upgrade-confirm .swrt-confirm-backup>input[type=checkbox]::before,.swrt-upgrade-confirm .swrt-confirm-backup>input[type=checkbox]::after{content:none!important;display:none!important}
 #swrt-upgrade input#swrt-keep-config:disabled{cursor:not-allowed}
 #swrt-upgrade progress{flex-basis:100%;width:100%;height:8px;accent-color:var(--np-accent)}
 #swrt-upgrade [data-phase=failed]{color:var(--np-danger)}
 #swrt-upgrade [data-phase=ready]{color:var(--np-green)}
 #swrt-upgrade .swrt-release-notes{white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto;font:inherit;font-size:13px;line-height:1.8;border:0;padding:0;margin:0;background:none;color:var(--np-muted)}
-.swrt-confirm-backup{display:block;margin:20px 0;line-height:1.8}
+.swrt-upgrade-confirm .swrt-confirm-backup{display:flex;align-items:flex-start;gap:12px;margin:20px 0;line-height:1.8;cursor:pointer;text-align:left;white-space:normal}
+.swrt-upgrade-confirm .swrt-confirm-copy{min-width:0;overflow-wrap:anywhere}
 .swrt-upgrade-confirm .swrt-confirm-file{overflow-wrap:anywhere}
 .swrt-upgrade-confirm p{margin-bottom:14px;line-height:1.7}
 .swrt-upgrade-confirm .np-actions{margin-top:18px}
 .swrt-upgrade-confirm h4{box-shadow:none;border-radius:0}
-.swrt-upgrade-confirm input[type=checkbox]{position:static;inset:auto;transform:none;margin:0 8px 0 0!important;vertical-align:middle}
 @media(max-width:760px){#swrt-upgrade .swrt-file{grid-template-columns:minmax(0,1fr)}#swrt-upgrade .np-actions>.np-btn{flex:1;min-width:0}}
 #swrt-upgrade .swrt-source-bar{display:grid;grid-template-columns:auto minmax(220px,320px) minmax(0,1fr);gap:10px 16px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--np-line)}
 #swrt-upgrade .swrt-source-bar>label{margin:0;font-size:13px;color:var(--np-text);white-space:nowrap}
