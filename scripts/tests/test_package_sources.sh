@@ -105,6 +105,17 @@ vsean https://mirrors.vsean.net/openwrt
 official https://downloads.immortalwrt.org
 MIRRORS
 }
+test_istore_feeds_survive_all_mirror_switches() {
+    local extra="$PHOTONICAT_PACKAGE_ROOT/etc/apk/repositories.d/pwrt-istore.list" name
+    cp "$ROOT/files/etc/apk/repositories.d/pwrt-istore.list" "$extra"
+    printf '%s\n' 'https://repo.istoreos.com/repo-apk/aarch64_generic/nas/packages.adb' >> "$extra"
+    cp "$extra" "$TEST_TMP/istore.before"
+    for name in nju ustc sjtu zju vsean official; do
+        engine_ok set "{\"source\":\"$name\"}"
+        assert_json "$OUT" ".actual==\"$name\""
+        assert_same "$extra" "$TEST_TMP/istore.before"
+    done
+}
 test_mixed_mirrors_and_aliases() {
     cat > "$feed" <<'FEEDS'
 @base https://mirrors.nju.edu.cn/immortalwrt/releases/25.12-SNAPSHOT/packages/aarch64_generic/base/packages.adb

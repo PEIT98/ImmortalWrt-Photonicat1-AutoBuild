@@ -1,5 +1,5 @@
 #!/bin/sh
-# 功能：兼容 iStore 在 ImmortalWrt 25.12 中的包名和依赖。
+# 功能：兼容 iStore 在 ImmortalWrt 25.12 中的包名、依赖和下载顺序。
 # 修正官方 LinkEase iStore 在 ImmortalWrt 25.12 中的软件包名称。
 # 在安装 Feeds 后执行；仅修改编译机的临时源码。
 set -eu
@@ -37,5 +37,27 @@ END {
 }'
 grep -Fxq 'LUCI_NAME:=luci-app-store' "$PC_WORK"
 grep -Fxq 'PKG_NAME:=luci-app-store' "$PC_WORK"
+
+# iStore 原站优先，下载失败时仍保留官方镜像回退。
+# 仅调整安装器重试顺序，不改 APK/OPKG 源及光影猫管理的源选择。
+pc_load "$SRC/package/feeds/istore/luci-app-store/root/bin/is-opkg"
+pc_replace 'do_in_mirrors() {
+    local server
+' 'do_in_mirrors() {
+    local server result
+    # Pwrt: try the origin before the iStore mirror.
+    echo "Try origin server $FEEDS_SERVER"
+    "$@" && return 0
+    result=$?
+' 'iStore 下载重试入口'
+pc_replace '            PATH="$newpath" IS_ORIG_SERVER=$FEEDS_SERVER IS_MIRROR_SERVER=$server "$@" && return 0
+' '            PATH="$newpath" IS_ORIG_SERVER=$FEEDS_SERVER IS_MIRROR_SERVER=$server "$@" && return 0
+            result=$?
+' 'iStore 镜像回退结果'
+pc_replace '    echo "Try origin server $FEEDS_SERVER"
+    "$@"
+}' '    return "$result"
+}' 'iStore 下载重试返回值'
+sh -n "$PC_WORK"
 pc_commit
-echo 'iStore 官方来源保持不变；已显式修正 LuCI app 包名并确认 taskd 相关文件。'
+echo 'iStore 包名和依赖已适配；下载优先原站、失败回退镜像，系统软件源设置保持不变。'

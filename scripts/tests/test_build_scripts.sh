@@ -70,6 +70,27 @@ PKG_VERSION:=0.2.1-r1
 include $(TOPDIR)/feeds/luci/luci.mk
 # call BuildPackage - OpenWrt buildroot signature
 MAKEFILE
+    client="$feed/luci/luci-app-store/root/bin/is-opkg"
+    mkdir -p "${client%/*}"
+    cat > "$client" <<'CLIENT'
+#!/bin/sh
+# Unrelated configuration must survive the patch.
+FEEDS_SERVER=https://istore.istoreos.com/repo-apk
+FEEDS_SERVER_MIRRORS="https://repo.istoreos.com/repo-apk"
+do_in_mirrors() {
+    local server
+    if ! $DISABLE_MIRROR; then
+        local newpath="/usr/libexec/istore/mirror-bin:$PATH"
+        for server in $FEEDS_SERVER_MIRRORS ; do
+            echo "Try mirror server $server"
+            PATH="$newpath" IS_ORIG_SERVER=$FEEDS_SERVER IS_MIRROR_SERVER=$server "$@" && return 0
+        done
+        DISABLE_MIRROR=true
+    fi
+    echo "Try origin server $FEEDS_SERVER"
+    "$@"
+}
+CLIENT
     patch="$ROOT/scripts/patches/packages/fix-istore-25.12.sh"
 }
 test_istore_patch_preserves_feed_links_and_is_idempotent() {
@@ -81,8 +102,51 @@ test_istore_patch_preserves_feed_links_and_is_idempotent() {
     assert_has "$app" '# Apache-2.0; keep unrelated package settings'
     [[ -L "$istore/package/feeds/istore/luci-app-store" ]] || fail 'feed symlink replaced'
     cp "$app" "$TEST_TMP/once"
+    cp "$client" "$TEST_TMP/client.once"
     ok sh "$patch" "$istore"
     assert_same "$app" "$TEST_TMP/once"
+    assert_same "$client" "$TEST_TMP/client.once"
+}
+istore_download_harness() {
+    istore_fixture
+    ok sh "$patch" "$istore"
+    harness="$TEST_TMP/download.sh"
+    cat > "$harness" <<'HARNESS'
+#!/bin/sh
+. "$1"
+DISABLE_MIRROR=${DISABLE_MIRROR:-false}
+probe() {
+    [ "$#" -eq 3 ] && [ "$3" = 'one argument' ] || return 99
+    if [ -n "${IS_MIRROR_SERVER:-}" ]; then
+        printf 'mirror:%s\n' "$IS_MIRROR_SERVER" >> "$TRACE"
+        return "$MIRROR_RC"
+    fi
+    printf 'origin:%s\n' "$FEEDS_SERVER" >> "$TRACE"
+    return "$ORIGIN_RC"
+}
+do_in_mirrors probe add app-meta-homebox 'one argument'
+HARNESS
+    trace="$TEST_TMP/download.log"
+}
+test_istore_origin_success_skips_mirror() {
+    istore_download_harness
+    ok env TRACE="$trace" ORIGIN_RC=0 MIRROR_RC=8 sh "$harness" "$client"
+    assert_eq 'origin:https://istore.istoreos.com/repo-apk' "$(cat "$trace")"
+}
+test_istore_origin_failure_falls_back_to_mirror() {
+    istore_download_harness
+    ok env TRACE="$trace" ORIGIN_RC=4 MIRROR_RC=0 sh "$harness" "$client"
+    assert_eq $'origin:https://istore.istoreos.com/repo-apk\nmirror:https://repo.istoreos.com/repo-apk' "$(cat "$trace")"
+}
+test_istore_download_failures_propagate() {
+    istore_download_harness
+    reject env TRACE="$trace" ORIGIN_RC=4 MIRROR_RC=7 sh "$harness" "$client"
+    assert_eq 7 "$RC"
+    assert_eq $'origin:https://istore.istoreos.com/repo-apk\nmirror:https://repo.istoreos.com/repo-apk' "$(cat "$trace")"
+    rm "$trace"
+    reject env TRACE="$trace" ORIGIN_RC=4 MIRROR_RC=0 DISABLE_MIRROR=true sh "$harness" "$client"
+    assert_eq 4 "$RC"
+    assert_eq 'origin:https://istore.istoreos.com/repo-apk' "$(cat "$trace")"
 }
 test_istore_existing_names_are_normalized() {
     istore_fixture
@@ -115,6 +179,15 @@ test_istore_failure_keeps_original_source() {
     mv "$istore/feeds/istore/luci/taskd/Makefile" "$istore/feeds/istore/luci/taskd/Makefile.disabled"
     reject sh "$patch" "$istore"
     assert_same "$app" "$TEST_TMP/before"
+}
+test_istore_client_failure_keeps_all_original_sources() {
+    istore_fixture
+    rewrite "$client" 'do_in_mirrors() {' 'changed_download() {'
+    cp "$app" "$TEST_TMP/app.before"
+    cp "$client" "$TEST_TMP/client.before"
+    reject sh "$patch" "$istore"
+    assert_same "$app" "$TEST_TMP/app.before"
+    assert_same "$client" "$TEST_TMP/client.before"
 }
 test_config_inheritance_and_passwall() {
     printf '# untouched\nCONFIG_PACKAGE_unrelated=y\nCONFIG_PACKAGE_luci-app-qmodem-next=m\nCONFIG_PACKAGE_luci-app-passwall_INCLUDE_Foo=y\n' > "$TEST_TMP/config"
