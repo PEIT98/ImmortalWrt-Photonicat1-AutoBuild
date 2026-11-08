@@ -35,12 +35,27 @@ UBUS
     export SWRT_UPGRADE_ROOT="$root" SWRT_UPGRADE_SCRIPT="$engine" PATH="$root/bin:$PATH"
     worker="$root/tmp/swrt-upgrade"; state="$worker/state.json"; log="$root/sysupgrade.log"
 }
-engine_ok() { ok sh "$engine" "$1" <<<"${2:-}"; assert_json "$OUT" '.ok==true'; }
-engine_reject() { reject sh "$engine" "$1" <<<"${2:-}"; }
+engine_ok() {
+    ok sh "$engine" "$1" <<<"${2:-}"; assert_json "$OUT" '.ok==true'
+    if [[ $1 == check ]]; then
+        wait_worker
+        ok sh "$engine" status
+        assert_json "$OUT" '.ok==true and (.state.phase=="available" or .state.phase=="current")'
+    fi
+}
+engine_reject() {
+    capture sh "$engine" "$1" <<<"${2:-}"
+    if [[ $1 == check && $RC == 0 ]]; then
+        wait_worker
+        assert_json "$state" '.phase=="failed"'
+    else
+        [[ $RC != 0 ]] || fail "command unexpectedly succeeded: $1"
+    fi
+}
 wait_worker() {
     local i
     for ((i=0;i<270;i++)); do
-        if [[ -f $state ]] && jq -e '.phase=="ready" or .phase=="failed"' "$state" >/dev/null; then
+        if [[ -f $state ]] && jq -e '.phase=="ready" or .phase=="failed" or .phase=="available" or .phase=="current"' "$state" >/dev/null; then
             flock -w 3 "$worker/lock" true || fail 'worker lock timeout'
             return
         fi
@@ -90,6 +105,42 @@ test_numeric_version_and_no_flash() {
     engine_ok check; assert_json "$OUT" '.current=="photonicat1-20261101-120000-9" and .release.version=="photonicat1-20261102-222244-55"'
     engine_ok download; wait_worker; assert_json "$state" '.phase=="ready"'
     engine_ok status; assert_json "$OUT" ".release.sha256==\"$sha\" and .downloaded_bytes==$size"; no_flash
+}
+test_check_returns_before_network_and_holds_lock() {
+    touch "$root/api-block"
+    ok sh "$engine" check
+    assert_json "$OUT" '.ok==true'
+    engine_ok status; assert_json "$OUT" '.state.phase=="checking" and .release==null'
+    engine_reject check
+    engine_reject set-source '{"source":"github"}'
+    assert_absent "$log"
+    rm "$root/api-block"
+    wait_worker
+    engine_ok status; assert_json "$OUT" '.state.phase=="available"'
+    assert_absent "$log"
+}
+test_check_retries_transient_network_on_selected_source() {
+    local source
+    for source in proxy github; do
+        engine_ok set-source "{\"source\":\"$source\"}"
+        : > "$root/curl.log"
+        touch "$root/api-fail-once"
+        engine_ok check
+        assert_eq 2 "$(wc -l < "$root/curl.log")"
+        assert_eq 1 "$(sort -u "$root/curl.log" | wc -l)"
+        assert_json "$OUT" ".source==\"$source\" and .release.version==\"photonicat1-20261102-222244-55\""
+        if [[ $source == proxy ]]; then assert_has "$root/curl.log" 'https://gh-proxy.com/https://api.github.com/';
+        else assert_not_has "$root/curl.log" 'gh-proxy.com'; fi
+        assert_absent "$log"
+    done
+}
+test_check_retries_invalid_proxy_response() {
+    touch "$root/api-html-once"
+    engine_ok check
+    assert_eq 2 "$(wc -l < "$root/curl.log")"
+    assert_has "$worker/network.log" 'Invalid release JSON response'
+    assert_json "$worker/api.json" '.tag_name=="photonicat1-20261102-222244-55"'
+    assert_absent "$log"
 }
 test_prerelease_and_stable() {
     update_json "$fixture/release.json" '.prerelease=true'
@@ -220,7 +271,11 @@ test_asset_replacement() {
 test_duplicate_checksum_and_network_error() {
     engine_ok check; cat "$fixture/sha256sums" "$fixture/sha256sums" > "$TEST_TMP/sums"; cp "$TEST_TMP/sums" "$fixture/sha256sums"
     engine_ok download; wait_worker; assert_json "$state" '.phase=="failed"'; assert_absent "$log"
-    touch "$root/network-fail"; engine_reject check; engine_ok status; assert_json "$OUT" '.state.phase=="failed"'
+    : > "$root/curl.log"
+    touch "$root/network-fail"; engine_reject check; engine_ok status
+    assert_json "$OUT" '.state.phase=="failed" and (.state.message|contains("3次"))'
+    assert_eq 3 "$(wc -l < "$root/curl.log")"
+    assert_absent "$worker/api.json"
 }
 test_ready_tampering() {
     prepare; corrupt "$worker/firmware.img.gz"; engine_ok install "{\"keep\":0,\"sha256\":\"$sha\"}"; wait_worker

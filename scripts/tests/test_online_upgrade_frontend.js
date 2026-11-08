@@ -40,6 +40,10 @@ function harness(phase = 'available', readonly = false) {
             h.calls.push([spec.method, args]);
             if (spec.method === 'status') return h.statusOffline ? Promise.reject(new Error('network offline')) : Promise.resolve(h.state);
             if (spec.method === 'check' && h.error) return Promise.resolve({ ok: false, message: h.error });
+            if (spec.method === 'check' && h.asyncCheck) {
+                h.state.release = null;
+                h.state.state = { phase: 'checking', message: '正在检查，连接异常时会自动重试' };
+            }
             if (spec.method === 'download') h.state.state.phase = 'downloading';
             if (spec.method === 'set_source') {
                 if (h.sourceError) return Promise.resolve({ ok: false, message: h.sourceError });
@@ -93,6 +97,29 @@ const flush = async () => { await new Promise(resolve => setImmediate(resolve));
     assert.equal(available.keep.checked, true, 'Existing configuration is preserved by default');
     assert.equal(available.source.value, 'proxy', 'Domestic accelerator is selected by default');
     assert.equal(available.button('确认升级').disabled, true);
+
+    const checking = harness('idle');
+    const checkedRelease = checking.state.release;
+    checking.asyncCheck = true;
+    checking.button('检查更新').fire('click');
+    await flush();
+    assert.equal(checking.button('检查更新').disabled, true);
+    assert.equal(checking.source.disabled, true);
+    assert.equal(checking.notices.length, 0, 'A background check is not an RPC failure');
+    checking.state.state.message = '更新源连接或响应异常，正在重试（2/3）';
+    await checking.polls[0]();
+    assert.ok(walk(checking.root).some(n => n.textContent.includes('正在重试（2/3）')));
+    checking.button('检查更新').fire('click');
+    assert.equal(checking.calls.filter(c => c[0] === 'check').length, 1);
+    checking.state.release = checkedRelease;
+    checking.state.state.phase = 'available';
+    await checking.polls[0]();
+    assert.equal(checking.button('下载并校验').disabled, false);
+    assert.equal(checking.calls.filter(c => c[0] === 'download' || c[0] === 'install').length, 0);
+    checking.state.state = { phase: 'failed', message: '更新源暂不可用' };
+    await checking.polls[0]();
+    assert.equal(checking.button('检查更新').disabled, false);
+    assert.equal(checking.button('下载并校验').disabled, true);
 
     const switched = harness('ready');
     switched.source.value = 'github';

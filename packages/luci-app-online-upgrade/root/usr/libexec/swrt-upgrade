@@ -72,10 +72,31 @@ require_device() {
     [ "$FS" = squashfs ] || fail '本仓库仅提供 SquashFS 镜像，请使用相同系统类型或 USB 线刷'
 }
 fetch() {
-    curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-        --connect-timeout 5 --max-time 30 --max-filesize 8388608 \
-        -H 'Accept: application/vnd.github+json' -H 'User-Agent: Pwrt-Online-Upgrade/2.0' \
-        -o "$2" "$(transport_url "$1")" 2>"$DIR/network.log"
+    local attempt=1
+    while [ "$attempt" -le 3 ]; do
+        # Remove partial/error responses before each attempt; never reuse proxy HTML.
+        rm -f "$2"
+        printf 'Fetch attempt %s/3\n' "$attempt" >> "$DIR/network.log"
+        if curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            --connect-timeout 5 --max-time 20 --max-filesize 8388608 \
+            -H 'Accept: application/vnd.github+json' -H 'User-Agent: Pwrt-Online-Upgrade/2.0' \
+            -o "$2" "$(transport_url "$1")" 2>>"$DIR/network.log"; then
+            if [ "${3:-}" != json ] || jq -e '
+                type == "array" or (type == "object" and (.tag_name|type) == "string")
+                ' "$2" >/dev/null 2>&1; then
+                return 0
+            fi
+            printf 'Invalid release JSON response\n' >> "$DIR/network.log"
+        fi
+        [ "$attempt" -lt 3 ] || break
+        attempt=$((attempt + 1))
+        if [ "$MODE" = _check ]; then
+            phase checking "更新源连接或响应异常，正在重试（$attempt/3）"
+        fi
+        sleep 1
+    done
+    rm -f "$2"
+    return 1
 }
 transport_url() {
     case "$SOURCE" in
@@ -222,12 +243,22 @@ case "$MODE" in
         ;;
     check)
         lock
-        phase checking '正在连接所选更新源检查发布'
         require_device
         rm -f "$RELEASE" "$IMAGE" "$IMAGE.part"
+        : > "$DIR/network.log"
+        phase checking '正在连接所选更新源检查发布，连接异常时会自动重试'
+        # Check asynchronously like downloads, so slow proxies cannot time out RPC.
+        setsid /bin/sh "$SCRIPT" _check </dev/null >"$DIR/worker.log" 2>&1 &
+        jq -nc '{ok:true}'
+        ;;
+    _check)
+        flock -n 9 || exit 1
+        trap worker_exit EXIT
+        trap 'exit 1' HUP INT TERM
+        require_device
         endpoint="$API?per_page=100"
         [ "$CHANNEL" != stable ] || endpoint="$API/latest"
-        fetch "$endpoint" "$DIR/api.json" || fail '更新源连接失败或该通道暂无发布，请切换更新源、版本通道后重试'
+        fetch "$endpoint" "$DIR/api.json" json || fail '无法获取所选更新源的发布信息，已自动尝试3次，请稍后重试或切换更新源'
         select_release "$DIR/api.json" "$DIR/release.new" || fail '发布中没有匹配当前系统的完整固件和校验清单'
         mv "$DIR/release.new" "$RELEASE"
         if newer "$(jq -r '.version' "$RELEASE")"; then
@@ -235,7 +266,6 @@ case "$MODE" in
         else
             phase current '当前已是所选通道的最新版本，或当前构建更新'
         fi
-        emit_status
         ;;
     download)
         lock
@@ -255,7 +285,7 @@ case "$MODE" in
         require_device
         require_source
         tag="$(jq -er '.tag | select(test("^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$"))' "$RELEASE")"
-        fetch "$API/tags/$tag" "$DIR/api.json" || fail '无法重新确认发布信息'
+        fetch "$API/tags/$tag" "$DIR/api.json" json || fail '无法重新确认发布信息'
         select_release "$DIR/api.json" "$DIR/release.new" || fail '发布附件已变化，请重新检查'
         jq -e --slurpfile old "$RELEASE" '.id == $old[0].id and .url == $old[0].url and
             .size == $old[0].size and .digest == $old[0].digest' "$DIR/release.new" >/dev/null || fail '发布附件已替换，请重新检查更新'
