@@ -24,6 +24,16 @@ case "$url" in
             printf '<html>proxy warming up</html>\n' > "$output"
             exit 0
         fi
+        if [ -f "$root/api-empty-once" ]; then
+            rm "$root/api-empty-once"
+            printf '[]\n' > "$output"
+            exit 0
+        fi
+        if [ -f "$root/api-incomplete-once" ]; then
+            rm "$root/api-incomplete-once"
+            jq '.assets |= map(select(.name != "SHA256SUMS.txt"))' "$root/fixtures/release.json" > "$output"
+            exit 0
+        fi
         source="$root/fixtures/release.json"
         ;;
     */SHA256SUMS.txt) source="$root/fixtures/sha256sums" ;;

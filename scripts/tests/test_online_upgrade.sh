@@ -138,9 +138,32 @@ test_check_retries_invalid_proxy_response() {
     touch "$root/api-html-once"
     engine_ok check
     assert_eq 2 "$(wc -l < "$root/curl.log")"
-    assert_has "$worker/network.log" 'Invalid release JSON response'
+    assert_has "$worker/network.log" 'Invalid or incomplete firmware release response'
     assert_json "$worker/api.json" '.tag_name=="photonicat1-20261102-222244-55"'
     assert_absent "$log"
+}
+test_check_retries_empty_release_list() {
+    touch "$root/api-empty-once"
+    engine_ok check
+    assert_eq 2 "$(wc -l < "$root/curl.log")"
+    assert_json "$OUT" '.state.phase=="available" and .release.version=="photonicat1-20261102-222244-55"'
+    assert_absent "$log"
+}
+test_check_retries_incomplete_release() {
+    touch "$root/api-incomplete-once"
+    engine_ok check
+    assert_eq 2 "$(wc -l < "$root/curl.log")"
+    assert_json "$OUT" '.state.phase=="available" and .release.version=="photonicat1-20261102-222244-55"'
+    assert_absent "$log"
+}
+test_download_retries_empty_release_revalidation() {
+    engine_ok check
+    touch "$root/api-empty-once"
+    engine_ok download
+    wait_worker
+    assert_json "$state" '.phase=="ready"'
+    assert_eq 5 "$(wc -l < "$root/curl.log")"
+    no_flash
 }
 test_prerelease_and_stable() {
     update_json "$fixture/release.json" '.prerelease=true'

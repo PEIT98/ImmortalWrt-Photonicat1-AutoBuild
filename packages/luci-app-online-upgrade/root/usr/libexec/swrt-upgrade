@@ -74,28 +74,29 @@ require_device() {
 fetch() {
     local attempt=1
     while [ "$attempt" -le 3 ]; do
-        # Remove partial/error responses before each attempt; never reuse proxy HTML.
+        # Argument 3 is the selected-release output. A parseable API response alone
+        # is insufficient: empty lists and incomplete cached releases must retry.
         rm -f "$2"
+        [ -z "${3:-}" ] || rm -f "$3"
         printf 'Fetch attempt %s/3\n' "$attempt" >> "$DIR/network.log"
         if curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
             --connect-timeout 5 --max-time 20 --max-filesize 8388608 \
             -H 'Accept: application/vnd.github+json' -H 'User-Agent: Pwrt-Online-Upgrade/2.0' \
             -o "$2" "$(transport_url "$1")" 2>>"$DIR/network.log"; then
-            if [ "${3:-}" != json ] || jq -e '
-                type == "array" or (type == "object" and (.tag_name|type) == "string")
-                ' "$2" >/dev/null 2>&1; then
+            if [ -z "${3:-}" ] || select_release "$2" "$3" 2>>"$DIR/network.log"; then
                 return 0
             fi
-            printf 'Invalid release JSON response\n' >> "$DIR/network.log"
+            printf 'Invalid or incomplete firmware release response\n' >> "$DIR/network.log"
         fi
         [ "$attempt" -lt 3 ] || break
         attempt=$((attempt + 1))
         if [ "$MODE" = _check ]; then
-            phase checking "更新源连接或响应异常，正在重试（$attempt/3）"
+            phase checking "更新源连接或发布信息异常，正在重试（$attempt/3）"
         fi
         sleep 1
     done
     rm -f "$2"
+    [ -z "${3:-}" ] || rm -f "$3"
     return 1
 }
 transport_url() {
@@ -258,8 +259,7 @@ case "$MODE" in
         require_device
         endpoint="$API?per_page=100"
         [ "$CHANNEL" != stable ] || endpoint="$API/latest"
-        fetch "$endpoint" "$DIR/api.json" json || fail '无法获取所选更新源的发布信息，已自动尝试3次，请稍后重试或切换更新源'
-        select_release "$DIR/api.json" "$DIR/release.new" || fail '发布中没有匹配当前系统的完整固件和校验清单'
+        fetch "$endpoint" "$DIR/api.json" "$DIR/release.new" || fail '已尝试3次，未获取到匹配的完整固件信息，请稍后重试或切换更新源、版本通道'
         mv "$DIR/release.new" "$RELEASE"
         if newer "$(jq -r '.version' "$RELEASE")"; then
             phase available '发现新版本，可下载并校验固件'
@@ -285,8 +285,7 @@ case "$MODE" in
         require_device
         require_source
         tag="$(jq -er '.tag | select(test("^photonicat1-[0-9]{8}-[0-9]{6}-[0-9]+$"))' "$RELEASE")"
-        fetch "$API/tags/$tag" "$DIR/api.json" json || fail '无法重新确认发布信息'
-        select_release "$DIR/api.json" "$DIR/release.new" || fail '发布附件已变化，请重新检查'
+        fetch "$API/tags/$tag" "$DIR/api.json" "$DIR/release.new" || fail '无法重新确认完整的发布信息，请重新检查更新'
         jq -e --slurpfile old "$RELEASE" '.id == $old[0].id and .url == $old[0].url and
             .size == $old[0].size and .digest == $old[0].digest' "$DIR/release.new" >/dev/null || fail '发布附件已替换，请重新检查更新'
         fetch "$(jq -r '.checksum_url' "$RELEASE")" "$DIR/sha256sums" || fail '无法获取 SHA256 校验清单'
