@@ -93,6 +93,7 @@ need=(
   CONFIG_PACKAGE_kmod-mt7925e
   CONFIG_PACKAGE_kmod-mt7921e
   CONFIG_PACKAGE_kmod-mt7915e
+  CONFIG_PACKAGE_kmod-mt7915-firmware
   CONFIG_PACKAGE_kmod-mt7925-firmware
   CONFIG_PACKAGE_kmod-mt7916-firmware
   CONFIG_PACKAGE_kmod-ath12k
